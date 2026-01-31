@@ -1,0 +1,122 @@
+
+input
+    Contratos(1);   // ÚNICO PARÂMETRO DE USUÁRIO (1 a 5)
+
+var
+    Media : Float;
+    Hilo  : Float;
+    ADXv  : Float;
+    DentroHorario : Boolean;
+    TendenciaForte : Boolean;
+    ResultadoDia : Float;
+    DiaBloqueado : Boolean;
+    DataAtual : Integer;
+    StopAtual : Float;
+
+    LossesConsecutivos : Integer;
+    ResultadoAnterior  : Float;
+
+    LicencaValida : Boolean;
+    ContratosOperacao : Integer;
+
+begin
+
+    // =====================================================
+    // LICENÇA HÍBRIDA
+    // =====================================================
+    LicencaValida := (Date >= 1260131) and (Date <= 1260303);
+
+    // =========================
+    // VALIDAÇÃO DE CONTRATOS
+    // =========================
+    ContratosOperacao := Contratos;
+
+    if (ContratosOperacao > 20) then
+        ContratosOperacao := 20;
+
+    if (ContratosOperacao < 1) then
+        ContratosOperacao := 1;
+
+    // =========================
+    // ZERAGEM FINAL
+    // =========================
+    if (Time >= 1740) then
+        if HasPosition then
+            ClosePosition;
+
+    // =========================
+    // RESET DIÁRIO
+    // =========================
+    if (Date <> DataAtual) then
+    begin
+        DataAtual := Date;
+        DiaBloqueado := False;
+        LossesConsecutivos := 0;
+        ResultadoAnterior := DailyResult(True);
+    end;
+
+    ResultadoDia := DailyResult(True);
+
+    if (ResultadoDia < ResultadoAnterior) then
+        LossesConsecutivos := LossesConsecutivos + 1
+    else if (ResultadoDia > ResultadoAnterior) then
+        LossesConsecutivos := 0;
+
+    ResultadoAnterior := ResultadoDia;
+
+    if (LossesConsecutivos >= 20) then
+        DiaBloqueado := True;
+
+    // =========================
+    // HORÁRIO FIXO
+    // =========================
+    DentroHorario := (Time >= 0900) and (Time <= 1200) and (Time < 1740);
+
+    // =========================
+    // INDICADORES (VALORES FIXOS)
+    // =========================
+    Media := MediaExp(20, Close);
+    Hilo  := HiloActivator(10);
+    ADXv  := ADX(14, 14);
+
+    TendenciaForte := (ADXv >= 20);
+
+    // =========================
+    // ENTRADAS
+    // =========================
+    if LicencaValida and DentroHorario and TendenciaForte and
+       (not DiaBloqueado) and (not HasPosition) and
+       (Close > Media) and (Close > Hilo) then
+        BuyAtMarket(ContratosOperacao);
+
+    if LicencaValida and DentroHorario and TendenciaForte and
+       (not DiaBloqueado) and (not HasPosition) and
+       (Close < Media) and (Close < Hilo) then
+        SellShortAtMarket(ContratosOperacao);
+
+    // =========================
+    // GERENCIAMENTO
+    // =========================
+    if IsBought then
+    begin
+        if (Close >= BuyPrice + 190) then
+            StopAtual := BuyPrice + 10
+        else
+            StopAtual := BuyPrice - 300;
+
+        SellToCoverStop(StopAtual, StopAtual, ContratosOperacao);
+        SellToCoverLimit(BuyPrice + 600, ContratosOperacao);
+    end;
+
+    if IsSold then
+    begin
+        if (Close <= SellPrice - 190) then
+            StopAtual := SellPrice - 10
+        else
+            StopAtual := SellPrice + 300;
+
+        BuyToCoverStop(StopAtual, StopAtual, ContratosOperacao);
+        BuyToCoverLimit(SellPrice - 600, ContratosOperacao);
+    end;
+
+end;

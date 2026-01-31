@@ -1,0 +1,6 @@
+📄 INFORMAÇÕES DO ROBÔ DE TRADING AUTOMÁTICO
+
+Este robô opera de forma totalmente automática, com controle interno de risco,
+bloqueios de segurança e regras operacionais bem definidas.
+
+Resultados passados não garantem resultados futuros.
