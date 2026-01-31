@@ -6,7 +6,7 @@ EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE")
 SENHA_APP = os.getenv("EMAIL_SENHA_APP")
 
 SMTP_SERVIDOR = "smtp.gmail.com"
-SMTP_PORTA = 465
+SMTP_PORTA = 587
 
 def enviar_email(destinatario, nome_plano, arquivo, senha):
     msg = EmailMessage()
@@ -31,6 +31,7 @@ Senha do arquivo: {senha}
             filename=os.path.basename(arquivo)
         )
 
-    with smtplib.SMTP_SSL(SMTP_SERVIDOR, SMTP_PORTA) as smtp:
+    with smtplib.SMTP(SMTP_SERVIDOR, SMTP_PORTA, timeout=30) as smtp:
+        smtp.starttls()
         smtp.login(EMAIL_REMETENTE, SENHA_APP)
         smtp.send_message(msg)
