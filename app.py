@@ -81,6 +81,20 @@ def comprar():
 # ======================================================
 # WEBHOOK INFINITEPAY (BLINDADO)
 # ======================================================
+@app.route("/debug/orders")
+def debug_orders():
+    import sqlite3
+
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM orders ORDER BY created_at DESC")
+    rows = c.fetchall()
+
+    conn.close()
+
+    return jsonify([dict(row) for row in rows])
 
 @app.route("/webhook/infinitypay", methods=["POST"])
 def webhook():
@@ -160,3 +174,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
