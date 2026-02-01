@@ -11,16 +11,16 @@ def enviar_email(destinatario, nome_plano, arquivo, senha):
     payload = {
         "email": destinatario,
         "assunto": f"Seu plano {nome_plano} – Acesso Liberado",
-        "mensagem": f"""Olá 👋
+        "mensagem": f"""Olá 
 
 Obrigado pela sua compra!
 
 ✅ Pagamento confirmado com sucesso.
 
-📦 Plano adquirido: {nome_plano}
-🔐 Senha do arquivo: {senha}
+ Plano adquirido: {nome_plano}
+ Senha do arquivo: {senha}
 
-📎 O arquivo do seu plano está em anexo neste email.
+ O arquivo do seu plano está em anexo neste email.
 
 ⚠️ Importante:
 – Guarde sua senha
@@ -28,7 +28,7 @@ Obrigado pela sua compra!
 
 Qualquer dúvida, é só responder este email.
 
-Bom uso 🚀
+Bom uso 
 """
 ,
         "filename": os.path.basename(arquivo),
@@ -36,3 +36,4 @@ Bom uso 🚀
     }
 
     requests.post(GOOGLE_EMAIL_WEBHOOK, json=payload, timeout=60)
+
