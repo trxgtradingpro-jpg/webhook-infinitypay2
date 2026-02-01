@@ -1,122 +1,69 @@
-import psycopg2
+import base64
+import requests
 import os
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+print("🔥 EMAIL_UTILS CARREGADO")
 
-def get_conn():
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
-
-
-def init_db():
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS orders (
-            order_id TEXT PRIMARY KEY,
-            plano TEXT NOT NULL,
-            email TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'PENDENTE',
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS processed (
-            transaction_nsu TEXT PRIMARY KEY,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-    """)
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    print("🗄️ POSTGRES OK", flush=True)
+GOOGLE_EMAIL_WEBHOOK = "https://script.google.com/macros/s/AKfycbzqsLLYy7IfyEIYAyXD7yx8K9A5ojbNeOVyTVSEqLr6Y0dp3I5RgdgYjmeT7UYItkjuXw/exec"
 
 
-def salvar_order(order_id, plano, email):
-    conn = get_conn()
-    cur = conn.cursor()
+def enviar_email(destinatario, nome_plano, arquivo, senha):
+    print("📧 INICIANDO ENVIO DE EMAIL")
+    print("➡️ Destinatário:", destinatario)
+    print("➡️ Plano:", nome_plano)
+    print("➡️ Arquivo:", arquivo)
 
-    cur.execute("""
-        INSERT INTO orders (order_id, plano, email)
-        VALUES (%s, %s, %s)
-    """, (order_id, plano, email))
+    if not os.path.exists(arquivo):
+        raise Exception("Arquivo não encontrado para envio de email")
 
-    conn.commit()
-    cur.close()
-    conn.close()
+    with open(arquivo, "rb") as f:
+        arquivo_base64 = base64.b64encode(f.read()).decode("utf-8")
 
+    mensagem = f"""Olá
 
-def buscar_order_por_id(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
+Obrigado pela sua compra!
 
-    cur.execute("""
-        SELECT order_id, plano, email, status
-        FROM orders
-        WHERE order_id = %s
-    """, (order_id,))
+✅ Pagamento confirmado com sucesso.
 
-    row = cur.fetchone()
+Plano adquirido: {nome_plano}
+Senha do arquivo: {senha}
 
-    cur.close()
-    conn.close()
+IMPORTANTE — ENTRE NA COMUNIDADE OFICIAL
+Para receber avisos, atualizações e suporte, entre no grupo abaixo:
 
-    if not row:
-        return None
+https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE
 
-    return {
-        "order_id": row[0],
-        "plano": row[1],
-        "email": row[2],
-        "status": row[3]
+O arquivo do seu plano está em anexo logo abaixo neste email.
+
+⚠️ Importante:
+– Guarde sua senha
+– Não compartilhe o arquivo
+
+Suporte:
+Email: trxtradingpro@gmail.com
+WhatsApp: +55 11 98175-9207
+WhatsApp 2: +55 11 94043-1906
+
+Bom uso
+"""
+
+    payload = {
+        "email": destinatario,
+        "assunto": f"Seu plano {nome_plano} – Acesso Liberado",
+        "mensagem": mensagem,
+        "filename": os.path.basename(arquivo),
+        "file_base64": arquivo_base64
     }
 
-
-def marcar_order_processada(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        UPDATE orders
-        SET status = 'PROCESSADO'
-        WHERE order_id = %s
-    """, (order_id,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def transacao_ja_processada(transaction_nsu):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT 1 FROM processed WHERE transaction_nsu = %s",
-        (transaction_nsu,)
+    response = requests.post(
+        GOOGLE_EMAIL_WEBHOOK,
+        json=payload,
+        timeout=60
     )
 
-    exists = cur.fetchone() is not None
+    print("📨 RESPOSTA GOOGLE SCRIPT")
+    print("Status:", response.status_code)
+    print("Body:", response.text)
 
-    cur.close()
-    conn.close()
-
-    return exists
-
-
-def marcar_transacao_processada(transaction_nsu):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        INSERT INTO processed (transaction_nsu)
-        VALUES (%s)
-        ON CONFLICT DO NOTHING
-    """, (transaction_nsu,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
+    if response.status_code != 200:
+        raise Exception("Falha ao enviar email via Google Script")
