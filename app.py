@@ -60,6 +60,11 @@ PLANOS = {
         "nome": "TRX BLACK",
         "pasta": "Licencas/TRX BLACK",
         "preco": 70000
+    },
+    "trx-teste": {
+        "nome": "TRX TESTE",
+        "pasta": "Licencas/TRX TESTE",
+        "preco": 100
     }
 }
 
