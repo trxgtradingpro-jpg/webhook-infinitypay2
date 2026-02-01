@@ -81,7 +81,7 @@ def comprar():
 # ======================================================
 # WEBHOOK INFINITEPAY (BLINDADO)
 # ======================================================
-@app.route("/debug/orders")
+@app.route("/orders")
 def debug_orders():
     import sqlite3
 
@@ -174,4 +174,5 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
