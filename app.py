@@ -149,6 +149,41 @@ def pagamentos():
         chart_labels=chart_labels,
         chart_values=chart_values
     )
+@app.route("/relatorios")
+def relatorios():
+    faturamento_mensal = "5.430,00"
+    crescimento = 18
+    plano_top = "TRX BRONZE"
+    conversao = 92
+    melhor_dia = "Sexta-feira"
+
+    dias = [
+        {"dia":"Segunda","vendas":5,"valor":"985,00"},
+        {"dia":"Terça","vendas":7,"valor":"1.379,00"},
+        {"dia":"Quarta","vendas":4,"valor":"788,00"},
+        {"dia":"Quinta","vendas":6,"valor":"1.182,00"},
+        {"dia":"Sexta","vendas":9,"valor":"1.096,00"},
+    ]
+
+    chart_labels = ["Seg","Ter","Qua","Qui","Sex"]
+    chart_values = [985,1379,788,1182,1096]
+
+    planos_labels = ["TRX BRONZE","TRX PRATA","TRX GOLD","TRX BLACK"]
+    planos_values = [55,20,15,10]
+
+    return render_template(
+        "relatorios.html",
+        faturamento_mensal=faturamento_mensal,
+        crescimento=crescimento,
+        plano_top=plano_top,
+        conversao=conversao,
+        melhor_dia=melhor_dia,
+        dias=dias,
+        chart_labels=chart_labels,
+        chart_values=chart_values,
+        planos_labels=planos_labels,
+        planos_values=planos_values
+    )
 
 @app.route("/orders")
 def orders():
@@ -165,6 +200,7 @@ def orders():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
