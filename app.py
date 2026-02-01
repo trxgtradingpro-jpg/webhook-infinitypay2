@@ -12,6 +12,9 @@ from database import (
     transacao_ja_processada,
     marcar_processada
 )
+print("🧾 PAYLOAD RECEBIDO:", data)
+print("🧾 order_nsu RECEBIDO:", order_nsu)
+
 
 app = Flask(__name__)
 
@@ -150,3 +153,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
