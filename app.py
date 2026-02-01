@@ -86,6 +86,8 @@ def webhook():
         arquivo=arquivo,
         senha=senha
     )
+    print("🚀 CHAMANDO enviar_email()")
+
 
     # Marca pagamento como processado
     if pagamento_id:
@@ -99,6 +101,7 @@ def webhook():
         pass
 
     return jsonify({"msg": "Plano enviado com sucesso"}), 200
+    print("🚀 CHAMANDO enviar_email22()")
 
 
 # -------------------- START --------------------
@@ -107,4 +110,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     os.makedirs(PASTA_SAIDA, exist_ok=True)
     app.run(host="0.0.0.0", port=port)
+
 
