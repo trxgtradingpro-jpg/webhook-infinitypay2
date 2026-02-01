@@ -35,7 +35,7 @@ CHECKOUT_LINKS = {
     "trx-prata-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85/79gZN80wGp",
     "trx-gold-0001":   "https://checkout.infinitepay.io/guilherme-gomes-v85/ayMFQnAMR",
     "trx-black-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85/OeFp5epL5",
-    "trx-teste-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85/OeFp5epL5",
+    "trx_teste-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_wAACwOePNZgFM5YemHyoyWkDN24lKqphA24AAs0lSD6XKTGzm3I2QJ3qNKD3SBDKM75UgjrRWn3_X0bUdgU57yCxtuF4YcaaB13QVZbmO3H0aI0g_b70NCr1KYFWee1lJuZLkBIlXoqPPfZxWObxtpYIBWFBgZWDINbHvf5UkCA7Mx3CicV9FAymZpTqSi_1P_n7ISEh0BxRbksISrCFTTKGwN2HEwe_o-2ipDtaPI2wOCAi_QYTqhkzex0kDSi0yyIQwD.v1.da2465697b6d205b",
 }
 
 # ================= CHECKOUT =================
@@ -200,6 +200,7 @@ def orders():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
