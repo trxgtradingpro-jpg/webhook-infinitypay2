@@ -50,6 +50,16 @@ def init_db():
 
     print("🗄️ POSTGRES CONECTADO E TABELAS OK", flush=True)
 
+def listar_pagamentos():
+    with sqlite3.connect(DB) as con:
+        cur = con.execute("""
+            SELECT plano, email, valor, metodo, status, created_at
+            FROM orders
+            WHERE processado = 1
+            ORDER BY created_at DESC
+        """)
+        return cur.fetchall()
+
 # ================= CRUD =================
 
 def salvar_order(plano, email, telefone):
@@ -127,3 +137,4 @@ def marcar_processada(transaction_nsu):
     conn.commit()
     cur.close()
     conn.close()
+
