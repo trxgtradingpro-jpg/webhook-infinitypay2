@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template, redirect
 import os
 import uuid
-import json
 
 from compactador import compactar_plano
 from email_utils import enviar_email
@@ -37,15 +36,15 @@ PLANOS = {
 }
 
 # ======================================================
-# LINKS CHECKOUT INFINITEPAY
+# LINKS CHECKOUT INFINITEPAY (SEUS LINKS REAIS)
 # ======================================================
 
 CHECKOUT_LINKS = {
-    "trx-bronze-0001": "SEU_LINK_AQUI",
-    "trx-prata-0001":  "SEU_LINK_AQUI",
-    "trx-gold-0001":   "SEU_LINK_AQUI",
-    "trx-black-0001":  "SEU_LINK_AQUI",
-    "trx-teste-0001":  "SEU_LINK_AQUI",
+    "trx-bronze-0001": "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_4AAKwOeFPWKZHaGgwrtbnxQhkv4KiDhArJwQYcaqpRqvPtJldWd-Ka92SNWfqci-iv0AFNIEN450spoppyYt12BDblKb-w3Wh3QRBzoAF3WVbgNnyOMGIo_VHrdXTVr-4mjB9RGT4I3E0xxinog89v3-nnq9k4WI_xqbseh3gitacdu-0yKWBPNv-wrxDnS0kNlKGhD3TRjVv9hQtQ2Qt5HgE9LshJE9Ol6eTcyux5qHtNN5i57nIOaCrc8LnJfDOPcq-fE3GMYrImTAI.v1.a98160e86dffbbf6",
+    "trx-prata-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_sAYCwOeBPrIb6xgbiDxUfFa9OglERQhU451CSSlkiU6uF05sNEDozSoO1Kn7p5IcwFGOY_2psDSmBMSrjzOggEa-zTA0s55VpBZW1BcOaDHvi73X6oGy4bpOuxS32Gg9APyOr2aRrIokINIhmwq8Zvr78wCdwqdUk_T92a7BQupGOeph9JLFTzZ_4BjoelldjGuABtyS8ef8oyBDU49LMgo_WLHKTp0GXZ8-RXDw7yPK4BhnhvZKgXZmEzFmikqlbUIM3ANA.v1.7267bbf4bfa06f94",
+    "trx-gold-0001":   "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_gAQIzDOCYcJweLYqmDiKQKTVzzyzRLMC0q-IFeoDfahHe-bUdgU57yCxvuCoIgDiijQANOs0A3fS5VJFb2j9Y_UVi11Sq74d23M7rpRAmCPDT--0ZDksdBWwRoVBVBh44Cu5P2bb3ukeBOtf965AUwLjXTN9XybhEP1tDmf-bvp6yC2EZAlgU5Ll9UHA1PyqdyRy-pXlPgxlWVzQBF0y80KcOkTPqldhasKpWi81gLxgE.v1.6ff188236f431871",
+    "trx-black-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_8AAJwHdsOHUA81Ig9NGxGrMCiDClfBOdaKvQgywZqeP3XzQvhlLcFp3xiTA0pgTAos77yGqSGSsu0IbMpTfmHDrjAoLLBMAg04zXIbOyOUEKN2WPo6KLrStGruuuwBaQIMWWz-e7wmiH2nTBzgZYlTgZZ1Flun8UaSmFnY_r1aQ9-ltcxR8zWZB9os_rn_T9kJiY6AYgtyZOHIQJDgLLUMBezMXZazs3NMP8uiViAq8AIBbpAG9ZAbAyyW0ZyMhBE.v1.6236e5c27ab6a662",
+    "trx-teste-0001":  "https://checkout.infinitepay.io/guilherme-gomes-v85?lenc=G_wAACwOePNZgFM5YemHyoyWkDN24lKqphA24AAs0lSD6XKTGzm3I2QJ3qNKD3SBDKM75UgjrRWn3_X0bUdgU57yCxtuF4YcaaB13QVZbmO3H0aI0g_b70NCr1KYFWee1lJuZLkBIlXoqPPfZxWObxtpYIBWFBgZWDINbHvf5UkCA7Mx3CicV9FAymZpTqSi_1P_n7ISEh0BxRbksISrCFTTKGwN2HEwe_o-2ipDtaPI2wOCAi_QYTqhkzex0kDSi0yyIQwD.v1.da2465697b6d205b",
 }
 
 # ======================================================
@@ -67,15 +66,15 @@ def comprar():
     if not email or not telefone or plano not in PLANOS:
         return "Dados inválidos", 400
 
-    # identificador interno nosso (100% controlado)
-    ref = f"{plano}-{uuid.uuid4().hex[:10]}"
+    # referência interna estável (nossa)
+    reference = f"{plano}-{uuid.uuid4().hex[:10]}"
 
-    salvar_order_email(ref, email)
+    salvar_order_email(reference, email)
 
-    print(f"🛒 CHECKOUT CRIADO | ref={ref} | email={email} | telefone={telefone}")
+    print(f"🛒 CHECKOUT CRIADO | ref={reference} | email={email} | telefone={telefone}")
 
     checkout_base = CHECKOUT_LINKS[plano]
-    checkout_url = f"{checkout_base}&reference={ref}"
+    checkout_url = f"{checkout_base}&reference={reference}"
 
     return redirect(checkout_url)
 
@@ -87,88 +86,52 @@ def comprar():
 def webhook():
     print("\n================ WEBHOOK RECEBIDO ================")
 
-    # -------- RAW BODY --------
-    raw_body = request.data.decode("utf-8", errors="ignore")
-    print("🧾 RAW BODY:")
-    print(raw_body)
+    raw = request.data.decode("utf-8", errors="ignore")
+    print("🧾 RAW BODY:", raw)
 
-    # -------- JSON --------
-    try:
-        data = request.get_json(force=True, silent=True)
-    except Exception as e:
-        print("❌ ERRO AO PARSEAR JSON:", e)
-        data = None
-
-    print("📦 JSON PARSEADO:", data)
+    data = request.get_json(force=True, silent=True)
+    print("📦 JSON:", data)
 
     if not data:
-        print("❌ Payload vazio ou inválido")
         return jsonify({"msg": "Payload inválido"}), 200
 
-    # -------- IDENTIFICADORES POSSÍVEIS --------
-    transaction_nsu = (
-        data.get("transaction_nsu")
-        or data.get("transactionId")
-        or data.get("id")
-    )
-
+    transaction_nsu = data.get("transaction_nsu") or data.get("id")
     reference = (
         data.get("reference")
         or data.get("invoice_slug")
         or data.get("order_nsu")
     )
-
-    paid_amount = (
-        data.get("paid_amount")
-        or data.get("amount")
-        or 0
-    )
+    paid_amount = data.get("paid_amount") or data.get("amount") or 0
 
     print("🔑 transaction_nsu:", transaction_nsu)
     print("🔑 reference:", reference)
     print("💰 paid_amount:", paid_amount)
 
-    # -------- VALIDAÇÕES --------
-    if not transaction_nsu:
-        print("❌ transaction_nsu ausente")
-        return jsonify({"msg": "transaction_nsu ausente"}), 200
-
-    if not reference:
-        print("❌ reference ausente")
-        return jsonify({"msg": "reference ausente"}), 200
+    if not transaction_nsu or not reference:
+        return jsonify({"msg": "Evento incompleto"}), 200
 
     if float(paid_amount) <= 0:
-        print("❌ Pagamento não confirmado")
         return jsonify({"msg": "Pagamento não confirmado"}), 200
 
     if transacao_ja_processada(transaction_nsu):
-        print("🔁 Transação já processada")
         return jsonify({"msg": "Já processado"}), 200
 
-    # -------- PLANO --------
     plano_id = reference.rsplit("-", 1)[0]
-    print("📦 plano_id:", plano_id)
-
     if plano_id not in PLANOS:
-        print("❌ Plano inválido:", plano_id)
         return jsonify({"msg": "Plano inválido"}), 200
 
-    # -------- EMAIL --------
     email = buscar_email(reference)
-    print("📧 EMAIL BUSCADO:", email)
+    print("📧 EMAIL:", email)
 
     if not email:
-        print("❌ Email não encontrado para:", reference)
         return jsonify({"msg": "Email não encontrado"}), 200
 
     plano = PLANOS[plano_id]
     arquivo = None
 
     try:
-        print("📦 Gerando arquivo...")
         arquivo, senha = compactar_plano(plano["pasta"], PASTA_SAIDA)
 
-        print("📧 Enviando email...")
         enviar_email(
             destinatario=email,
             nome_plano=plano["nome"],
@@ -177,16 +140,15 @@ def webhook():
         )
 
         marcar_processada(transaction_nsu)
-        print("✅ EMAIL ENVIADO COM SUCESSO")
+        print("✅ EMAIL ENVIADO")
 
     except Exception as e:
-        print("❌ ERRO CRÍTICO:", str(e))
+        print("❌ ERRO:", str(e))
         return jsonify({"msg": "Erro interno"}), 500
 
     finally:
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)
-            print("🧹 Arquivo removido")
 
     print("================ FIM WEBHOOK ================\n")
     return jsonify({"msg": "OK"}), 200
