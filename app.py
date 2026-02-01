@@ -1,114 +1,133 @@
 from flask import Flask, request, jsonify
+import os
+
 from compactador import compactar_plano
 from email_utils import enviar_email
-import os
-import json
+
+from database import (
+    init_db,
+    salvar_order_email,
+    buscar_email,
+    transacao_ja_processada,
+    marcar_processada
+)
 
 app = Flask(__name__)
 
+# ================= INIT =================
+
+init_db()
+PASTA_SAIDA = "saida"
+os.makedirs(PASTA_SAIDA, exist_ok=True)
+
 # ================= PLANOS =================
+
 PLANOS = {
     "trx-bronze-0001": {"nome": "TRX BRONZE", "pasta": "Licencas/TRX BRONZE"},
     "trx-prata-0001":  {"nome": "TRX PRATA",  "pasta": "Licencas/TRX PRATA"},
     "trx-gold-0001":   {"nome": "TRX GOLD",   "pasta": "Licencas/TRX GOLD"},
     "trx-black-0001":  {"nome": "TRX BLACK",  "pasta": "Licencas/TRX BLACK"},
-    "trx_teste-0001":  {"nome": "TRX BRONZE", "pasta": "Licencas/TRX BRONZE"}
+    "trx-teste-0001":  {"nome": "TRX BLACK",  "pasta": "Licencas/TRX BLACK"}
 }
 
-PASTA_SAIDA = "saida"
-ARQUIVO_PROCESSADOS = "processados.json"
+# ======================================================
+# ENDPOINT 1 — SALVAR EMAIL ANTES DO PAGAMENTO
+# ======================================================
+
+@app.route("/salvar-email", methods=["POST"])
+def salvar_email():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({"erro": "Payload vazio"}), 400
+
+    order_nsu = data.get("order_nsu")
+    email = data.get("email")
+
+    if not order_nsu or not email:
+        return jsonify({"erro": "order_nsu ou email ausente"}), 400
+
+    salvar_order_email(order_nsu, email)
+
+    print(f"💾 EMAIL SALVO | order_nsu={order_nsu} | email={email}")
+
+    return jsonify({"msg": "Email salvo com sucesso"}), 200
 
 
-# ---------------- UTIL ----------------
-
-def carregar_processados():
-    if not os.path.exists(ARQUIVO_PROCESSADOS):
-        return []
-
-    try:
-        with open(ARQUIVO_PROCESSADOS, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def salvar_processados(processados):
-    with open(ARQUIVO_PROCESSADOS, "w", encoding="utf-8") as f:
-        json.dump(processados, f)
-
-
-# ---------------- WEBHOOK ----------------
+# ======================================================
+# ENDPOINT 2 — WEBHOOK INFINITEPAY (PAGAMENTO APROVADO)
+# ======================================================
 
 @app.route("/webhook/infinitypay", methods=["POST"])
 def webhook():
-    data = request.get_json(force=True, silent=True)
+    data = request.get_json(silent=True)
 
-    print("📩 WEBHOOK RECEBIDO:")
-    print(data)
+    print("📩 WEBHOOK RECEBIDO")
 
     if not data:
+        print("⚠️ Payload vazio")
         return jsonify({"msg": "Payload vazio"}), 200
 
-    if data.get("status") != "paid":
-        return jsonify({"msg": "Evento ignorado"}), 200
-
-    order_nsu = data.get("order_nsu")
     transaction_nsu = data.get("transaction_nsu")
+    order_nsu = data.get("order_nsu")
+    paid_amount = data.get("paid_amount", 0)
 
-    cliente = data.get("customer", {})
-    email = cliente.get("email")
-
-    if not order_nsu or not transaction_nsu or not email:
-        print("⚠️ Evento incompleto")
+    if not transaction_nsu or not order_nsu:
+        print("⚠️ Evento incompleto:", data)
         return jsonify({"msg": "Evento incompleto"}), 200
 
-    processados = carregar_processados()
+    if paid_amount <= 0:
+        print("⚠️ Pagamento não confirmado:", paid_amount)
+        return jsonify({"msg": "Pagamento não confirmado"}), 200
 
-    if transaction_nsu in processados:
+    if transacao_ja_processada(transaction_nsu):
         print("🔁 Transação já processada:", transaction_nsu)
         return jsonify({"msg": "Já processado"}), 200
 
     if order_nsu not in PLANOS:
-        print("❌ Plano não reconhecido:", order_nsu)
+        print("❌ Plano inválido:", order_nsu)
         return jsonify({"msg": "Plano inválido"}), 200
 
+    email = buscar_email(order_nsu)
+
+    if not email:
+        print("❌ Email não encontrado para order_nsu:", order_nsu)
+        return jsonify({"msg": "Email não encontrado"}), 200
+
     plano = PLANOS[order_nsu]
+    arquivo = None
 
-    # -------- GERAR ARQUIVO --------
     try:
+        # -------- GERAR ARQUIVO --------
         arquivo, senha = compactar_plano(plano["pasta"], PASTA_SAIDA)
-    except Exception as e:
-        print("❌ Erro ao compactar:", e)
-        return jsonify({"error": "Erro interno"}), 500
 
-    # -------- ENVIAR EMAIL --------
-    try:
+        # -------- ENVIAR EMAIL --------
         enviar_email(
             destinatario=email,
             nome_plano=plano["nome"],
             arquivo=arquivo,
             senha=senha
         )
+
+        # -------- MARCAR PROCESSADO --------
+        marcar_processada(transaction_nsu)
+
+        print("✅ EMAIL ENVIADO COM SUCESSO")
+
     except Exception as e:
-        print("❌ Erro ao enviar email:", e)
-        return jsonify({"error": "Erro ao enviar email"}), 500
+        print("❌ ERRO NO PROCESSO:", str(e))
+        return jsonify({"msg": "Erro interno"}), 500
 
-    # -------- MARCAR COMO PROCESSADO --------
-    processados.append(transaction_nsu)
-    salvar_processados(processados)
+    finally:
+        # -------- LIMPAR ARQUIVO --------
+        if arquivo and os.path.exists(arquivo):
+            os.remove(arquivo)
 
-    # -------- LIMPAR ARQUIVO --------
-    try:
-        os.remove(arquivo)
-    except Exception:
-        pass
+    return jsonify({"msg": "OK"}), 200
 
-    print("✅ PROCESSO FINALIZADO")
 
-    return jsonify({"msg": "Plano enviado com sucesso"}), 200
-
+# ================= START =================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    os.makedirs(PASTA_SAIDA, exist_ok=True)
     app.run(host="0.0.0.0", port=port)
