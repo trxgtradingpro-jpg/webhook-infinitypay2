@@ -29,7 +29,12 @@ Obrigado pela sua compra!
 – Guarde sua senha
 – Não compartilhe o arquivo
 
-Qualquer dúvida, é só responder este email.
+Qualquer dúvida, é só responder este email entre em contato com o suporte:
+Email: trxtradingpro@gmail.com
+
+WhatsApp +55 11 98175-9207
+WhatsApp2 +55 11 94043-1906
+
 
 Bom uso 
 """
@@ -39,5 +44,4 @@ Bom uso
     }
 
     requests.post(GOOGLE_EMAIL_WEBHOOK, json=payload, timeout=60)
-
 
