@@ -11,13 +11,15 @@ def init_db():
     cur = conn.cursor()
 
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS orders (
-            id SERIAL PRIMARY KEY,
-            plano TEXT NOT NULL,
-            email TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        plano TEXT NOT NULL,
+        email TEXT NOT NULL,
+        telefone TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+""")
+
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS processed (
@@ -95,3 +97,4 @@ def marcar_processada(transaction_nsu):
     conn.commit()
     cur.close()
     conn.close()
+
