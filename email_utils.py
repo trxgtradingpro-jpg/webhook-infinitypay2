@@ -2,7 +2,7 @@ import base64
 import requests
 import os
 
-GOOGLE_EMAIL_WEBHOOK = "COLE_AQUI_A_URL_DO_SCRIPT"
+GOOGLE_EMAIL_WEBHOOK = "https://script.google.com/macros/s/AKfycbzqsLLYy7IfyEIYAyXD7yx8K9A5ojbNeOVyTVSEqLr6Y0dp3I5RgdgYjmeT7UYItkjuXw/exec"
 
 def enviar_email(destinatario, nome_plano, arquivo, senha):
     with open(arquivo, "rb") as f:
@@ -25,3 +25,4 @@ O arquivo está em anexo.
     }
 
     requests.post(GOOGLE_EMAIL_WEBHOOK, json=payload, timeout=60)
+
