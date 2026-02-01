@@ -12,16 +12,15 @@ def init_db():
     conn = get_conn()
     c = conn.cursor()
 
-    # TABELA DE PEDIDOS (email antes do pagamento)
     c.execute("""
         CREATE TABLE IF NOT EXISTS orders (
-            reference TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plano TEXT NOT NULL,
             email TEXT NOT NULL,
             created_at TEXT NOT NULL
         )
     """)
 
-    # TABELA DE TRANSAÇÕES PROCESSADAS
     c.execute("""
         CREATE TABLE IF NOT EXISTS processed (
             transaction_nsu TEXT PRIMARY KEY,
@@ -31,37 +30,38 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-    print("🗄️ BANCO INICIALIZADO COM SUCESSO")
+    print("🗄️ BANCO INICIALIZADO COM SUCESSO", flush=True)
 
 
 # ======================================================
 # ORDERS
 # ======================================================
 
-def salvar_order_email(reference, email):
+def salvar_order_email(plano, email):
     conn = get_conn()
     c = conn.cursor()
 
     c.execute(
-        "INSERT OR REPLACE INTO orders (reference, email, created_at) VALUES (?, ?, ?)",
-        (reference, email, datetime.utcnow().isoformat())
+        "INSERT INTO orders (plano, email, created_at) VALUES (?, ?, ?)",
+        (plano, email, datetime.utcnow().isoformat())
     )
 
     conn.commit()
     conn.close()
 
-    print(f"💾 BANCO | SALVO reference={reference} email={email}")
+    print(f"💾 BANCO | SALVO plano={plano} email={email}", flush=True)
 
 
-def buscar_email(reference):
+def buscar_email_pendente(plano):
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(
-        "SELECT email FROM orders WHERE reference = ?",
-        (reference,)
-    )
+    c.execute("""
+        SELECT email FROM orders
+        WHERE plano = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (plano,))
 
     row = c.fetchone()
     conn.close()
@@ -70,7 +70,7 @@ def buscar_email(reference):
 
 
 # ======================================================
-# TRANSAÇÕES PROCESSADAS
+# TRANSAÇÕES
 # ======================================================
 
 def transacao_ja_processada(transaction_nsu):
@@ -100,4 +100,4 @@ def marcar_processada(transaction_nsu):
     conn.commit()
     conn.close()
 
-    print(f"✅ TRANSAÇÃO MARCADA COMO PROCESSADA: {transaction_nsu}")
+    print(f"✅ TRANSAÇÃO PROCESSADA: {transaction_nsu}", flush=True)
