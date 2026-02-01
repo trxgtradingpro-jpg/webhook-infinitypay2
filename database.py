@@ -11,7 +11,6 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
-    # pedidos
     cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             order_id TEXT PRIMARY KEY,
@@ -22,7 +21,6 @@ def init_db():
         )
     """)
 
-    # transações já processadas (idempotência)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS processed (
             transaction_nsu TEXT PRIMARY KEY,
@@ -59,7 +57,6 @@ def buscar_order_por_id(order_id):
         SELECT order_id, plano, email, status
         FROM orders
         WHERE order_id = %s
-        FOR UPDATE
     """, (order_id,))
 
     row = cur.fetchone()
