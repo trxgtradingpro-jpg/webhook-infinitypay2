@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template, redirect
-import os, json
+import os
 
 from compactador import compactar_plano
 from email_utils import enviar_email
@@ -8,11 +8,15 @@ from database import (
     salvar_order,
     buscar_email_pendente,
     listar_orders,
+    listar_pagamentos,
+    salvar_pagamento,
     transacao_ja_processada,
     marcar_processada
 )
 
 print("🚀 APP INICIADO", flush=True)
+
+# ================= APP =================
 
 app = Flask(__name__)
 init_db()
@@ -27,7 +31,7 @@ PLANOS = {
     "trx-prata-0001":  {"nome": "TRX PRATA",  "pasta": "Licencas/TRX PRATA"},
     "trx-gold-0001":   {"nome": "TRX GOLD",   "pasta": "Licencas/TRX GOLD"},
     "trx-black-0001":  {"nome": "TRX BLACK",  "pasta": "Licencas/TRX BLACK"},
-    "trx-teste-0001":  {"nome": "TRX BLACK",  "pasta": "Licencas/TRX BLACK"},
+    "trx-teste-0001":  {"nome": "TRX BRONZE", "pasta": "Licencas/TRX BRONZE"},
 }
 
 CHECKOUT_LINKS = {
@@ -60,8 +64,8 @@ def comprar():
         return "Dados inválidos", 400
 
     salvar_order(plano, email, telefone)
+    print(f"💾 ORDER SALVO | {plano} | {email}", flush=True)
 
-    print(f"💾 SALVO | plano={plano} email={email} telefone={telefone}", flush=True)
     return redirect(CHECKOUT_LINKS[plano])
 
 # ================= WEBHOOK =================
@@ -77,8 +81,7 @@ def webhook():
     transaction_nsu = data.get("transaction_nsu")
     plano = data.get("order_nsu")
     paid_amount = data.get("paid_amount", 0)
-
-    print("📦 plano:", plano, flush=True)
+    metodo = data.get("capture_method", "desconhecido")
 
     if not transaction_nsu or not plano or paid_amount <= 0:
         return jsonify({"msg": "Evento ignorado"}), 200
@@ -98,8 +101,19 @@ def webhook():
     arquivo = None
 
     try:
+        # 🔹 salvar pagamento no banco
+        salvar_pagamento(
+            transaction_nsu=transaction_nsu,
+            plano=plano,
+            email=email,
+            valor=paid_amount,
+            metodo=metodo
+        )
+
+        # 🔹 gerar arquivo
         arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
 
+        # 🔹 enviar email
         enviar_email(
             destinatario=email,
             nome_plano=plano_info["nome"],
@@ -108,7 +122,7 @@ def webhook():
         )
 
         marcar_processada(transaction_nsu)
-        print("✅ EMAIL ENVIADO", flush=True)
+        print("✅ EMAIL E PAGAMENTO PROCESSADOS", flush=True)
 
     finally:
         if arquivo and os.path.exists(arquivo):
@@ -119,67 +133,24 @@ def webhook():
 
 # ================= DASHBOARD =================
 
-from datetime import datetime
-@app.route("/pagamentos")
-def pagamentos():
-    transacoes = listar_pagamentos()  # vindo do banco
-    return render_template("pagamentos.html", transacoes=transacoes)
-
-@app.route("/relatorios")
-def relatorios():
-    faturamento_mensal = "5.430,00"
-    crescimento = 18
-    plano_top = "TRX BRONZE"
-    conversao = 92
-    melhor_dia = "Sexta-feira"
-
-    dias = [
-        {"dia":"Segunda","vendas":5,"valor":"985,00"},
-        {"dia":"Terça","vendas":7,"valor":"1.379,00"},
-        {"dia":"Quarta","vendas":4,"valor":"788,00"},
-        {"dia":"Quinta","vendas":6,"valor":"1.182,00"},
-        {"dia":"Sexta","vendas":9,"valor":"1.096,00"},
-    ]
-
-    chart_labels = ["Seg","Ter","Qua","Qui","Sex"]
-    chart_values = [985,1379,788,1182,1096]
-
-    planos_labels = ["TRX BRONZE","TRX PRATA","TRX GOLD","TRX BLACK"]
-    planos_values = [55,20,15,10]
-
-    return render_template(
-        "relatorios.html",
-        faturamento_mensal=faturamento_mensal,
-        crescimento=crescimento,
-        plano_top=plano_top,
-        conversao=conversao,
-        melhor_dia=melhor_dia,
-        dias=dias,
-        chart_labels=chart_labels,
-        chart_values=chart_values,
-        planos_labels=planos_labels,
-        planos_values=planos_values
-    )
-
 @app.route("/orders")
 def orders():
     pedidos = listar_orders(200)
-    return render_template(
-        "orders.html",
-        orders=pedidos,
-        year=datetime.now().year
-    )
+    return render_template("orders.html", orders=pedidos)
 
+
+@app.route("/pagamentos")
+def pagamentos():
+    transacoes = listar_pagamentos()
+    return render_template("pagamentos.html", transacoes=transacoes)
+
+
+@app.route("/relatorios")
+def relatorios():
+    return render_template("relatorios.html")
 
 # ================= START =================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
-
-
-
-
