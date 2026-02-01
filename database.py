@@ -6,19 +6,23 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_conn():
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
+
 def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
+    # pedidos
     cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
-            id SERIAL PRIMARY KEY,
+            order_id TEXT PRIMARY KEY,
             plano TEXT NOT NULL,
             email TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
     """)
 
+    # transações já processadas (idempotência)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS processed (
             transaction_nsu TEXT PRIMARY KEY,
@@ -30,40 +34,63 @@ def init_db():
     cur.close()
     conn.close()
 
-    print("🗄️ POSTGRES CONECTADO E TABELAS OK", flush=True)
+    print("🗄️ POSTGRES OK", flush=True)
 
 
-def salvar_order_email(plano, email):
+def salvar_order(order_id, plano, email):
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute(
-        "INSERT INTO orders (plano, email) VALUES (%s, %s)",
-        (plano, email)
-    )
+    cur.execute("""
+        INSERT INTO orders (order_id, plano, email)
+        VALUES (%s, %s, %s)
+    """, (order_id, plano, email))
 
     conn.commit()
     cur.close()
     conn.close()
 
 
-def buscar_email_pendente(plano):
+def buscar_order_por_id(order_id):
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT email FROM orders
-        WHERE plano = %s
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (plano,))
+        SELECT order_id, plano, email, status
+        FROM orders
+        WHERE order_id = %s
+        FOR UPDATE
+    """, (order_id,))
 
     row = cur.fetchone()
 
     cur.close()
     conn.close()
 
-    return row[0] if row else None
+    if not row:
+        return None
+
+    return {
+        "order_id": row[0],
+        "plano": row[1],
+        "email": row[2],
+        "status": row[3]
+    }
+
+
+def marcar_order_processada(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE orders
+        SET status = 'PROCESSADO'
+        WHERE order_id = %s
+    """, (order_id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 def transacao_ja_processada(transaction_nsu):
@@ -83,14 +110,15 @@ def transacao_ja_processada(transaction_nsu):
     return exists
 
 
-def marcar_processada(transaction_nsu):
+def marcar_transacao_processada(transaction_nsu):
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute(
-        "INSERT INTO processed (transaction_nsu) VALUES (%s) ON CONFLICT DO NOTHING",
-        (transaction_nsu,)
-    )
+    cur.execute("""
+        INSERT INTO processed (transaction_nsu)
+        VALUES (%s)
+        ON CONFLICT DO NOTHING
+    """, (transaction_nsu,))
 
     conn.commit()
     cur.close()
