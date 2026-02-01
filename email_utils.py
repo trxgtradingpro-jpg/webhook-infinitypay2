@@ -28,7 +28,7 @@ Para receber avisos, atualizações e suporte, entre no grupo abaixo:
 – Guarde sua senha
 – Não compartilhe o arquivo
 
-📞 Suporte:
+ Suporte:
 Email: trxtradingpro@gmail.com  
 WhatsApp: +55 11 98175-9207  
 WhatsApp 2: +55 11 94043-1906  
@@ -45,4 +45,5 @@ Bom uso
     }
 
     requests.post(GOOGLE_EMAIL_WEBHOOK, json=payload, timeout=60)
+
 
