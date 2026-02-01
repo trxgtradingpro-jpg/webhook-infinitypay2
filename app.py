@@ -118,6 +118,35 @@ def webhook():
 # ================= DASHBOARD =================
 
 from datetime import datetime
+@app.route("/pagamentos")
+def pagamentos():
+    # DADOS MOCK (por enquanto)
+    pagamentos = [
+        {
+            "plano": "TRX BRONZE",
+            "email": "cliente@email.com",
+            "valor": "197,00",
+            "metodo": "PIX",
+            "data": "01/02/2026"
+        }
+    ]
+
+    faturamento_total = "197,00"
+    pagamentos_hoje = 1
+    ticket_medio = "197,00"
+
+    chart_labels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"]
+    chart_values = [197, 394, 197, 591, 394, 788, 591]
+
+    return render_template(
+        "pagamentos.html",
+        pagamentos=pagamentos,
+        faturamento_total=faturamento_total,
+        pagamentos_hoje=pagamentos_hoje,
+        ticket_medio=ticket_medio,
+        chart_labels=chart_labels,
+        chart_values=chart_values
+    )
 
 @app.route("/orders")
 def orders():
@@ -134,4 +163,5 @@ def orders():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
