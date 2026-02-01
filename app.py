@@ -7,7 +7,7 @@ import json
 app = Flask(__name__)
 
 # ================= PLANOS =================
-# O identificador É O order_nsu enviado no POST da InfinitePay
+# A chave É O order_nsu enviado pela InfinitePay
 PLANOS = {
     "trx-bronze-0001": {"nome": "TRX BRONZE", "pasta": "Licencas/TRX BRONZE"},
     "trx-prata-0001":  {"nome": "TRX PRATA",  "pasta": "Licencas/TRX PRATA"},
@@ -21,7 +21,7 @@ PASTA_SAIDA = "saida"
 ARQUIVO_PROCESSADOS = "processados.json"
 
 
-# ---------- CONTROLE DE PAGAMENTOS PROCESSADOS ----------
+# ---------------- UTILIDADES ----------------
 
 def carregar_processados():
     if not os.path.exists(ARQUIVO_PROCESSADOS):
@@ -39,76 +39,88 @@ def salvar_processados(processados):
         json.dump(processados, f)
 
 
-# -------------------- WEBHOOK --------------------
+# ---------------- WEBHOOK ----------------
 
 @app.route("/webhook/infinitypay", methods=["POST"])
 def webhook():
     data = request.get_json(force=True, silent=True)
 
+    print("📩 WEBHOOK RECEBIDO:")
+    print(data)
+
     if not data:
-        return jsonify({"error": "Payload inválido"}), 400
+        return jsonify({"msg": "Payload vazio"}), 200
 
-    # Confirma pagamento
+    # Apenas pagamentos confirmados
     if data.get("status") != "paid":
-        return jsonify({"msg": "Pagamento não aprovado"}), 200
+        return jsonify({"msg": "Evento ignorado"}), 200
 
-    # ID único do pagamento (para evitar duplicidade)
     pagamento_id = data.get("id") or data.get("transaction_id")
-    processados = carregar_processados()
-
-    if pagamento_id and pagamento_id in processados:
-        return jsonify({"msg": "Pagamento já processado"}), 200
-
-    # 🔥 Identificador correto do plano (InfinitePay External Checkout)
-    plano_id = data.get("order_nsu")
+    order_nsu = data.get("order_nsu")
 
     cliente = data.get("customer", {})
     email = cliente.get("email")
 
-    if not email:
-        return jsonify({"error": "Email não encontrado"}), 400
+    # Eventos incompletos → ignora com 200
+    if not pagamento_id or not order_nsu or not email:
+        print("⚠️ Evento incompleto ignorado")
+        return jsonify({"msg": "Evento incompleto"}), 200
 
-    if not plano_id or plano_id not in PLANOS:
-        return jsonify({"error": "Plano não reconhecido"}), 400
+    processados = carregar_processados()
 
-    plano = PLANOS[plano_id]
+    # Evita duplicidade
+    if pagamento_id in processados:
+        print("🔁 Pagamento já processado:", pagamento_id)
+        return jsonify({"msg": "Pagamento já processado"}), 200
+
+    if order_nsu not in PLANOS:
+        print("❌ Plano não reconhecido:", order_nsu)
+        return jsonify({"msg": "Plano não reconhecido"}), 200
+
+    plano = PLANOS[order_nsu]
 
     if not os.path.exists(plano["pasta"]):
-        return jsonify({"error": "Pasta do plano não encontrada"}), 500
+        print("❌ Pasta do plano não encontrada")
+        return jsonify({"error": "Erro interno"}), 500
 
-    # Gera ZIP + senha
-    arquivo, senha = compactar_plano(plano["pasta"], PASTA_SAIDA)
+    # -------- GERA ARQUIVO --------
+    try:
+        arquivo, senha = compactar_plano(plano["pasta"], PASTA_SAIDA)
+    except Exception as e:
+        print("❌ ERRO AO COMPACTAR:", e)
+        return jsonify({"error": "Erro ao gerar arquivo"}), 500
 
-    # Envia email com anexo
-    enviar_email(
-        destinatario=email,
-        nome_plano=plano["nome"],
-        arquivo=arquivo,
-        senha=senha
-    )
-    print("🚀 CHAMANDO enviar_email()")
+    # -------- ENVIA EMAIL --------
+    try:
+        print("📧 Enviando email para:", email)
+        enviar_email(
+            destinatario=email,
+            nome_plano=plano["nome"],
+            arquivo=arquivo,
+            senha=senha
+        )
+    except Exception as e:
+        print("❌ ERRO AO ENVIAR EMAIL:", e)
+        return jsonify({"error": "Falha ao enviar email"}), 500
 
+    # -------- MARCA COMO PROCESSADO --------
+    processados.append(pagamento_id)
+    salvar_processados(processados)
 
-    # Marca pagamento como processado
-    if pagamento_id:
-        processados.append(pagamento_id)
-        salvar_processados(processados)
-
-    # Remove o ZIP após envio
+    # -------- LIMPA ARQUIVO --------
     try:
         os.remove(arquivo)
     except Exception:
         pass
 
+    print("✅ PROCESSO FINALIZADO COM SUCESSO")
+
     return jsonify({"msg": "Plano enviado com sucesso"}), 200
-    print("🚀 CHAMANDO enviar_email22()")
 
 
-# -------------------- START --------------------
+# ---------------- START ----------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     os.makedirs(PASTA_SAIDA, exist_ok=True)
     app.run(host="0.0.0.0", port=port)
-
-
