@@ -2,22 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Pedido {{ pedido.order_id }}</title>
+  <title>Pedido</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      background: #f5f7fb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 30px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1f2937;
+    }
+
+    p {
+      margin: 10px 0;
+      font-size: 15px;
+    }
+
+    b {
+      color: #374151;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 20px;
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+  </style>
 </head>
 <body>
 
-  <h2>Pedido</h2>
+  <div class="card">
+    <h2>📦 Pedido</h2>
 
-  <p><b>Order ID:</b> {{ pedido.order_id }}</p>
-  <p><b>Email:</b> {{ pedido.email }}</p>
-  <p><b>Plano:</b> {{ pedido.plano }}</p>
-  <p><b>Status:</b> {{ pedido.status }}</p>
-  <p><b>Tentativas de Email:</b> {{ pedido.email_tentativas }}</p>
-  <p><b>Último erro:</b> {{ pedido.ultimo_erro }}</p>
-  <p><b>Data:</b> {{ pedido.created_at }}</p>
+    <p><b>Order ID:</b> {{ pedido.order_id }}</p>
+    <p><b>Email:</b> {{ pedido.email }}</p>
+    <p><b>Plano:</b> {{ pedido.plano }}</p>
+    <p><b>Status:</b> {{ pedido.status }}</p>
+    <p><b>Tentativas de Email:</b> {{ pedido.email_tentativas }}</p>
+    <p><b>Último erro:</b> {{ pedido.ultimo_erro }}</p>
+    <p><b>Data:</b> {{ pedido.created_at }}</p>
 
-  <br>
-  <a href="/admin/dashboard">← Voltar ao dashboard</a>
+    <a href="/admin/dashboard">← Voltar ao dashboard</a>
+  </div>
 
 </body>
 </html>
