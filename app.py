@@ -58,7 +58,7 @@ HANDLE = "guilherme-gomes-v85"
 WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 
 # ======================================================
-# PLANOS
+# PLANOS (COM TESTE + GRÁTIS)
 # ======================================================
 
 PLANOS = {
@@ -86,18 +86,17 @@ PLANOS = {
         "preco": 70000,
         "redirect_url": "https://sites.google.com/view/plano-ilimitado/in%C3%ADcio"
     },
-    "trx-gratis": {
-    "nome": "TRX GRATIS",
-    "pasta": "Licencas/TRX GRATIS",
-    "preco": 0,
-    "gratis": True,
-    "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
-},
-
     "trx-teste": {
         "nome": "TRX TESTE",
         "pasta": "Licencas/TRX TESTE",
         "preco": 100,
+        "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
+    },
+    "trx-gratis": {
+        "nome": "TRX GRÁTIS",
+        "pasta": "Licencas/TRX GRATIS",
+        "preco": 0,
+        "gratis": True,
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     }
 }
@@ -107,10 +106,6 @@ PLANOS = {
 # ======================================================
 
 def formatar_telefone_infinitepay(telefone):
-    """
-    Converte qualquer entrada para:
-    +5511999999999
-    """
     numeros = re.sub(r"\D", "", telefone)
 
     if numeros.startswith("55") and len(numeros) > 11:
@@ -122,7 +117,7 @@ def formatar_telefone_infinitepay(telefone):
     return f"+55{numeros}"
 
 # ======================================================
-# CHECKOUT DINÂMICO (INFINITEPAY)
+# CHECKOUT INFINITEPAY
 # ======================================================
 
 def criar_checkout_dinamico(plano_id, order_id, nome, email, telefone):
@@ -133,14 +128,11 @@ def criar_checkout_dinamico(plano_id, order_id, nome, email, telefone):
         "webhook_url": WEBHOOK_URL,
         "redirect_url": plano["redirect_url"],
         "order_nsu": order_id,
-
-        # 🔥 FORMATO OFICIAL DA DOC INFINITEPAY
         "customer": {
             "name": nome,
             "email": email,
             "phone_number": formatar_telefone_infinitepay(telefone)
         },
-
         "items": [
             {
                 "description": plano["nome"],
@@ -172,14 +164,9 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
                 senha=senha
             )
             return True
-
         except Exception as e:
             tentativas += 1
-            registrar_falha_email(
-                order["order_id"],
-                tentativas,
-                str(e)
-            )
+            registrar_falha_email(order["order_id"], tentativas, str(e))
             time.sleep(5)
 
     return False
@@ -206,86 +193,55 @@ def checkout(plano):
         telefone=session.get("telefone", "")
     )
 
-
-
+# 🚫 nunca permitir GET em /comprar
 @app.route("/comprar", methods=["GET"])
+def comprar_get():
+    return redirect("/")
+
+# ✅ POST real
+@app.route("/comprar", methods=["POST"])
 def comprar():
     nome = request.form.get("nome")
     email = request.form.get("email")
-    telefone_raw = request.form.get("telefone")
+    telefone = request.form.get("telefone")
     plano_id = request.form.get("plano")
 
-    if not nome or not email or not telefone_raw or plano_id not in PLANOS:
+    if not nome or not email or not telefone or plano_id not in PLANOS:
         return "Dados inválidos", 400
 
-    try:
-        telefone_formatado = formatar_telefone_infinitepay(telefone_raw)
-    except ValueError:
-        return "Telefone inválido. Use DDD + número.", 400
+    formatar_telefone_infinitepay(telefone)
 
-    # salva para autofill
     session["nome"] = nome
     session["email"] = email
-    session["telefone"] = telefone_raw
+    session["telefone"] = telefone
 
     order_id = str(uuid.uuid4())
-    salvar_order(
-    order_id=order_id,
-    plano=plano_id,
-    nome=nome,
-    email=email,
-    telefone=telefone_raw
-)
-
+    salvar_order(order_id, plano_id, nome, email, telefone)
 
     plano = PLANOS[plano_id]
 
-    # ======================================================
-    # 🚀 FLUXO PLANO GRÁTIS (SEM CHECKOUT)
-    # ======================================================
+    # 🎁 PLANO GRÁTIS
     if plano.get("gratis") is True or plano["preco"] <= 0:
-        print(f"🎁 PLANO GRÁTIS | {order_id}", flush=True)
-
         arquivo = None
         try:
-            arquivo, senha = compactar_plano(
-                plano["pasta"],
-                PASTA_SAIDA
-            )
-
-            enviar_email(
-                destinatario=email,
-                nome_plano=plano["nome"],
-                arquivo=arquivo,
-                senha=senha
-            )
-
+            arquivo, senha = compactar_plano(plano["pasta"], PASTA_SAIDA)
+            enviar_email(email, plano["nome"], arquivo, senha)
             marcar_order_processada(order_id)
-
         finally:
             if arquivo and os.path.exists(arquivo):
                 os.remove(arquivo)
 
-        # redireciona direto para a página final
         return redirect(plano["redirect_url"])
 
-    # ======================================================
-    # 💳 FLUXO PLANO PAGO (INFINITEPAY)
-    # ======================================================
+    # 💳 PLANO TESTE / PAGO
     checkout_url = criar_checkout_dinamico(
-        plano_id=plano_id,
-        order_id=order_id,
-        nome=nome,
-        email=email,
-        telefone=telefone_raw
+        plano_id, order_id, nome, email, telefone
     )
 
-    print(f"🧾 PEDIDO {order_id} criado para {email}", flush=True)
     return redirect(checkout_url)
 
-
 # ======================================================
-# WEBHOOK INFINITEPAY
+# WEBHOOK
 # ======================================================
 
 @app.route("/webhook/infinitypay", methods=["POST"])
@@ -310,22 +266,11 @@ def webhook():
     arquivo = None
 
     try:
-        arquivo, senha = compactar_plano(
-            plano_info["pasta"],
-            PASTA_SAIDA
-        )
-
-        sucesso = enviar_email_com_retry(
-            order,
-            plano_info,
-            arquivo,
-            senha
-        )
-
+        arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
+        sucesso = enviar_email_com_retry(order, plano_info, arquivo, senha)
         if sucesso:
             marcar_order_processada(order_id)
             marcar_transacao_processada(transaction_nsu)
-
     finally:
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)
@@ -333,7 +278,7 @@ def webhook():
     return jsonify({"msg": "OK"}), 200
 
 # ======================================================
-# ADMIN / DASHBOARD
+# ADMIN
 # ======================================================
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -343,7 +288,6 @@ def admin_login():
             session["admin"] = True
             return redirect("/admin/dashboard")
         return "Senha inválida", 403
-
     return render_template("admin_login.html")
 
 
@@ -380,9 +324,3 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
-
-
-
