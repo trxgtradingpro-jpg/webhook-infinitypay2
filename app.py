@@ -25,14 +25,19 @@ from database import (
 
 print("🚀 APP INICIADO", flush=True)
 
+# ======================================================
+# APP
+# ======================================================
+
 app = Flask(__name__)
 
 # ======================================================
-# CONFIG ADMIN
+# CONFIG ADMIN (SOMENTE VARIÁVEIS DE AMBIENTE)
 # ======================================================
+# ⚠️ Se essas variáveis não existirem, o app NÃO SOBE (correto em produção)
 
-app.secret_key = os.environ.get("ADMIN_SECRET", "supersecret")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "123456")
+app.secret_key = os.environ["ADMIN_SECRET"]
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
 # ======================================================
 # INIT
@@ -113,7 +118,7 @@ def criar_checkout_dinamico(plano_id, order_id):
     return r.json()["url"]
 
 # ======================================================
-# EMAIL COM RETRY
+# EMAIL COM RETRY AUTOMÁTICO
 # ======================================================
 
 MAX_TENTATIVAS_EMAIL = 3
@@ -214,7 +219,12 @@ def webhook():
     try:
         arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
 
-        sucesso = enviar_email_com_retry(order, plano_info, arquivo, senha)
+        sucesso = enviar_email_com_retry(
+            order=order,
+            plano_info=plano_info,
+            arquivo=arquivo,
+            senha=senha
+        )
 
         if sucesso:
             marcar_order_processada(order_id)
@@ -230,7 +240,7 @@ def webhook():
     return jsonify({"msg": "OK"}), 200
 
 # ======================================================
-# DASHBOARD ADMIN
+# DASHBOARD ADMIN (PROTEGIDO)
 # ======================================================
 
 @app.route("/admin/login", methods=["GET", "POST"])
