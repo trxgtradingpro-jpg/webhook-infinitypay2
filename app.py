@@ -228,6 +228,40 @@ def comprar():
     order_id = str(uuid.uuid4())
     salvar_order(order_id, plano_id, email)
 
+    plano = PLANOS[plano_id]
+
+    # ======================================================
+    # 🚀 FLUXO PLANO GRÁTIS (SEM CHECKOUT)
+    # ======================================================
+    if plano.get("gratis") is True or plano["preco"] <= 0:
+        print(f"🎁 PLANO GRÁTIS | {order_id}", flush=True)
+
+        arquivo = None
+        try:
+            arquivo, senha = compactar_plano(
+                plano["pasta"],
+                PASTA_SAIDA
+            )
+
+            enviar_email(
+                destinatario=email,
+                nome_plano=plano["nome"],
+                arquivo=arquivo,
+                senha=senha
+            )
+
+            marcar_order_processada(order_id)
+
+        finally:
+            if arquivo and os.path.exists(arquivo):
+                os.remove(arquivo)
+
+        # redireciona direto para a página final
+        return redirect(plano["redirect_url"])
+
+    # ======================================================
+    # 💳 FLUXO PLANO PAGO (INFINITEPAY)
+    # ======================================================
     checkout_url = criar_checkout_dinamico(
         plano_id=plano_id,
         order_id=order_id,
@@ -238,6 +272,7 @@ def comprar():
 
     print(f"🧾 PEDIDO {order_id} criado para {email}", flush=True)
     return redirect(checkout_url)
+
 
 # ======================================================
 # WEBHOOK INFINITEPAY
@@ -335,4 +370,5 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
