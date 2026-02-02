@@ -201,3 +201,28 @@ def buscar_pedido_detalhado(order_id):
         "created_at": row[6]
     }
 
+
+def obter_estatisticas():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM orders")
+    total_pedidos = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM orders WHERE status = 'PROCESSADO'")
+    processados = cur.fetchone()[0]
+
+    cur.execute("SELECT COUNT(*) FROM orders WHERE status = 'PENDENTE'")
+    pendentes = cur.fetchone()[0]
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {
+        "total": total_pedidos,
+        "processados": processados,
+        "pendentes": pendentes
+    }
+
+
