@@ -3,6 +3,7 @@ import os
 import json
 import uuid
 import requests
+import time
 
 from compactador import compactar_plano
 from email_utils import enviar_email
@@ -12,6 +13,7 @@ from database import (
     salvar_order,
     buscar_order_por_id,
     marcar_order_processada,
+    registrar_falha_email,
     transacao_ja_processada,
     marcar_transacao_processada
 )
@@ -37,7 +39,7 @@ HANDLE = "guilherme-gomes-v85"
 WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 
 # ======================================================
-# PLANOS (COM REDIRECIONAMENTO)
+# PLANOS
 # ======================================================
 
 PLANOS = {
@@ -83,7 +85,7 @@ def criar_checkout_dinamico(plano_id, order_id):
     payload = {
         "handle": HANDLE,
         "webhook_url": WEBHOOK_URL,
-        "redirect_url": plano["redirect_url"],  # 👈 REDIRECIONAMENTO
+        "redirect_url": plano["redirect_url"],
         "order_nsu": order_id,
         "items": [
             {
@@ -97,6 +99,39 @@ def criar_checkout_dinamico(plano_id, order_id):
     r = requests.post(INFINITEPAY_URL, json=payload, timeout=30)
     r.raise_for_status()
     return r.json()["url"]
+
+# ======================================================
+# EMAIL COM RETRY
+# ======================================================
+
+MAX_TENTATIVAS_EMAIL = 3
+
+def enviar_email_com_retry(order, plano_info, arquivo, senha):
+    tentativas = order["email_tentativas"]
+
+    while tentativas < MAX_TENTATIVAS_EMAIL:
+        try:
+            enviar_email(
+                destinatario=order["email"],
+                nome_plano=plano_info["nome"],
+                arquivo=arquivo,
+                senha=senha
+            )
+            return True
+
+        except Exception as e:
+            tentativas += 1
+            print(f"❌ Falha no envio do email (tentativa {tentativas}): {e}", flush=True)
+
+            registrar_falha_email(
+                order_id=order["order_id"],
+                tentativas=tentativas,
+                erro=str(e)
+            )
+
+            time.sleep(5)
+
+    return False
 
 # ======================================================
 # ROTAS
@@ -120,15 +155,11 @@ def comprar():
 
     order_id = str(uuid.uuid4())
 
-    salvar_order(
-        order_id=order_id,
-        plano=plano_id,
-        email=email
-    )
+    salvar_order(order_id, plano_id, email)
 
     checkout_url = criar_checkout_dinamico(plano_id, order_id)
 
-    print(f"🧾 ORDER {order_id} criado para {email}", flush=True)
+    print(f"🧾 PEDIDO {order_id} criado para {email}", flush=True)
     return redirect(checkout_url)
 
 # ======================================================
@@ -168,17 +199,19 @@ def webhook():
     try:
         arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
 
-        enviar_email(
-            destinatario=order["email"],
-            nome_plano=plano_info["nome"],
+        sucesso = enviar_email_com_retry(
+            order=order,
+            plano_info=plano_info,
             arquivo=arquivo,
             senha=senha
         )
 
-        marcar_order_processada(order_id)
-        marcar_transacao_processada(transaction_nsu)
-
-        print("✅ EMAIL ENVIADO", flush=True)
+        if sucesso:
+            marcar_order_processada(order_id)
+            marcar_transacao_processada(transaction_nsu)
+            print("✅ EMAIL ENVIADO COM SUCESSO", flush=True)
+        else:
+            print("🚨 EMAIL FALHOU APÓS TODAS AS TENTATIVAS", flush=True)
 
     finally:
         if arquivo and os.path.exists(arquivo):
