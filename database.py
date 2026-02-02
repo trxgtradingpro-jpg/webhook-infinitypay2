@@ -14,18 +14,22 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
+    # TABELA BASE
     cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             order_id TEXT PRIMARY KEY,
             plano TEXT NOT NULL,
             email TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDENTE',
-            email_tentativas INT DEFAULT 0,
-            ultimo_erro TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
     """)
 
+    # MIGRATIONS SEGURAS (corrige erro atual)
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS email_tentativas INT DEFAULT 0;")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS ultimo_erro TEXT;")
+
+    # TABELA DE IDEMPOTÊNCIA
     cur.execute("""
         CREATE TABLE IF NOT EXISTS processed (
             transaction_nsu TEXT PRIMARY KEY,
@@ -37,7 +41,7 @@ def init_db():
     cur.close()
     conn.close()
 
-    print("🗄️ POSTGRES OK", flush=True)
+    print("🗄️ POSTGRES OK (com migrations)", flush=True)
 
 
 def salvar_order(order_id, plano, email):
