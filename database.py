@@ -31,15 +31,19 @@ def init_db():
 
     # TABELA DE IDEMPOTÊNCIA
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS processed (
-            transaction_nsu TEXT PRIMARY KEY,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS orders (
+        order_id TEXT PRIMARY KEY,
+        plano TEXT NOT NULL,
+        nome TEXT,
+        email TEXT NOT NULL,
+        telefone TEXT,
+        status TEXT DEFAULT 'PENDENTE',
+        email_tentativas INT DEFAULT 0,
+        ultimo_erro TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+    )
+""")
 
-    conn.commit()
-    cur.close()
-    conn.close()
 
     print("🗄️ POSTGRES OK (com migrations)", flush=True)
 
