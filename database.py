@@ -4,35 +4,13 @@ import os
 print("📦 DATABASE.PY CARREGADO")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-RESET_DB = os.environ.get("RESET_DB") == "1"
 
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 
-def reset_db_se_necessario():
-    if not RESET_DB:
-        return
-
-    print("⚠️ RESET_DB ATIVO — APAGANDO TABELAS", flush=True)
-
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("DROP TABLE IF EXISTS orders;")
-    cur.execute("DROP TABLE IF EXISTS processed;")
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    print("🔥 BANCO RESETADO COM SUCESSO", flush=True)
-
-
 def init_db():
-    reset_db_se_necessario()
-
     conn = get_conn()
     cur = conn.cursor()
 
@@ -42,6 +20,8 @@ def init_db():
             plano TEXT NOT NULL,
             email TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDENTE',
+            email_tentativas INT DEFAULT 0,
+            ultimo_erro TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
     """)
@@ -79,7 +59,7 @@ def buscar_order_por_id(order_id):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT order_id, plano, email, status
+        SELECT order_id, plano, email, status, email_tentativas
         FROM orders
         WHERE order_id = %s
     """, (order_id,))
@@ -96,7 +76,8 @@ def buscar_order_por_id(order_id):
         "order_id": row[0],
         "plano": row[1],
         "email": row[2],
-        "status": row[3]
+        "status": row[3],
+        "email_tentativas": row[4]
     }
 
 
@@ -109,6 +90,22 @@ def marcar_order_processada(order_id):
         SET status = 'PROCESSADO'
         WHERE order_id = %s
     """, (order_id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def registrar_falha_email(order_id, tentativas, erro):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE orders
+        SET email_tentativas = %s,
+            ultimo_erro = %s
+        WHERE order_id = %s
+    """, (tentativas, erro, order_id))
 
     conn.commit()
     cur.close()
