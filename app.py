@@ -216,7 +216,14 @@ def comprar():
     session["telefone"] = telefone
 
     order_id = str(uuid.uuid4())
-    salvar_order(order_id, plano_id, nome, email, telefone)
+    salvar_order(
+    order_id=order_id,
+    plano=plano_id,
+    nome=nome,
+    email=email,
+    telefone=telefone_raw
+)
+
 
     plano = PLANOS[plano_id]
 
@@ -324,3 +331,4 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
