@@ -1,65 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Pedido</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Pedido {{ pedido.order_id }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      background: #f5f7fb;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-      margin: 0;
-      padding: 30px;
-    }
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 30px;
+        }
 
-    .card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 30px;
-      max-width: 600px;
-      margin: auto;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.08);
-    }
+        .box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            max-width: 700px;
+        }
 
-    h2 {
-      margin-top: 0;
-      color: #1f2937;
-    }
+        h2 {
+            margin-top: 0;
+        }
 
-    p {
-      margin: 10px 0;
-      font-size: 15px;
-    }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
 
-    b {
-      color: #374151;
-    }
+        li {
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
 
-    a {
-      display: inline-block;
-      margin-top: 20px;
-      color: #2563eb;
-      text-decoration: none;
-      font-weight: 500;
-    }
-  </style>
+        strong {
+            display: inline-block;
+            width: 140px;
+        }
+
+        .erro {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff4f4;
+            border-radius: 8px;
+            color: #c0392b;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>📦 Pedido</h2>
+    <div class="box">
+        <h2>📦 Pedido</h2>
 
-    <p><b>Order ID:</b> {{ pedido.order_id }}</p>
-    <p><b>Email:</b> {{ pedido.email }}</p>
-    <p><b>Plano:</b> {{ pedido.plano }}</p>
-    <p><b>Status:</b> {{ pedido.status }}</p>
-    <p><b>Tentativas de Email:</b> {{ pedido.email_tentativas }}</p>
-    <p><b>Último erro:</b> {{ pedido.ultimo_erro }}</p>
-    <p><b>Data:</b> {{ pedido.created_at }}</p>
+        <ul>
+            <li><strong>ID:</strong> {{ pedido.order_id }}</li>
+            <li><strong>Nome:</strong> {{ pedido.nome }}</li>
+            <li><strong>Email:</strong> {{ pedido.email }}</li>
+            <li><strong>Telefone:</strong> {{ pedido.telefone }}</li>
+            <li><strong>Plano:</strong> {{ pedido.plano }}</li>
+            <li><strong>Status:</strong> {{ pedido.status }}</li>
+            <li><strong>Criado em:</strong> {{ pedido.created_at.strftime("%d/%m/%Y %H:%M") }}</li>
+        </ul>
 
-    <a href="/admin/dashboard">← Voltar ao dashboard</a>
-  </div>
+        {% if pedido.ultimo_erro %}
+        <div class="erro">
+            <strong>Último erro de envio:</strong><br>
+            {{ pedido.ultimo_erro }}
+        </div>
+        {% endif %}
+
+        <a href="/admin/dashboard">← Voltar ao dashboard</a>
+    </div>
 
 </body>
 </html>
