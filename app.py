@@ -37,34 +37,39 @@ HANDLE = "guilherme-gomes-v85"
 WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 
 # ======================================================
-# PLANOS
+# PLANOS (COM REDIRECIONAMENTO)
 # ======================================================
 
 PLANOS = {
     "trx-bronze": {
         "nome": "TRX BRONZE",
         "pasta": "Licencas/TRX BRONZE",
-        "preco": 19700
+        "preco": 19700,
+        "redirect_url": "https://sites.google.com/view/plano-bronze/in%C3%ADcio"
     },
     "trx-prata": {
         "nome": "TRX PRATA",
         "pasta": "Licencas/TRX PRATA",
-        "preco": 25000
+        "preco": 25000,
+        "redirect_url": "https://sites.google.com/view/plano-prata/in%C3%ADcio"
     },
     "trx-gold": {
         "nome": "TRX GOLD",
         "pasta": "Licencas/TRX GOLD",
-        "preco": 49900
+        "preco": 49900,
+        "redirect_url": "https://sites.google.com/view/plano-gold/in%C3%ADcio"
     },
     "trx-black": {
         "nome": "TRX BLACK",
         "pasta": "Licencas/TRX BLACK",
-        "preco": 70000
+        "preco": 70000,
+        "redirect_url": "https://sites.google.com/view/plano-ilimitado/in%C3%ADcio"
     },
     "trx-teste": {
         "nome": "TRX TESTE",
         "pasta": "Licencas/TRX TESTE",
-        "preco": 100
+        "preco": 100,
+        "redirect_url": "https://sites.google.com/view/plano-bronze/in%C3%ADcio"
     }
 }
 
@@ -78,6 +83,7 @@ def criar_checkout_dinamico(plano_id, order_id):
     payload = {
         "handle": HANDLE,
         "webhook_url": WEBHOOK_URL,
+        "redirect_url": plano["redirect_url"],  # 👈 REDIRECIONAMENTO
         "order_nsu": order_id,
         "items": [
             {
@@ -180,7 +186,6 @@ def webhook():
 
     return jsonify({"msg": "OK"}), 200
 
-
 # ======================================================
 # START
 # ======================================================
@@ -188,4 +193,3 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
