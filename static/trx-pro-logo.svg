@@ -1,0 +1,14 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="120" rx="18" fill="#0B0E18"/>
+  <g filter="url(#shadow)">
+    <text x="22" y="74" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#E5E7EB">TR</text>
+    <text x="132" y="74" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#E5E7EB">X</text>
+  </g>
+  <rect x="164" y="22" width="124" height="64" rx="12" fill="#C81E1E"/>
+  <text x="178" y="74" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="700" fill="#F9FAFB">PRO</text>
+  <defs>
+    <filter id="shadow" x="0" y="0" width="320" height="120" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#111827" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+</svg>
