@@ -1,6 +1,6 @@
 from flask import (
     Flask, request, jsonify, render_template,
-    redirect, session
+    redirect, session, Response
 )
 import os
 import json
@@ -8,6 +8,9 @@ import uuid
 import requests
 import time
 import re
+import csv
+import io
+from collections import defaultdict
 
 from compactador import compactar_plano
 from email_utils import enviar_email
@@ -312,6 +315,63 @@ def admin_dashboard():
     )
 
 
+def montar_dashboard_stats(pedidos):
+    total_vendas = len(pedidos)
+    pagos = [
+        pedido
+        for pedido in pedidos
+        if (pedido.get("status") or "").strip().upper() == "PAGO"
+    ]
+    pendentes = total_vendas - len(pagos)
+    total_faturado = sum(
+        PLANOS[pedido["plano"]]["preco"]
+        for pedido in pagos
+        if pedido["plano"] in PLANOS
+    )
+
+    faturamento_por_dia = defaultdict(int)
+    for pedido in pagos:
+        criado_em = pedido["created_at"]
+        if criado_em:
+            dia = criado_em.date().isoformat()
+            faturamento_por_dia[dia] += PLANOS[pedido["plano"]]["preco"]
+
+    faturamento_labels = sorted(faturamento_por_dia.keys())
+    faturamento_values = [faturamento_por_dia[label] for label in faturamento_labels]
+
+    planos_labels = [info["nome"] for info in PLANOS.values()]
+    planos_values = [
+        sum(
+            1
+            for pedido in pagos
+            if pedido["plano"] == plano_id
+        )
+        for plano_id in PLANOS.keys()
+    ]
+
+    return {
+        "total_vendas": total_vendas,
+        "total_faturado": total_faturado,
+        "pagos": len(pagos),
+        "pendentes": pendentes,
+        "faturamento_labels": json.dumps(faturamento_labels),
+        "faturamento_values": json.dumps(faturamento_values),
+        "planos_labels": json.dumps(planos_labels),
+        "planos_values": json.dumps(planos_values)
+    }
+
+
+@app.route("/dashboard")
+def dashboard():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    pedidos = listar_pedidos()
+    stats = montar_dashboard_stats(pedidos)
+
+    return render_template("dashboard.html", stats=stats)
+
+
 @app.route("/admin/pedido/<order_id>")
 def admin_pedido(order_id):
     if not session.get("admin"):
@@ -322,6 +382,45 @@ def admin_pedido(order_id):
         return "Pedido não encontrado", 404
 
     return render_template("admin_pedido.html", pedido=pedido)
+
+
+@app.route("/admin/export/csv")
+def admin_export_csv():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    pedidos = listar_pedidos()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "order_id",
+        "nome",
+        "email",
+        "telefone",
+        "plano",
+        "status",
+        "created_at"
+    ])
+
+    for pedido in pedidos:
+        created_at = pedido["created_at"]
+        created_at_str = created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else ""
+        writer.writerow([
+            pedido["order_id"],
+            pedido["nome"] or "",
+            pedido["email"],
+            pedido["telefone"] or "",
+            pedido["plano"],
+            pedido["status"],
+            created_at_str
+        ])
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=pedidos.csv"}
+    )
 
 # ======================================================
 # START

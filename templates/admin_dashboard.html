@@ -6,15 +6,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
+        :root {
+            --bg: #05070f;
+            --panel: #0b1224;
+            --card: #0b1328;
+            --text: #f3f4f6;
+            --muted: #94a3b8;
+            --border: #1c2541;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --warning: #facc15;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background: #f4f6f8;
+            background:
+                radial-gradient(circle at top, rgba(34, 197, 94, 0.08), transparent 45%),
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.08), transparent 40%),
+                linear-gradient(180deg, #03040a 0%, var(--bg) 100%);
+            color: var(--text);
             margin: 0;
             padding: 30px;
         }
 
         h1 {
             margin-bottom: 10px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand img {
+            width: 120px;
+            height: auto;
+        }
+
+        .export-button {
+            background: var(--accent);
+            color: #041018;
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 10px 24px rgba(56, 189, 248, 0.28);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .export-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(56, 189, 248, 0.35);
         }
 
         .stats {
@@ -25,50 +77,53 @@
         }
 
         .card {
-            background: white;
+            background: linear-gradient(150deg, rgba(11, 18, 36, 0.95), rgba(8, 12, 24, 0.98));
             padding: 18px;
             border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
             min-width: 180px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
+            background: var(--panel);
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
         }
 
         th, td {
             padding: 14px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
             text-align: left;
             font-size: 14px;
         }
 
         th {
-            background: #fafafa;
+            background: rgba(11, 19, 40, 0.9);
             font-weight: 600;
+            color: var(--muted);
         }
 
         tr:hover {
-            background: #f9fbff;
+            background: rgba(56, 189, 248, 0.08);
         }
 
         .status-ok {
-            color: green;
+            color: var(--success);
             font-weight: bold;
         }
 
         .status-pendente {
-            color: orange;
+            color: var(--warning);
             font-weight: bold;
         }
 
         a {
-            color: #3498db;
+            color: var(--accent);
             text-decoration: none;
             font-weight: 500;
         }
@@ -80,7 +135,13 @@
 </head>
 <body>
 
-    <h1>📊 Dashboard</h1>
+    <div class="header">
+        <div class="brand">
+            <img src="/static/trx-pro-logo.svg" alt="TRX Pro logo">
+            <h1>📊 Dashboard</h1>
+        </div>
+        <a class="export-button" href="/admin/export/csv">Exportar CSV</a>
+    </div>
 
     <div class="stats">
         <div class="card">
