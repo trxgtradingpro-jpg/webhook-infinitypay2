@@ -102,7 +102,7 @@ PLANOS = {
         "gratis": True,
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     },
-# =====================ALESSIO =========================
+                                    # =====================ALESSIO =========================
     "trx-bronze-gringo": {
         "nome": "TRX BRONZE",
         "pasta": "Licencas/TRX BRONZE",
@@ -132,7 +132,7 @@ PLANOS = {
         "pasta": "Licencas/TRX TESTE",
         "preco": 110,
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
-    
+    }
 }
 
 # ======================================================
@@ -460,6 +460,7 @@ def admin_export_csv():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
