@@ -160,7 +160,11 @@ def gerar_link_whatsapp(order):
     if not telefone_usuario:
         return None
 
-    numero = formatar_telefone_whatsapp(telefone_usuario)
+    try:
+        numero = formatar_telefone_whatsapp(telefone_usuario)
+    except ValueError:
+        return None
+
     mensagem = WHATSAPP_MENSAGEM.format(
         nome=order.get("nome") or "",
         plano=PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", ""))
@@ -460,6 +464,8 @@ def admin_dashboard():
                 pedido["whatsapp_status"] = "mensagem enviada"
             elif pedido_liberado_para_whatsapp(pedido):
                 pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
+                if not pedido["whatsapp_link"]:
+                    pedido["whatsapp_status"] = "telefone inválido"
             else:
                 pedido["whatsapp_status"] = f"aguardando {WHATSAPP_DELAY_MINUTES} min"
 
