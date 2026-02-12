@@ -37,7 +37,8 @@ from database import (
     excluir_duplicados_por_dados,
     registrar_evento_compra_analytics,
     buscar_user_plan_stats,
-    listar_eventos_analytics
+    listar_eventos_analytics,
+    backfill_analytics_from_orders
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -134,6 +135,11 @@ PLANOS = {
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     }
 }
+
+backfill_analytics_from_orders({
+    plano_id: int(info.get("preco") or 0)
+    for plano_id, info in PLANOS.items()
+})
 
 # ======================================================
 # UTIL

@@ -485,6 +485,92 @@ def registrar_evento_compra_analytics(order_id, user_key, plano, is_paid, amount
     return inserido
 
 
+
+
+def backfill_analytics_from_orders(precos_por_plano):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT order_id, email, telefone, plano, status, created_at
+        FROM orders
+        WHERE status = 'PAGO'
+        ORDER BY created_at ASC
+    """)
+
+    rows = cur.fetchall()
+
+    for row in rows:
+        order_id, email, telefone, plano, status, created_at = row
+        if plano not in precos_por_plano:
+            continue
+
+        email_norm = (email or '').strip().lower()
+        telefone_norm = ''.join(ch for ch in (telefone or '') if ch.isdigit())
+        user_key = email_norm or telefone_norm or (order_id or '')
+        if not user_key:
+            continue
+
+        amount_centavos = int(precos_por_plano.get(plano) or 0)
+
+        cur.execute("""
+            INSERT INTO analytics_purchase_events (
+                order_id, transaction_nsu, user_key, plano,
+                is_paid, amount_centavos, created_at
+            )
+            VALUES (%s, NULL, %s, %s, %s, %s, COALESCE(%s, NOW()))
+            ON CONFLICT (order_id) DO NOTHING
+        """, (order_id, user_key, plano, amount_centavos > 0, amount_centavos, created_at))
+
+        if cur.rowcount > 0:
+            cur.execute("""
+                INSERT INTO user_plan_stats (
+                    user_key,
+                    free_count,
+                    paid_count,
+                    plan_trx_gratis_count,
+                    plan_trx_bronze_count,
+                    plan_trx_prata_count,
+                    plan_trx_gold_count,
+                    plan_trx_black_count,
+                    updated_at
+                )
+                VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    NOW()
+                )
+                ON CONFLICT (user_key)
+                DO UPDATE SET
+                    free_count = user_plan_stats.free_count + EXCLUDED.free_count,
+                    paid_count = user_plan_stats.paid_count + EXCLUDED.paid_count,
+                    plan_trx_gratis_count = user_plan_stats.plan_trx_gratis_count + EXCLUDED.plan_trx_gratis_count,
+                    plan_trx_bronze_count = user_plan_stats.plan_trx_bronze_count + EXCLUDED.plan_trx_bronze_count,
+                    plan_trx_prata_count = user_plan_stats.plan_trx_prata_count + EXCLUDED.plan_trx_prata_count,
+                    plan_trx_gold_count = user_plan_stats.plan_trx_gold_count + EXCLUDED.plan_trx_gold_count,
+                    plan_trx_black_count = user_plan_stats.plan_trx_black_count + EXCLUDED.plan_trx_black_count,
+                    updated_at = NOW()
+            """, (
+                user_key,
+                1 if plano == 'trx-gratis' else 0,
+                1 if amount_centavos > 0 and plano != 'trx-gratis' else 0,
+                1 if plano == 'trx-gratis' else 0,
+                1 if plano == 'trx-bronze' else 0,
+                1 if plano == 'trx-prata' else 0,
+                1 if plano == 'trx-gold' else 0,
+                1 if plano == 'trx-black' else 0
+            ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
 def buscar_user_plan_stats(user_key):
     conn = get_conn()
     cur = conn.cursor()
