@@ -43,3 +43,11 @@ Sem `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_ACCESS_TOKEN`, o sistema continua exi
 - Cada pedido possui botão `Excluir` com confirmação.
 
 - O botão manual `WhatsApp` envia para o telefone do próprio usuário salvo no pedido (campo `telefone`).
+
+
+## Novos recursos no dashboard
+
+- Botão `Reenviar msg` para abrir novamente a conversa no WhatsApp do usuário.
+- Coluna de contagem regressiva com dias restantes para completar 30 dias desde `created_at`.
+- Alertas visuais quando faltam **5** e **3** dias para completar 30 dias.
+- Detecção de usuários com dados duplicados (nome + email + telefone) e opção de `Excluir duplicados` mantendo o registro atual.

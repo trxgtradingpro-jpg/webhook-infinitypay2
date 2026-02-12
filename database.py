@@ -349,3 +349,22 @@ def excluir_order(order_id):
     conn.commit()
     cur.close()
     conn.close()
+
+
+def excluir_duplicados_por_dados(order_id_referencia, nome, email, telefone):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM orders
+        WHERE order_id <> %s
+          AND LOWER(COALESCE(TRIM(nome), '')) = LOWER(COALESCE(TRIM(%s), ''))
+          AND LOWER(COALESCE(TRIM(email), '')) = LOWER(COALESCE(TRIM(%s), ''))
+          AND REGEXP_REPLACE(COALESCE(telefone, ''), '\D', '', 'g') = REGEXP_REPLACE(COALESCE(%s, ''), '\D', '', 'g')
+    """, (order_id_referencia, nome, email, telefone))
+
+    removidos = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+    return removidos

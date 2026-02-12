@@ -8,6 +8,7 @@ import uuid
 import requests
 import time
 from datetime import datetime, timedelta
+import math
 from urllib.parse import quote
 import re
 import threading
@@ -31,7 +32,8 @@ from database import (
     listar_whatsapp_pendentes,
     registrar_falha_whatsapp,
     marcar_whatsapp_enviado,
-    excluir_order
+    excluir_order,
+    excluir_duplicados_por_dados
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -265,6 +267,38 @@ def pedido_liberado_para_whatsapp(order):
 iniciar_worker_whatsapp()
 
 
+def chave_duplicidade_pedido(order):
+    nome = (order.get("nome") or "").strip().lower()
+    email = (order.get("email") or "").strip().lower()
+    telefone = re.sub(r"\D", "", order.get("telefone") or "")
+    return (nome, email, telefone)
+
+
+def calcular_contagem_regressiva_30_dias(order):
+    criado_em = order.get("created_at")
+    if not criado_em:
+        return {
+            "dias_restantes_30": None,
+            "alerta_30_dias": ""
+        }
+
+    agora = datetime.now(criado_em.tzinfo) if getattr(criado_em, "tzinfo", None) else datetime.now()
+    limite = criado_em + timedelta(days=30)
+    segundos = (limite - agora).total_seconds()
+    dias_restantes = math.ceil(segundos / 86400)
+
+    alerta = ""
+    if dias_restantes in (5, 3):
+        alerta = f"⚠ Faltam {dias_restantes} dias para completar 30 dias"
+
+    return {
+        "dias_restantes_30": dias_restantes,
+        "alerta_30_dias": alerta
+    }
+
+
+
+
 # ======================================================
 # CHECKOUT INFINITEPAY
 # ======================================================
@@ -455,6 +489,17 @@ def admin_dashboard():
     pedidos = listar_pedidos()
     stats = obter_estatisticas()
 
+    grupos_duplicados = defaultdict(list)
+    for pedido in pedidos:
+        grupos_duplicados[chave_duplicidade_pedido(pedido)].append(pedido["order_id"])
+
+    duplicados_grupos_count = 0
+    duplicados_registros_count = 0
+    for ids in grupos_duplicados.values():
+        if len(ids) > 1:
+            duplicados_grupos_count += 1
+            duplicados_registros_count += len(ids)
+
     for pedido in pedidos:
         pedido["whatsapp_link"] = None
         pedido["whatsapp_status"] = ""
@@ -469,15 +514,41 @@ def admin_dashboard():
             else:
                 pedido["whatsapp_status"] = f"aguardando {WHATSAPP_DELAY_MINUTES} min"
 
+        info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
+        pedido.update(info_30_dias)
+
+        ids_mesmos_dados = grupos_duplicados[chave_duplicidade_pedido(pedido)]
+        pedido["duplicados_total"] = max(0, len(ids_mesmos_dados) - 1)
+        pedido["tem_duplicados"] = pedido["duplicados_total"] > 0
+
     return render_template(
         "admin_dashboard.html",
         pedidos=pedidos,
-        stats=stats
+        stats=stats,
+        duplicados_grupos_count=duplicados_grupos_count,
+        duplicados_registros_count=duplicados_registros_count
     )
 
 
 @app.route("/admin/whatsapp/<order_id>")
 def admin_whatsapp(order_id):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    pedido = buscar_order_por_id(order_id)
+    if not pedido:
+        return "Pedido não encontrado", 404
+
+    link = gerar_link_whatsapp(pedido)
+    if not link:
+        return "Telefone do usuário não encontrado/inválido", 400
+
+    marcar_whatsapp_enviado(order_id)
+    return redirect(link)
+
+
+@app.route("/admin/whatsapp/reenviar/<order_id>")
+def admin_whatsapp_reenviar(order_id):
     if not session.get("admin"):
         return redirect("/admin/login")
 
@@ -499,6 +570,19 @@ def admin_excluir_pedido(order_id):
         return redirect("/admin/login")
 
     excluir_order(order_id)
+    return redirect("/admin/dashboard")
+
+
+@app.route("/admin/pedido/<order_id>/excluir-duplicados", methods=["POST"])
+def admin_excluir_duplicados(order_id):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    nome = request.form.get("nome", "")
+    email = request.form.get("email", "")
+    telefone = request.form.get("telefone", "")
+    excluir_duplicados_por_dados(order_id, nome, email, telefone)
+
     return redirect("/admin/dashboard")
 
 

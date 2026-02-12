@@ -91,6 +91,30 @@
             font-weight: bold;
         }
 
+        .countdown-ok {
+            color: #93c5fd;
+            font-weight: 600;
+        }
+
+        .countdown-alert {
+            color: #f59e0b;
+            font-weight: 700;
+        }
+
+        .countdown-expired {
+            color: #f87171;
+            font-weight: 700;
+        }
+
+        .notice {
+            margin-bottom: 16px;
+            padding: 12px;
+            border: 1px solid #7c2d12;
+            border-radius: 8px;
+            color: #fdba74;
+            background: rgba(124, 45, 18, 0.2);
+        }
+
         a {
             color: #38bdf8;
             text-decoration: none;
@@ -121,6 +145,12 @@
         </div>
     </div>
 
+    {% if duplicados_grupos_count > 0 %}
+    <div class="notice">
+        ⚠ Encontrados {{ duplicados_grupos_count }} grupos com dados duplicados ({{ duplicados_registros_count }} registros). Revise e escolha excluir ou manter.
+    </div>
+    {% endif %}
+
     <table>
         <thead>
             <tr>
@@ -131,6 +161,7 @@
                 <th>Plano</th>
                 <th>Status</th>
                 <th>Data</th>
+                <th>Dias p/30</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -153,12 +184,35 @@
                 </td>
                 <td>{{ p.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
                 <td>
+                    {% if p.dias_restantes_30 is none %}
+                        <span style="color: var(--muted);">-</span>
+                    {% elif p.dias_restantes_30 <= 0 %}
+                        <span class="countdown-expired">encerrado</span>
+                    {% elif p.dias_restantes_30 in [5, 3] %}
+                        <span class="countdown-alert">⚠ faltam {{ p.dias_restantes_30 }} dias</span>
+                    {% else %}
+                        <span class="countdown-ok">{{ p.dias_restantes_30 }} dias</span>
+                    {% endif %}
+                </td>
+                <td>
                     <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                     {% if p.whatsapp_link %}
                         | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                        | <a href="/admin/whatsapp/reenviar/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">Reenviar msg</a>
                     {% elif p.whatsapp_status %}
                         | <span style="color: var(--muted);">{{ p.whatsapp_status }}</span>
                     {% endif %}
+
+                    {% if p.tem_duplicados %}
+                        <br><span class="countdown-alert">⚠ {{ p.duplicados_total }} duplicado(s) com os mesmos dados</span>
+                        <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" style="display:inline;" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
+                            <input type="hidden" name="nome" value="{{ p.nome or '' }}">
+                            <input type="hidden" name="email" value="{{ p.email or '' }}">
+                            <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
+                            <button type="submit" style="background:none;border:none;color:#f59e0b;cursor:pointer;padding:0;font:inherit;">Excluir duplicados</button>
+                        </form>
+                    {% endif %}
+
                     |
                     <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');">
                         <button type="submit" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0;font:inherit;">Excluir</button>
