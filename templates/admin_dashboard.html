@@ -49,6 +49,34 @@
             min-width: 180px;
         }
 
+        .search-box {
+            margin-bottom: 18px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box input {
+            min-width: 280px;
+            background: #081124;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .search-box button,
+        .search-box a {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: #38bdf8;
+            border-radius: 8px;
+            padding: 9px 12px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -90,6 +118,23 @@
             color: var(--warn);
             font-weight: bold;
         }
+
+        .plan-badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1px solid transparent;
+            letter-spacing: .2px;
+        }
+
+        .plan-bronze { color: #f59e0b; border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+        .plan-prata { color: #d1d5db; border-color: rgba(209,213,219,.35); background: rgba(148,163,184,.10); }
+        .plan-gold { color: #facc15; border-color: rgba(250,204,21,.35); background: rgba(250,204,21,.10); }
+        .plan-black { color: #cbd5e1; border-color: rgba(71,85,105,.55); background: rgba(15,23,42,.65); }
+        .plan-gratis { color: #38bdf8; border-color: rgba(56,189,248,.35); background: rgba(56,189,248,.10); }
+        .plan-teste { color: #a78bfa; border-color: rgba(167,139,250,.35); background: rgba(167,139,250,.10); }
 
         .countdown-ok {
             color: #93c5fd;
@@ -151,6 +196,14 @@
     </div>
     {% endif %}
 
+    <form class="search-box" method="GET" action="/admin/dashboard">
+        <input type="text" name="q" value="{{ busca or '' }}" placeholder="Pesquisar por nome, email, telefone, data ou dias restantes...">
+        <button type="submit">Pesquisar</button>
+        {% if busca %}
+            <a href="/admin/dashboard">Limpar</a>
+        {% endif %}
+    </form>
+
     <table>
         <thead>
             <tr>
@@ -172,7 +225,23 @@
                 <td>{{ p.nome or "-" }}</td>
                 <td>{{ p.email }}</td>
                 <td>{{ p.telefone or "-" }}</td>
-                <td>{{ p.plano }}</td>
+                <td>
+                    {% if p.plano == 'trx-bronze' %}
+                        <span class="plan-badge plan-bronze">🥉 TRX BRONZE</span>
+                    {% elif p.plano == 'trx-prata' %}
+                        <span class="plan-badge plan-prata">🥈 TRX PRATA</span>
+                    {% elif p.plano == 'trx-gold' %}
+                        <span class="plan-badge plan-gold">🥇 TRX GOLD</span>
+                    {% elif p.plano == 'trx-black' %}
+                        <span class="plan-badge plan-black">⚫ TRX BLACK</span>
+                    {% elif p.plano == 'trx-gratis' %}
+                        <span class="plan-badge plan-gratis">🆓 TRX GRÁTIS</span>
+                    {% elif p.plano == 'trx-teste' %}
+                        <span class="plan-badge plan-teste">🧪 TRX TESTE</span>
+                    {% else %}
+                        <span class="plan-badge">{{ p.plano }}</span>
+                    {% endif %}
+                </td>
                 <td>
                     {% if p.status == "PAGO" and p.plano == "trx-gratis" %}
                         <span class="status-gratis">✔ Pago (grátis)</span>

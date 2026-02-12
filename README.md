@@ -51,3 +51,6 @@ Sem `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_ACCESS_TOKEN`, o sistema continua exi
 - Coluna de contagem regressiva com dias restantes para completar 30 dias desde `created_at`.
 - Alertas visuais quando faltam **5** e **3** dias para completar 30 dias.
 - Detecção de usuários com dados duplicados (nome + email + telefone) e opção de `Excluir duplicados` mantendo o registro atual.
+
+- Barra de pesquisa no dashboard por nome, email, telefone, data, status, plano e dias restantes.
+- Planos pagos destacados com cores e símbolos por tipo de plano.

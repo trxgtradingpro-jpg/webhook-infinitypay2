@@ -486,6 +486,8 @@ def admin_dashboard():
     if not session.get("admin"):
         return redirect("/admin/login")
 
+    busca = (request.args.get("q") or "").strip().lower()
+
     pedidos = listar_pedidos()
     stats = obter_estatisticas()
 
@@ -500,6 +502,7 @@ def admin_dashboard():
             duplicados_grupos_count += 1
             duplicados_registros_count += len(ids)
 
+    pedidos_processados = []
     for pedido in pedidos:
         pedido["whatsapp_link"] = None
         pedido["whatsapp_status"] = ""
@@ -521,12 +524,34 @@ def admin_dashboard():
         pedido["duplicados_total"] = max(0, len(ids_mesmos_dados) - 1)
         pedido["tem_duplicados"] = pedido["duplicados_total"] > 0
 
+        pedido["data_formatada_busca"] = (
+            pedido["created_at"].strftime("%d/%m/%Y %H:%M")
+            if pedido.get("created_at") else ""
+        )
+
+        if busca:
+            campos_busca = [
+                pedido.get("nome") or "",
+                pedido.get("email") or "",
+                pedido.get("telefone") or "",
+                pedido.get("plano") or "",
+                pedido.get("status") or "",
+                pedido.get("data_formatada_busca") or "",
+                str(pedido.get("dias_restantes_30") if pedido.get("dias_restantes_30") is not None else "")
+            ]
+            texto = " ".join(campos_busca).lower()
+            if busca not in texto:
+                continue
+
+        pedidos_processados.append(pedido)
+
     return render_template(
         "admin_dashboard.html",
-        pedidos=pedidos,
+        pedidos=pedidos_processados,
         stats=stats,
         duplicados_grupos_count=duplicados_grupos_count,
-        duplicados_registros_count=duplicados_registros_count
+        duplicados_registros_count=duplicados_registros_count,
+        busca=busca
     )
 
 
