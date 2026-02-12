@@ -33,3 +33,10 @@ https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
 - Mostra botão `WhatsApp` também para planos pagos (quando telefone válido).
 - Mantém detecção de duplicados e opção de excluir duplicados.
 - Salva contador de mensagens enviadas por pedido em `whatsapp_mensagens_enviadas`.
+
+
+## Navegação e filtros
+
+- O admin agora tem menu com páginas separadas: `Resumo` e `Relatórios`, mantendo o mesmo estilo visual.
+- O filtro tem opção `Somente pendentes` além de `Todos`, `Somente pagos` e `Somente grátis`.
+- `Somente pagos` exclui planos grátis.

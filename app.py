@@ -595,7 +595,7 @@ def admin_dashboard():
         "pagos": total_pagos,
         "total_gratis": total_gratis,
         "total_faturado": f"R$ {total_faturado_centavos / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-        "online": total_usuarios_online()
+        "online": total_usuarios_online(excluir_request_atual=True)
     }
 
     pedidos_processados = []
@@ -631,7 +631,9 @@ def admin_dashboard():
                     continue
             elif filtro_plano == "gratis" and pedido.get("plano") != "trx-gratis":
                 continue
-            elif filtro_plano not in ("pagos", "gratis") and pedido.get("plano") != filtro_plano:
+            elif filtro_plano == "pendentes" and (pedido.get("status") or "").upper() == "PAGO":
+                continue
+            elif filtro_plano not in ("pagos", "gratis", "pendentes") and pedido.get("plano") != filtro_plano:
                 continue
 
         pedido["data_formatada_busca"] = pedido["created_at_local"]
@@ -662,6 +664,48 @@ def admin_dashboard():
         busca=busca,
         filtro_plano=filtro_plano,
         planos=list(PLANOS.keys())
+    )
+
+
+@app.route("/admin/relatorios")
+def admin_relatorios():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    pedidos = listar_pedidos()
+
+    total_pedidos = len(pedidos)
+    total_pagos = [
+        p for p in pedidos
+        if (p.get("status") or "").upper() == "PAGO"
+        and p.get("plano") in PLANOS
+        and PLANOS[p.get("plano")]["preco"] > 0
+    ]
+
+    faturado_centavos = sum(PLANOS[p["plano"]]["preco"] for p in total_pagos)
+
+    por_plano = []
+    for plano_id, info in PLANOS.items():
+        pagos_plano = [p for p in pedidos if (p.get("status") or "").upper() == "PAGO" and p.get("plano") == plano_id]
+        quantidade = len(pagos_plano)
+        faturado = (info["preco"] * quantidade) / 100
+        por_plano.append({
+            "plano_id": plano_id,
+            "nome": info["nome"],
+            "quantidade": quantidade,
+            "faturado": f"R$ {faturado:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        })
+
+    return render_template(
+        "admin_relatorios.html",
+        stats={
+            "total_pedidos": total_pedidos,
+            "pagos_reais": len(total_pagos),
+            "pendentes": sum(1 for p in pedidos if (p.get("status") or "").upper() != "PAGO"),
+            "faturado_total": f"R$ {faturado_centavos / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "online": total_usuarios_online(excluir_request_atual=True)
+        },
+        por_plano=por_plano
     )
 
 
