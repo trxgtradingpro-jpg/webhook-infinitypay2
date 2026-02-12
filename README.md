@@ -1,20 +1,21 @@
 # webhook-infinitypay
 
-## WhatsApp automático para plano grátis
+## WhatsApp oficial (`wa.me`) para plano grátis
 
-Para enviar uma mensagem de WhatsApp **5 minutos** após a liberação do plano `trx-gratis`, configure estas variáveis:
+Para abrir a conversa oficial do WhatsApp com mensagem pronta após 5 minutos do `trx-gratis`, configure:
 
-- `WHATSAPP_API_URL` (obrigatória): endpoint HTTP da sua integração WhatsApp.
-- `WHATSAPP_API_TOKEN` (opcional): token Bearer para autenticação.
-- `WHATSAPP_DELAY_MINUTES` (opcional, padrão `5`): atraso em minutos.
-- `WHATSAPP_TEMPLATE` (opcional): mensagem com placeholders `{nome}` e `{plano}`.
+- `WHATSAPP_NUMERO` (obrigatória): número de destino (com ou sem `55`, apenas números).
+- `WHATSAPP_MENSAGEM` (obrigatória/recomendada): mensagem padrão. Suporta `{nome}` e `{plano}`.
+- `WHATSAPP_DELAY_MINUTES` (opcional, padrão `5`): tempo de espera para liberar o link no dashboard.
 
-Payload enviado para `WHATSAPP_API_URL`:
+Formato gerado:
 
-```json
-{
-  "phone": "55DDDNUMERO",
-  "message": "mensagem formatada",
-  "order_id": "uuid-do-pedido"
-}
+```text
+https://wa.me/<numero>?text=<mensagem-url-encoded>
+```
+
+Exemplo:
+
+```text
+https://wa.me/5511940431906?text=Olá%20quero%20meu%20plano
 ```

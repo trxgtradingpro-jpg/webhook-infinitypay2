@@ -7,8 +7,9 @@ import json
 import uuid
 import requests
 import time
+from datetime import datetime
+from urllib.parse import quote
 import re
-import threading
 from collections import defaultdict
 
 from compactador import compactar_plano
@@ -25,10 +26,7 @@ from database import (
     listar_pedidos,
     buscar_pedido_detalhado,
     obter_estatisticas,
-    agendar_whatsapp,
-    listar_whatsapp_pendentes,
-    registrar_falha_whatsapp,
-    marcar_whatsapp_enviado
+    agendar_whatsapp
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -67,14 +65,12 @@ WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 # WHATSAPP FOLLOW-UP (PLANO GRÁTIS)
 # ======================================================
 
-WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "").strip()
-WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN", "").strip()
-WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
-WHATSAPP_TEMPLATE = os.environ.get(
-    "WHATSAPP_TEMPLATE",
-    "Olá {nome}, tudo bem? Vi que você baixou o plano {plano}. "
-    "Se quiser ajuda para começar, posso te orientar por aqui."
+WHATSAPP_NUMERO = os.environ.get("WHATSAPP_NUMERO", "").strip()
+WHATSAPP_MENSAGEM = os.environ.get(
+    "WHATSAPP_MENSAGEM",
+    "Olá {nome}, vi que você baixou o plano {plano}. Posso te ajudar a começar?"
 )
+WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
 
 # ======================================================
 # PLANOS (COM TESTE + GRÁTIS)
@@ -151,58 +147,28 @@ def formatar_telefone_whatsapp(telefone):
     raise ValueError("Telefone inválido para WhatsApp")
 
 
-def enviar_whatsapp_followup(order):
-    if not WHATSAPP_API_URL:
-        raise RuntimeError("WHATSAPP_API_URL não configurada")
+def gerar_link_whatsapp(order):
+    if not WHATSAPP_NUMERO:
+        return None
 
-    telefone = formatar_telefone_whatsapp(order.get("telefone"))
-    mensagem = WHATSAPP_TEMPLATE.format(
+    numero = formatar_telefone_whatsapp(WHATSAPP_NUMERO)
+    mensagem = WHATSAPP_MENSAGEM.format(
         nome=order.get("nome") or "",
         plano=PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", ""))
     )
-
-    headers = {"Content-Type": "application/json"}
-    if WHATSAPP_API_TOKEN:
-        headers["Authorization"] = f"Bearer {WHATSAPP_API_TOKEN}"
-
-    payload = {
-        "phone": telefone,
-        "message": mensagem,
-        "order_id": order["order_id"]
-    }
-
-    response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers, timeout=30)
-    response.raise_for_status()
+    return f"https://wa.me/{numero}?text={quote(mensagem)}"
 
 
-def processar_fila_whatsapp():
-    pendentes = listar_whatsapp_pendentes(limite=30)
+def pedido_liberado_para_whatsapp(order):
+    if order.get("plano") != "trx-gratis" or order.get("status") != "PAGO":
+        return False
 
-    for order in pendentes:
-        tentativas = int(order.get("whatsapp_tentativas") or 0)
-        try:
-            enviar_whatsapp_followup(order)
-            marcar_whatsapp_enviado(order["order_id"])
-            print(f"📲 WhatsApp enviado: {order['order_id']}", flush=True)
-        except Exception as e:
-            registrar_falha_whatsapp(order["order_id"], tentativas + 1, str(e))
-            print(f"❌ Falha WhatsApp {order['order_id']}: {e}", flush=True)
+    agendado = order.get("whatsapp_agendado_para")
+    if agendado is None:
+        return False
 
+    return agendado <= datetime.now(agendado.tzinfo) if getattr(agendado, "tzinfo", None) else agendado <= datetime.now()
 
-def iniciar_worker_whatsapp():
-    def worker_loop():
-        while True:
-            try:
-                processar_fila_whatsapp()
-            except Exception as e:
-                print(f"⚠️ Worker WhatsApp com erro: {e}", flush=True)
-            time.sleep(20)
-
-    thread = threading.Thread(target=worker_loop, daemon=True)
-    thread.start()
-
-
-iniciar_worker_whatsapp()
 
 # ======================================================
 # CHECKOUT INFINITEPAY
@@ -393,6 +359,11 @@ def admin_dashboard():
 
     pedidos = listar_pedidos()
     stats = obter_estatisticas()
+
+    for pedido in pedidos:
+        pedido["whatsapp_link"] = None
+        if pedido_liberado_para_whatsapp(pedido):
+            pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
 
     return render_template(
         "admin_dashboard.html",

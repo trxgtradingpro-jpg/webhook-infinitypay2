@@ -126,7 +126,7 @@
                 <th>Plano</th>
                 <th>Status</th>
                 <th>Data</th>
-                <th></th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -147,6 +147,11 @@
                 <td>{{ p.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
                 <td>
                     <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
+                    {% if p.whatsapp_link %}
+                        | <a href="{{ p.whatsapp_link }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                    {% elif p.plano == "trx-gratis" and p.status == "PAGO" %}
+                        | <span style="color: var(--muted);">aguardando 5 min</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

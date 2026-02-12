@@ -185,7 +185,7 @@ def listar_pedidos():
 
     cur.execute("""
         SELECT order_id, nome, email, telefone,
-               plano, status, created_at
+               plano, status, whatsapp_agendado_para, created_at
         FROM orders
         ORDER BY created_at DESC
     """)
@@ -203,7 +203,8 @@ def listar_pedidos():
             "telefone": r[3],
             "plano": r[4],
             "status": r[5],
-            "created_at": r[6]
+            "whatsapp_agendado_para": r[6],
+            "created_at": r[7]
         })
 
     return pedidos
@@ -251,77 +252,3 @@ def agendar_whatsapp(order_id, minutos=5):
     cur.close()
     conn.close()
 
-
-def listar_whatsapp_pendentes(limite=50):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT order_id, plano, nome, email, telefone,
-               status, email_tentativas, erro_email,
-               whatsapp_enviado, whatsapp_tentativas,
-               erro_whatsapp, whatsapp_agendado_para, created_at
-        FROM orders
-        WHERE plano = 'trx-gratis'
-          AND status = 'PAGO'
-          AND COALESCE(whatsapp_enviado, FALSE) = FALSE
-          AND (whatsapp_agendado_para IS NULL OR whatsapp_agendado_para <= NOW())
-        ORDER BY created_at ASC
-        LIMIT %s
-    """, (limite,))
-
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-
-    pedidos = []
-    for row in rows:
-        pedidos.append({
-            "order_id": row[0],
-            "plano": row[1],
-            "nome": row[2],
-            "email": row[3],
-            "telefone": row[4],
-            "status": row[5],
-            "email_tentativas": row[6],
-            "erro_email": row[7],
-            "whatsapp_enviado": row[8],
-            "whatsapp_tentativas": row[9],
-            "erro_whatsapp": row[10],
-            "whatsapp_agendado_para": row[11],
-            "created_at": row[12]
-        })
-
-    return pedidos
-
-
-def registrar_falha_whatsapp(order_id, tentativas, erro):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        UPDATE orders
-        SET whatsapp_tentativas = %s,
-            erro_whatsapp = %s
-        WHERE order_id = %s
-    """, (tentativas, erro, order_id))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-
-def marcar_whatsapp_enviado(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
-
-    cur.execute("""
-        UPDATE orders
-        SET whatsapp_enviado = TRUE,
-            erro_whatsapp = NULL
-        WHERE order_id = %s
-    """, (order_id,))
-
-    conn.commit()
-    cur.close()
-    conn.close()
