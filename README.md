@@ -40,3 +40,6 @@ https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
 - O admin agora tem menu com páginas separadas: `Resumo` e `Relatórios`, mantendo o mesmo estilo visual.
 - O filtro tem opção `Somente pendentes` além de `Todos`, `Somente pagos` e `Somente grátis`.
 - `Somente pagos` exclui planos grátis.
+
+- Menu admin com 3 páginas: `Resumo`, `Relatórios` e `Gráficos`.
+- Preços atualizados: Prata R$ 247,00, Gold R$ 497,00, Black R$ 697,00.

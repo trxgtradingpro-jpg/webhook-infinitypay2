@@ -28,7 +28,14 @@
         th{background:#071126;color:var(--muted)}
         tr:hover{background:rgba(56,189,248,.06)}
         .plan{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
+        
         .bronze{color:#f59e0b;background:rgba(245,158,11,.12)} .prata{color:#cbd5e1;background:rgba(148,163,184,.14)} .gold{color:#facc15;background:rgba(250,204,21,.12)} .black{color:#e2e8f0;background:rgba(30,41,59,.75)} .gratis{color:#38bdf8;background:rgba(56,189,248,.12)} .teste{color:#a78bfa;background:rgba(167,139,250,.12)}
+        .plan{transition:all .2s ease}
+        .plan.bronze:hover{background:rgba(245,158,11,.28);box-shadow:0 0 14px rgba(245,158,11,.35)}
+        .plan.prata:hover{background:rgba(203,213,225,.25);box-shadow:0 0 14px rgba(203,213,225,.35)}
+        .plan.gold:hover{background:rgba(250,204,21,.28);box-shadow:0 0 14px rgba(250,204,21,.35)}
+        .plan.black:hover{background:rgba(71,85,105,.5);box-shadow:0 0 14px rgba(100,116,139,.35)}
+
         .ok{color:var(--green);font-weight:700}.okfree{color:var(--cyan);font-weight:700}.pend{color:var(--amber);font-weight:700}
         .alert{color:var(--amber);font-weight:700}.expired{color:var(--red);font-weight:700}
         a{color:var(--cyan);text-decoration:none}
@@ -40,6 +47,7 @@
         <nav class="menu">
             <a class="active" href="/admin/dashboard">Resumo</a>
             <a href="/admin/relatorios">Relatórios</a>
+            <a href="/dashboard">Gráficos</a>
         </nav>
     </div>
 
@@ -100,7 +108,15 @@
                     <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                     {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
                     {% if p.whatsapp_status %} | <span style="color:#94a3b8">{{ p.whatsapp_status }}</span>{% endif %}
-                    {% if p.tem_duplicados %}<br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>{% endif %}
+                    {% if p.tem_duplicados %}
+                        <br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>
+                        <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" style="display:inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
+                            <input type="hidden" name="nome" value="{{ p.nome or '' }}">
+                            <input type="hidden" name="email" value="{{ p.email or '' }}">
+                            <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
+                            <button type="submit" style="background:none;border:none;color:#f59e0b;cursor:pointer">Excluir duplicados</button>
+                        </form>
+                    {% endif %}
                     | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" style="display:inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><button type="submit" style="background:none;border:none;color:#f87171;cursor:pointer">Excluir</button></form>
                 </td>
             </tr>

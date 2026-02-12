@@ -102,19 +102,19 @@ PLANOS = {
     "trx-prata": {
         "nome": "TRX PRATA",
         "pasta": "Licencas/TRX PRATA",
-        "preco": 25000,
+        "preco": 24700,
         "redirect_url": "https://sites.google.com/view/plano-prata/in%C3%ADcio"
     },
     "trx-gold": {
         "nome": "TRX GOLD",
         "pasta": "Licencas/TRX GOLD",
-        "preco": 49900,
+        "preco": 49700,
         "redirect_url": "https://sites.google.com/view/plano-gold/in%C3%ADcio"
     },
     "trx-black": {
         "nome": "TRX BLACK",
         "pasta": "Licencas/TRX BLACK",
-        "preco": 70000,
+        "preco": 69700,
         "redirect_url": "https://sites.google.com/view/plano-ilimitado/in%C3%ADcio"
     },
     "trx-teste": {
@@ -605,13 +605,12 @@ def admin_dashboard():
 
         mensagens_enviadas = int(pedido.get("whatsapp_mensagens_enviadas") or 0)
 
-        if (pedido.get("status") or "").upper() == "PAGO":
-            pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
-            if not pedido["whatsapp_link"]:
-                pedido["whatsapp_status"] = "telefone inválido"
+        pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
+        if not pedido["whatsapp_link"] and (pedido.get("telefone") or ""):
+            pedido["whatsapp_status"] = "telefone inválido"
 
-            if mensagens_enviadas > 0:
-                pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
+        if mensagens_enviadas > 0:
+            pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
 
         data_local = converter_data_para_timezone_admin(pedido.get("created_at"))
         pedido["created_at_local"] = data_local.strftime("%d/%m/%Y %H:%M") if data_local else "-"
