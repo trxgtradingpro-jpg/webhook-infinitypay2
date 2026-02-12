@@ -28,9 +28,12 @@ Obrigado pela sua compra!
 Plano adquirido: {nome_plano}
 Senha do arquivo: {senha}
 
+(ASSISTA AGORA)
+Tutorial de como baixar descompactar e instalar o robô:
+https://youtu.be/u3GWhwR8bcQ?si=3mb8yraHc_KKruFF
+
 IMPORTANTE — ENTRE NA COMUNIDADE OFICIAL
 Para receber avisos, atualizações e suporte, entre no grupo abaixo:
-
 https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE
 
 O arquivo do seu plano está em anexo logo abaixo neste email.
@@ -41,8 +44,8 @@ O arquivo do seu plano está em anexo logo abaixo neste email.
 
 Suporte:
 Email: trxtradingpro@gmail.com
-WhatsApp: +55 11 98175-9207
-WhatsApp 2: +55 11 94043-1906
+WhatsApp: +55 11 94043-1906
+WhatsApp 2: +55 11 98175-9207
 
 Bom uso
 """
@@ -67,3 +70,4 @@ Bom uso
 
     if response.status_code != 200:
         raise Exception("Falha ao enviar email via Google Script")
+
