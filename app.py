@@ -8,6 +8,7 @@ import uuid
 import requests
 import time
 import re
+import threading
 from collections import defaultdict
 
 from compactador import compactar_plano
@@ -23,7 +24,11 @@ from database import (
     marcar_transacao_processada,
     listar_pedidos,
     buscar_pedido_detalhado,
-    obter_estatisticas
+    obter_estatisticas,
+    agendar_whatsapp,
+    listar_whatsapp_pendentes,
+    registrar_falha_whatsapp,
+    marcar_whatsapp_enviado
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -57,6 +62,19 @@ os.makedirs(PASTA_SAIDA, exist_ok=True)
 INFINITEPAY_URL = "https://api.infinitepay.io/invoices/public/checkout/links"
 HANDLE = "guilherme-gomes-v85"
 WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
+
+# ======================================================
+# WHATSAPP FOLLOW-UP (PLANO GRÁTIS)
+# ======================================================
+
+WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "").strip()
+WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN", "").strip()
+WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
+WHATSAPP_TEMPLATE = os.environ.get(
+    "WHATSAPP_TEMPLATE",
+    "Olá {nome}, tudo bem? Vi que você baixou o plano {plano}. "
+    "Se quiser ajuda para começar, posso te orientar por aqui."
+)
 
 # ======================================================
 # PLANOS (COM TESTE + GRÁTIS)
@@ -116,6 +134,75 @@ def formatar_telefone_infinitepay(telefone):
         raise ValueError("Telefone inválido")
 
     return f"+55{numeros}"
+
+
+def formatar_telefone_whatsapp(telefone):
+    numeros = re.sub(r"\D", "", telefone or "")
+
+    if not numeros:
+        raise ValueError("Telefone vazio")
+
+    if numeros.startswith("55"):
+        return numeros
+
+    if len(numeros) in (10, 11):
+        return f"55{numeros}"
+
+    raise ValueError("Telefone inválido para WhatsApp")
+
+
+def enviar_whatsapp_followup(order):
+    if not WHATSAPP_API_URL:
+        raise RuntimeError("WHATSAPP_API_URL não configurada")
+
+    telefone = formatar_telefone_whatsapp(order.get("telefone"))
+    mensagem = WHATSAPP_TEMPLATE.format(
+        nome=order.get("nome") or "",
+        plano=PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", ""))
+    )
+
+    headers = {"Content-Type": "application/json"}
+    if WHATSAPP_API_TOKEN:
+        headers["Authorization"] = f"Bearer {WHATSAPP_API_TOKEN}"
+
+    payload = {
+        "phone": telefone,
+        "message": mensagem,
+        "order_id": order["order_id"]
+    }
+
+    response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers, timeout=30)
+    response.raise_for_status()
+
+
+def processar_fila_whatsapp():
+    pendentes = listar_whatsapp_pendentes(limite=30)
+
+    for order in pendentes:
+        tentativas = int(order.get("whatsapp_tentativas") or 0)
+        try:
+            enviar_whatsapp_followup(order)
+            marcar_whatsapp_enviado(order["order_id"])
+            print(f"📲 WhatsApp enviado: {order['order_id']}", flush=True)
+        except Exception as e:
+            registrar_falha_whatsapp(order["order_id"], tentativas + 1, str(e))
+            print(f"❌ Falha WhatsApp {order['order_id']}: {e}", flush=True)
+
+
+def iniciar_worker_whatsapp():
+    def worker_loop():
+        while True:
+            try:
+                processar_fila_whatsapp()
+            except Exception as e:
+                print(f"⚠️ Worker WhatsApp com erro: {e}", flush=True)
+            time.sleep(20)
+
+    thread = threading.Thread(target=worker_loop, daemon=True)
+    thread.start()
+
+
+iniciar_worker_whatsapp()
 
 # ======================================================
 # CHECKOUT INFINITEPAY
@@ -234,6 +321,7 @@ def comprar():
         )
 
         marcar_order_processada(order_id)
+        agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
         return redirect(plano_info["redirect_url"])
 
     checkout_url = criar_checkout_dinamico(
