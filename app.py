@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from urllib.parse import quote
 import re
+import threading
 from collections import defaultdict
 
 from compactador import compactar_plano
@@ -26,7 +27,10 @@ from database import (
     listar_pedidos,
     buscar_pedido_detalhado,
     obter_estatisticas,
-    agendar_whatsapp
+    agendar_whatsapp,
+    listar_whatsapp_pendentes,
+    registrar_falha_whatsapp,
+    marcar_whatsapp_enviado
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -71,6 +75,10 @@ WHATSAPP_MENSAGEM = os.environ.get(
     "Olá {nome}, vi que você baixou o plano {plano}. Posso te ajudar a começar?"
 )
 WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
+WHATSAPP_AUTO_SEND = os.environ.get("WHATSAPP_AUTO_SEND", "true").strip().lower() == "true"
+WHATSAPP_GRAPH_VERSION = os.environ.get("WHATSAPP_GRAPH_VERSION", "v21.0").strip()
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "").strip()
 
 # ======================================================
 # PLANOS (COM TESTE + GRÁTIS)
@@ -159,6 +167,81 @@ def gerar_link_whatsapp(order):
     return f"https://wa.me/{numero}?text={quote(mensagem)}"
 
 
+def enviar_whatsapp_automatico(order):
+    if not WHATSAPP_AUTO_SEND:
+        raise RuntimeError("WHATSAPP_AUTO_SEND=false")
+
+    if not WHATSAPP_PHONE_NUMBER_ID or not WHATSAPP_ACCESS_TOKEN:
+        raise RuntimeError(
+            "Configure WHATSAPP_PHONE_NUMBER_ID e WHATSAPP_ACCESS_TOKEN para envio automático"
+        )
+
+    numero_destino = formatar_telefone_whatsapp(order.get("telefone"))
+    mensagem = WHATSAPP_MENSAGEM.format(
+        nome=order.get("nome") or "",
+        plano=PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", ""))
+    )
+
+    url = (
+        f"https://graph.facebook.com/{WHATSAPP_GRAPH_VERSION}/"
+        f"{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    )
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": numero_destino,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": mensagem
+        }
+    }
+
+    response = requests.post(url, json=payload, headers=headers, timeout=30)
+    response.raise_for_status()
+
+
+MAX_TENTATIVAS_WHATSAPP = 3
+
+
+def processar_fila_whatsapp():
+    pedidos = listar_whatsapp_pendentes(limite=30)
+
+    for pedido in pedidos:
+        tentativas = int(pedido.get("whatsapp_tentativas") or 0)
+        if tentativas >= MAX_TENTATIVAS_WHATSAPP:
+            continue
+
+        try:
+            enviar_whatsapp_automatico(pedido)
+            marcar_whatsapp_enviado(pedido["order_id"])
+            print(f"📲 WhatsApp automático enviado: {pedido['order_id']}", flush=True)
+        except Exception as e:
+            registrar_falha_whatsapp(
+                pedido["order_id"],
+                tentativas + 1,
+                str(e)
+            )
+            print(f"❌ Falha WhatsApp automático {pedido['order_id']}: {e}", flush=True)
+
+
+def iniciar_worker_whatsapp():
+    def worker_loop():
+        while True:
+            try:
+                processar_fila_whatsapp()
+            except Exception as e:
+                print(f"⚠️ Worker WhatsApp com erro: {e}", flush=True)
+            time.sleep(20)
+
+    thread = threading.Thread(target=worker_loop, daemon=True)
+    thread.start()
+
+
 def pedido_liberado_para_whatsapp(order):
     if order.get("plano") != "trx-gratis" or order.get("status") != "PAGO":
         return False
@@ -168,6 +251,9 @@ def pedido_liberado_para_whatsapp(order):
         return False
 
     return agendado <= datetime.now(agendado.tzinfo) if getattr(agendado, "tzinfo", None) else agendado <= datetime.now()
+
+
+iniciar_worker_whatsapp()
 
 
 # ======================================================
