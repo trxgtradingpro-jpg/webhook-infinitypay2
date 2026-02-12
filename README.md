@@ -9,14 +9,13 @@ O sistema agora possui **2 comportamentos**:
 
 ## Variáveis para o link oficial (`wa.me`)
 
-- `WHATSAPP_NUMERO`: número que aparece no link (com ou sem `55`, só números).
 - `WHATSAPP_MENSAGEM`: mensagem base (suporta `{nome}` e `{plano}`).
 - `WHATSAPP_DELAY_MINUTES`: atraso para liberar ação de WhatsApp (padrão `5`).
 
 Formato do botão:
 
 ```text
-https://wa.me/<numero>?text=<mensagem-url-encoded>
+https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
 ```
 
 Exemplo:
@@ -42,3 +41,5 @@ Sem `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_ACCESS_TOKEN`, o sistema continua exi
 - Pedidos `trx-gratis` mostram status em azul.
 - Após envio automático ou clique no botão WhatsApp, aparece `mensagem enviada`.
 - Cada pedido possui botão `Excluir` com confirmação.
+
+- O botão manual `WhatsApp` envia para o telefone do próprio usuário salvo no pedido (campo `telefone`).

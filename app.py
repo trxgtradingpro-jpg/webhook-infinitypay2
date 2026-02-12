@@ -70,7 +70,6 @@ WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 # WHATSAPP FOLLOW-UP (PLANO GRÁTIS)
 # ======================================================
 
-WHATSAPP_NUMERO = os.environ.get("WHATSAPP_NUMERO", "").strip()
 WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
     "Olá {nome}, vi que você baixou o plano {plano}. Posso te ajudar a começar?"
@@ -157,10 +156,11 @@ def formatar_telefone_whatsapp(telefone):
 
 
 def gerar_link_whatsapp(order):
-    if not WHATSAPP_NUMERO:
+    telefone_usuario = order.get("telefone")
+    if not telefone_usuario:
         return None
 
-    numero = formatar_telefone_whatsapp(WHATSAPP_NUMERO)
+    numero = formatar_telefone_whatsapp(telefone_usuario)
     mensagem = WHATSAPP_MENSAGEM.format(
         nome=order.get("nome") or "",
         plano=PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", ""))
@@ -481,7 +481,7 @@ def admin_whatsapp(order_id):
 
     link = gerar_link_whatsapp(pedido)
     if not link:
-        return "WHATSAPP_NUMERO não configurado", 400
+        return "Telefone do usuário não encontrado/inválido", 400
 
     marcar_whatsapp_enviado(order_id)
     return redirect(link)
