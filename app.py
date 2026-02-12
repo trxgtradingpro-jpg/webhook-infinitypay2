@@ -7,11 +7,12 @@ import json
 import uuid
 import requests
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 from urllib.parse import quote
 import re
 import threading
+from zoneinfo import ZoneInfo
 from collections import defaultdict
 
 from compactador import compactar_plano
@@ -81,6 +82,11 @@ WHATSAPP_AUTO_SEND = os.environ.get("WHATSAPP_AUTO_SEND", "true").strip().lower(
 WHATSAPP_GRAPH_VERSION = os.environ.get("WHATSAPP_GRAPH_VERSION", "v21.0").strip()
 WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "").strip()
 WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "").strip()
+
+ADMIN_TIMEZONE = os.environ.get("ADMIN_TIMEZONE", "America/Sao_Paulo").strip()
+ONLINE_TTL_SECONDS = int(os.environ.get("ONLINE_TTL_SECONDS", "90"))
+_online_sessions = {}
+_online_lock = threading.Lock()
 
 # ======================================================
 # PLANOS (COM TESTE + GRÁTIS)
@@ -274,29 +280,55 @@ def chave_duplicidade_pedido(order):
     return (nome, email, telefone)
 
 
-def calcular_contagem_regressiva_30_dias(order):
-    criado_em = order.get("created_at")
-    if not criado_em:
-        return {
-            "dias_restantes_30": None,
-            "alerta_30_dias": ""
-        }
+def converter_data_para_timezone_admin(dt):
+    if not dt:
+        return None
 
-    agora = datetime.now(criado_em.tzinfo) if getattr(criado_em, "tzinfo", None) else datetime.now()
-    limite = criado_em + timedelta(days=30)
-    segundos = (limite - agora).total_seconds()
-    dias_restantes = math.ceil(segundos / 86400)
+    try:
+        tz_admin = ZoneInfo(ADMIN_TIMEZONE)
+    except Exception:
+        tz_admin = ZoneInfo("America/Sao_Paulo")
 
-    alerta = ""
-    if dias_restantes in (5, 3):
-        alerta = f"⚠ Faltam {dias_restantes} dias para completar 30 dias"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
 
-    return {
-        "dias_restantes_30": dias_restantes,
-        "alerta_30_dias": alerta
-    }
+    return dt.astimezone(tz_admin)
 
 
+def registrar_usuario_online():
+    identificador = f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
+    agora = time.time()
+
+    with _online_lock:
+        _online_sessions[identificador] = agora
+        limite = agora - ONLINE_TTL_SECONDS
+        expirados = [k for k, ts in _online_sessions.items() if ts < limite]
+        for k in expirados:
+            _online_sessions.pop(k, None)
+
+
+def total_usuarios_online():
+    agora = time.time()
+    with _online_lock:
+        limite = agora - ONLINE_TTL_SECONDS
+        expirados = [k for k, ts in _online_sessions.items() if ts < limite]
+        for k in expirados:
+            _online_sessions.pop(k, None)
+        return len(_online_sessions)
+
+
+@app.route('/online/ping', methods=['POST'])
+def online_ping():
+    registrar_usuario_online()
+    return jsonify({"ok": True})
+
+
+@app.route('/admin/online-count')
+def admin_online_count():
+    if not session.get("admin"):
+        return jsonify({"online": 0}), 403
+
+    return jsonify({"online": total_usuarios_online()})
 
 
 # ======================================================
@@ -365,6 +397,7 @@ def home():
 
 @app.route("/checkout/<plano>")
 def checkout(plano):
+    registrar_usuario_online()
     if plano not in PLANOS:
         return "Plano inválido", 404
 
@@ -486,10 +519,12 @@ def admin_dashboard():
     if not session.get("admin"):
         return redirect("/admin/login")
 
+    registrar_usuario_online()
+
     busca = (request.args.get("q") or "").strip().lower()
+    filtro_plano = (request.args.get("plano") or "todos").strip().lower()
 
     pedidos = listar_pedidos()
-    stats = obter_estatisticas()
 
     grupos_duplicados = defaultdict(list)
     for pedido in pedidos:
@@ -502,6 +537,25 @@ def admin_dashboard():
             duplicados_grupos_count += 1
             duplicados_registros_count += len(ids)
 
+    total_pedidos = len(pedidos)
+    total_pagos = sum(1 for p in pedidos if (p.get("status") or "").upper() == "PAGO")
+    total_gratis = sum(1 for p in pedidos if p.get("plano") == "trx-gratis")
+    total_faturado_centavos = sum(
+        PLANOS[p.get("plano", "")]["preco"]
+        for p in pedidos
+        if (p.get("status") or "").upper() == "PAGO" and p.get("plano") in PLANOS
+    )
+
+    stats = {
+        "total_pedidos": total_pedidos,
+        "processados": total_pagos,
+        "pendentes": max(0, total_pedidos - total_pagos),
+        "pagos": total_pagos,
+        "total_gratis": total_gratis,
+        "total_faturado": f"R$ {total_faturado_centavos / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+        "online": total_usuarios_online()
+    }
+
     pedidos_processados = []
     for pedido in pedidos:
         pedido["whatsapp_link"] = None
@@ -509,18 +563,16 @@ def admin_dashboard():
 
         mensagens_enviadas = int(pedido.get("whatsapp_mensagens_enviadas") or 0)
 
-        if pedido.get("plano") == "trx-gratis" and pedido.get("status") == "PAGO":
-            if pedido_liberado_para_whatsapp(pedido):
-                pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
-                if not pedido["whatsapp_link"]:
-                    pedido["whatsapp_status"] = "telefone inválido"
-            else:
-                pedido["whatsapp_status"] = f"aguardando {WHATSAPP_DELAY_MINUTES} min"
+        if (pedido.get("status") or "").upper() == "PAGO":
+            pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
+            if not pedido["whatsapp_link"]:
+                pedido["whatsapp_status"] = "telefone inválido"
 
             if mensagens_enviadas > 0:
                 pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
 
-        pedido["mostrar_reenviar"] = mensagens_enviadas > 0
+        data_local = converter_data_para_timezone_admin(pedido.get("created_at"))
+        pedido["created_at_local"] = data_local.strftime("%d/%m/%Y %H:%M") if data_local else "-"
 
         info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
         pedido.update(info_30_dias)
@@ -529,10 +581,15 @@ def admin_dashboard():
         pedido["duplicados_total"] = max(0, len(ids_mesmos_dados) - 1)
         pedido["tem_duplicados"] = pedido["duplicados_total"] > 0
 
-        pedido["data_formatada_busca"] = (
-            pedido["created_at"].strftime("%d/%m/%Y %H:%M")
-            if pedido.get("created_at") else ""
-        )
+        if filtro_plano != "todos":
+            if filtro_plano == "pagos" and (pedido.get("status") or "").upper() != "PAGO":
+                continue
+            elif filtro_plano == "gratis" and pedido.get("plano") != "trx-gratis":
+                continue
+            elif filtro_plano not in ("pagos", "gratis") and pedido.get("plano") != filtro_plano:
+                continue
+
+        pedido["data_formatada_busca"] = pedido["created_at_local"]
 
         if busca:
             campos_busca = [
@@ -557,29 +614,14 @@ def admin_dashboard():
         stats=stats,
         duplicados_grupos_count=duplicados_grupos_count,
         duplicados_registros_count=duplicados_registros_count,
-        busca=busca
+        busca=busca,
+        filtro_plano=filtro_plano,
+        planos=list(PLANOS.keys())
     )
 
 
 @app.route("/admin/whatsapp/<order_id>")
 def admin_whatsapp(order_id):
-    if not session.get("admin"):
-        return redirect("/admin/login")
-
-    pedido = buscar_order_por_id(order_id)
-    if not pedido:
-        return "Pedido não encontrado", 404
-
-    link = gerar_link_whatsapp(pedido)
-    if not link:
-        return "Telefone do usuário não encontrado/inválido", 400
-
-    incrementar_whatsapp_enviado(order_id)
-    return redirect(link)
-
-
-@app.route("/admin/whatsapp/reenviar/<order_id>")
-def admin_whatsapp_reenviar(order_id):
     if not session.get("admin"):
         return redirect("/admin/login")
 

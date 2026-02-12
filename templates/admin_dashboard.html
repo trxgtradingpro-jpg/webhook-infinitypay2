@@ -57,7 +57,8 @@
             flex-wrap: wrap;
         }
 
-        .search-box input {
+        .search-box input,
+        .search-box select {
             min-width: 280px;
             background: #081124;
             border: 1px solid var(--border);
@@ -188,6 +189,22 @@
             <strong>Pendentes</strong><br>
             {{ stats.pendentes }}
         </div>
+        <div class="card">
+            <strong>Total pagos</strong><br>
+            {{ stats.pagos }}
+        </div>
+        <div class="card">
+            <strong>Total grátis</strong><br>
+            {{ stats.total_gratis }}
+        </div>
+        <div class="card">
+            <strong>Faturamento total</strong><br>
+            {{ stats.total_faturado }}
+        </div>
+        <div class="card">
+            <strong>Online agora</strong><br>
+            <span id="online-count">{{ stats.online }}</span>
+        </div>
     </div>
 
     {% if duplicados_grupos_count > 0 %}
@@ -198,8 +215,16 @@
 
     <form class="search-box" method="GET" action="/admin/dashboard">
         <input type="text" name="q" value="{{ busca or '' }}" placeholder="Pesquisar por nome, email, telefone, data ou dias restantes...">
+        <select name="plano">
+            <option value="todos" {% if filtro_plano == 'todos' %}selected{% endif %}>Todos os planos</option>
+            <option value="pagos" {% if filtro_plano == 'pagos' %}selected{% endif %}>Somente pagos</option>
+            <option value="gratis" {% if filtro_plano == 'gratis' %}selected{% endif %}>Somente grátis</option>
+            {% for plano in planos %}
+                <option value="{{ plano }}" {% if filtro_plano == plano %}selected{% endif %}>{{ plano }}</option>
+            {% endfor %}
+        </select>
         <button type="submit">Pesquisar</button>
-        {% if busca %}
+        {% if busca or filtro_plano != 'todos' %}
             <a href="/admin/dashboard">Limpar</a>
         {% endif %}
     </form>
@@ -251,7 +276,7 @@
                         <span class="status-pendente">⏳ Pendente</span>
                     {% endif %}
                 </td>
-                <td>{{ p.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+                <td>{{ p.created_at_local }}</td>
                 <td>
                     {% if p.dias_restantes_30 is none %}
                         <span style="color: var(--muted);">-</span>
@@ -269,9 +294,6 @@
                         | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
                     {% endif %}
 
-                    {% if p.mostrar_reenviar %}
-                        | <a href="/admin/whatsapp/reenviar/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">Reenviar msg</a>
-                    {% endif %}
 
                     {% if p.whatsapp_status %}
                         | <span style="color: var(--muted);">{{ p.whatsapp_status }}</span>
@@ -297,5 +319,25 @@
         </tbody>
     </table>
 
+    <script>
+        async function pingOnline() {
+            try { await fetch('/online/ping', { method: 'POST' }); } catch (e) {}
+        }
+
+        async function atualizarOnline() {
+            try {
+                const r = await fetch('/admin/online-count');
+                if (!r.ok) return;
+                const data = await r.json();
+                const el = document.getElementById('online-count');
+                if (el) el.textContent = data.online;
+            } catch (e) {}
+        }
+
+        pingOnline();
+        atualizarOnline();
+        setInterval(pingOnline, 30000);
+        setInterval(atualizarOnline, 10000);
+    </script>
 </body>
 </html>
