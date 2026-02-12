@@ -48,6 +48,7 @@ def init_db():
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_tentativas INTEGER DEFAULT 0")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS erro_whatsapp TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_agendado_para TIMESTAMP")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_mensagens_enviadas INTEGER DEFAULT 0")
 
     cur.execute("""
         UPDATE orders
@@ -55,6 +56,13 @@ def init_db():
         WHERE plano = 'trx-gratis'
           AND status = 'PAGO'
           AND whatsapp_agendado_para IS NULL
+    """)
+
+    cur.execute("""
+        UPDATE orders
+        SET whatsapp_mensagens_enviadas = 1
+        WHERE COALESCE(whatsapp_enviado, FALSE) = TRUE
+          AND COALESCE(whatsapp_mensagens_enviadas, 0) = 0
     """)
 
     conn.commit()
@@ -90,7 +98,8 @@ def buscar_order_por_id(order_id):
         SELECT order_id, plano, nome, email, telefone,
                status, email_tentativas, erro_email,
                whatsapp_enviado, whatsapp_tentativas,
-               erro_whatsapp, whatsapp_agendado_para, created_at
+               erro_whatsapp, whatsapp_agendado_para,
+               whatsapp_mensagens_enviadas, created_at
         FROM orders
         WHERE order_id = %s
     """, (order_id,))
@@ -115,7 +124,8 @@ def buscar_order_por_id(order_id):
         "whatsapp_tentativas": row[9],
         "erro_whatsapp": row[10],
         "whatsapp_agendado_para": row[11],
-        "created_at": row[12]
+        "whatsapp_mensagens_enviadas": row[12],
+        "created_at": row[13]
     }
 
 
@@ -194,7 +204,7 @@ def listar_pedidos():
     cur.execute("""
         SELECT order_id, nome, email, telefone,
                plano, status, whatsapp_enviado,
-               whatsapp_agendado_para, created_at
+               whatsapp_agendado_para, whatsapp_mensagens_enviadas, created_at
         FROM orders
         ORDER BY created_at DESC
     """)
@@ -214,7 +224,8 @@ def listar_pedidos():
             "status": r[5],
             "whatsapp_enviado": r[6],
             "whatsapp_agendado_para": r[7],
-            "created_at": r[8]
+            "whatsapp_mensagens_enviadas": r[8],
+            "created_at": r[9]
         })
 
     return pedidos
@@ -272,7 +283,8 @@ def listar_whatsapp_pendentes(limite=50):
         SELECT order_id, plano, nome, email, telefone,
                status, email_tentativas, erro_email,
                whatsapp_enviado, whatsapp_tentativas,
-               erro_whatsapp, whatsapp_agendado_para, created_at
+               erro_whatsapp, whatsapp_agendado_para,
+               whatsapp_mensagens_enviadas, created_at
         FROM orders
         WHERE plano = 'trx-gratis'
           AND status = 'PAGO'
@@ -302,7 +314,8 @@ def listar_whatsapp_pendentes(limite=50):
             "whatsapp_tentativas": row[9],
             "erro_whatsapp": row[10],
             "whatsapp_agendado_para": row[11],
-            "created_at": row[12]
+            "whatsapp_mensagens_enviadas": row[12],
+            "created_at": row[13]
         })
 
     return pedidos
@@ -324,16 +337,17 @@ def registrar_falha_whatsapp(order_id, tentativas, erro):
     conn.close()
 
 
-def marcar_whatsapp_enviado(order_id):
+def incrementar_whatsapp_enviado(order_id, quantidade=1):
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
         UPDATE orders
         SET whatsapp_enviado = TRUE,
-            erro_whatsapp = NULL
+            erro_whatsapp = NULL,
+            whatsapp_mensagens_enviadas = COALESCE(whatsapp_mensagens_enviadas, 0) + %s
         WHERE order_id = %s
-    """, (order_id,))
+    """, (quantidade, order_id))
 
     conn.commit()
     cur.close()

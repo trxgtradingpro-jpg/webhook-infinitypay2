@@ -31,7 +31,7 @@ from database import (
     agendar_whatsapp,
     listar_whatsapp_pendentes,
     registrar_falha_whatsapp,
-    marcar_whatsapp_enviado,
+    incrementar_whatsapp_enviado,
     excluir_order,
     excluir_duplicados_por_dados
 )
@@ -225,7 +225,7 @@ def processar_fila_whatsapp():
 
         try:
             enviar_whatsapp_automatico(pedido)
-            marcar_whatsapp_enviado(pedido["order_id"])
+            incrementar_whatsapp_enviado(pedido["order_id"])
             print(f"📲 WhatsApp automático enviado: {pedido['order_id']}", flush=True)
         except Exception as e:
             registrar_falha_whatsapp(
@@ -507,15 +507,20 @@ def admin_dashboard():
         pedido["whatsapp_link"] = None
         pedido["whatsapp_status"] = ""
 
+        mensagens_enviadas = int(pedido.get("whatsapp_mensagens_enviadas") or 0)
+
         if pedido.get("plano") == "trx-gratis" and pedido.get("status") == "PAGO":
-            if pedido.get("whatsapp_enviado"):
-                pedido["whatsapp_status"] = "mensagem enviada"
-            elif pedido_liberado_para_whatsapp(pedido):
+            if pedido_liberado_para_whatsapp(pedido):
                 pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
                 if not pedido["whatsapp_link"]:
                     pedido["whatsapp_status"] = "telefone inválido"
             else:
                 pedido["whatsapp_status"] = f"aguardando {WHATSAPP_DELAY_MINUTES} min"
+
+            if mensagens_enviadas > 0:
+                pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
+
+        pedido["mostrar_reenviar"] = mensagens_enviadas > 0
 
         info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
         pedido.update(info_30_dias)
@@ -537,7 +542,8 @@ def admin_dashboard():
                 pedido.get("plano") or "",
                 pedido.get("status") or "",
                 pedido.get("data_formatada_busca") or "",
-                str(pedido.get("dias_restantes_30") if pedido.get("dias_restantes_30") is not None else "")
+                str(pedido.get("dias_restantes_30") if pedido.get("dias_restantes_30") is not None else ""),
+                str(pedido.get("whatsapp_mensagens_enviadas") or 0)
             ]
             texto = " ".join(campos_busca).lower()
             if busca not in texto:
@@ -568,7 +574,7 @@ def admin_whatsapp(order_id):
     if not link:
         return "Telefone do usuário não encontrado/inválido", 400
 
-    marcar_whatsapp_enviado(order_id)
+    incrementar_whatsapp_enviado(order_id)
     return redirect(link)
 
 
@@ -585,7 +591,7 @@ def admin_whatsapp_reenviar(order_id):
     if not link:
         return "Telefone do usuário não encontrado/inválido", 400
 
-    marcar_whatsapp_enviado(order_id)
+    incrementar_whatsapp_enviado(order_id)
     return redirect(link)
 
 

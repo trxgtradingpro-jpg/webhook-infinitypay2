@@ -267,8 +267,13 @@
                     <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                     {% if p.whatsapp_link %}
                         | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                    {% endif %}
+
+                    {% if p.mostrar_reenviar %}
                         | <a href="/admin/whatsapp/reenviar/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">Reenviar msg</a>
-                    {% elif p.whatsapp_status %}
+                    {% endif %}
+
+                    {% if p.whatsapp_status %}
                         | <span style="color: var(--muted);">{{ p.whatsapp_status }}</span>
                     {% endif %}
 

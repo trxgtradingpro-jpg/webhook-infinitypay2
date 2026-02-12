@@ -54,3 +54,6 @@ Sem `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_ACCESS_TOKEN`, o sistema continua exi
 
 - Barra de pesquisa no dashboard por nome, email, telefone, data, status, plano e dias restantes.
 - Planos pagos destacados com cores e símbolos por tipo de plano.
+
+- O sistema salva no banco o **contador de mensagens WhatsApp enviadas por usuário** (`whatsapp_mensagens_enviadas`).
+- O botão `Reenviar msg` aparece somente para usuários que já possuem ao menos 1 mensagem enviada.
