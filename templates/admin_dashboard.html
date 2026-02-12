@@ -320,10 +320,6 @@
     </table>
 
     <script>
-        async function pingOnline() {
-            try { await fetch('/online/ping', { method: 'POST' }); } catch (e) {}
-        }
-
         async function atualizarOnline() {
             try {
                 const r = await fetch('/admin/online-count');
@@ -334,9 +330,7 @@
             } catch (e) {}
         }
 
-        pingOnline();
         atualizarOnline();
-        setInterval(pingOnline, 30000);
         setInterval(atualizarOnline, 10000);
     </script>
 </body>

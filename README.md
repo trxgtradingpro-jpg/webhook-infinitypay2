@@ -27,8 +27,8 @@ https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
 - Filtro por plano: `Todos`, `Somente pagos`, `Somente grátis` e planos específicos.
 - Busca por nome, email, telefone, data, plano, status e dias restantes.
 - Destaque visual de planos com cores e símbolos.
-- Exibe: total pedidos, processados, pendentes, total pagos, total grátis e faturamento total.
-- Exibe usuários online em tempo real aproximado (heartbeat).
+- Exibe: total pedidos, processados, pendentes, total pagos (somente planos com preço > 0), total grátis e faturamento total real (somando o preço de cada plano pago).
+- Exibe usuários online em tempo real aproximado (heartbeat), sem contabilizar o próprio admin na tela do dashboard.
 - Corrige exibição de horário para timezone configurável em `ADMIN_TIMEZONE` (padrão `America/Sao_Paulo`).
 - Mostra botão `WhatsApp` também para planos pagos (quando telefone válido).
 - Mantém detecção de duplicados e opção de excluir duplicados.

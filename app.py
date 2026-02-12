@@ -318,8 +318,12 @@ def converter_data_para_timezone_admin(dt):
     return dt.astimezone(tz_admin)
 
 
+def identificador_online_request():
+    return f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
+
+
 def registrar_usuario_online():
-    identificador = f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
+    identificador = identificador_online_request()
     agora = time.time()
 
     with _online_lock:
@@ -330,14 +334,21 @@ def registrar_usuario_online():
             _online_sessions.pop(k, None)
 
 
-def total_usuarios_online():
+def total_usuarios_online(excluir_request_atual=False):
     agora = time.time()
     with _online_lock:
         limite = agora - ONLINE_TTL_SECONDS
         expirados = [k for k, ts in _online_sessions.items() if ts < limite]
         for k in expirados:
             _online_sessions.pop(k, None)
-        return len(_online_sessions)
+
+        total = len(_online_sessions)
+        if excluir_request_atual:
+            atual = identificador_online_request()
+            if atual in _online_sessions:
+                total -= 1
+
+        return max(0, total)
 
 
 @app.route('/online/ping', methods=['POST'])
@@ -351,7 +362,7 @@ def admin_online_count():
     if not session.get("admin"):
         return jsonify({"online": 0}), 403
 
-    return jsonify({"online": total_usuarios_online()})
+    return jsonify({"online": total_usuarios_online(excluir_request_atual=True)})
 
 
 # ======================================================
@@ -542,8 +553,6 @@ def admin_dashboard():
     if not session.get("admin"):
         return redirect("/admin/login")
 
-    registrar_usuario_online()
-
     busca = (request.args.get("q") or "").strip().lower()
     filtro_plano = (request.args.get("plano") or "todos").strip().lower()
 
@@ -561,18 +570,28 @@ def admin_dashboard():
             duplicados_registros_count += len(ids)
 
     total_pedidos = len(pedidos)
-    total_pagos = sum(1 for p in pedidos if (p.get("status") or "").upper() == "PAGO")
-    total_gratis = sum(1 for p in pedidos if p.get("plano") == "trx-gratis")
+    total_pagos = sum(
+        1 for p in pedidos
+        if (p.get("status") or "").upper() == "PAGO"
+        and p.get("plano") in PLANOS
+        and PLANOS[p.get("plano")]["preco"] > 0
+    )
+    total_gratis = sum(
+        1 for p in pedidos
+        if (p.get("status") or "").upper() == "PAGO" and p.get("plano") == "trx-gratis"
+    )
     total_faturado_centavos = sum(
         PLANOS[p.get("plano", "")]["preco"]
         for p in pedidos
-        if (p.get("status") or "").upper() == "PAGO" and p.get("plano") in PLANOS
+        if (p.get("status") or "").upper() == "PAGO"
+        and p.get("plano") in PLANOS
+        and PLANOS[p.get("plano")]["preco"] > 0
     )
 
     stats = {
         "total_pedidos": total_pedidos,
         "processados": total_pagos,
-        "pendentes": max(0, total_pedidos - total_pagos),
+        "pendentes": sum(1 for p in pedidos if (p.get("status") or "").upper() != "PAGO"),
         "pagos": total_pagos,
         "total_gratis": total_gratis,
         "total_faturado": f"R$ {total_faturado_centavos / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
@@ -605,8 +624,11 @@ def admin_dashboard():
         pedido["tem_duplicados"] = pedido["duplicados_total"] > 0
 
         if filtro_plano != "todos":
-            if filtro_plano == "pagos" and (pedido.get("status") or "").upper() != "PAGO":
-                continue
+            if filtro_plano == "pagos":
+                if (pedido.get("status") or "").upper() != "PAGO":
+                    continue
+                if pedido.get("plano") not in PLANOS or PLANOS[pedido.get("plano")]["preco"] <= 0:
+                    continue
             elif filtro_plano == "gratis" and pedido.get("plano") != "trx-gratis":
                 continue
             elif filtro_plano not in ("pagos", "gratis") and pedido.get("plano") != filtro_plano:
