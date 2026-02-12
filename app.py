@@ -280,6 +280,29 @@ def chave_duplicidade_pedido(order):
     return (nome, email, telefone)
 
 
+def calcular_contagem_regressiva_30_dias(order):
+    criado_em = order.get("created_at")
+    if not criado_em:
+        return {
+            "dias_restantes_30": None,
+            "alerta_30_dias": ""
+        }
+
+    agora = datetime.now(criado_em.tzinfo) if getattr(criado_em, "tzinfo", None) else datetime.now()
+    limite = criado_em + timedelta(days=30)
+    segundos = (limite - agora).total_seconds()
+    dias_restantes = math.ceil(segundos / 86400)
+
+    alerta = ""
+    if dias_restantes in (5, 3):
+        alerta = f"⚠ Faltam {dias_restantes} dias para completar 30 dias"
+
+    return {
+        "dias_restantes_30": dias_restantes,
+        "alerta_30_dias": alerta
+    }
+
+
 def converter_data_para_timezone_admin(dt):
     if not dt:
         return None
