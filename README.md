@@ -59,3 +59,27 @@ Foi adicionada uma página dedicada `GET /admin/analytics` com filtros de perío
 - Tabela `analytics_purchase_events` para eventos de compra (deduplicação por `order_id`).
 - Tabela `user_plan_stats` para agregados por usuário (grátis/pago e por plano).
 - Atualização automática ao confirmar pedido pago no fluxo atual (`/comprar` para grátis e webhook para pagos), sem alterar endpoints existentes.
+
+
+## Envio automático de WhatsApp pós-pagamento (microserviço HTTP)
+
+Configurar no Render:
+
+- `WA_SENDER_URL`: endpoint HTTP do microserviço (ex: `https://meu-sender.onrender.com/send`)
+- `WA_SENDER_TOKEN`: token Bearer de autenticação
+- `WHATSAPP_DELAY_MINUTES`: atraso do envio (padrão `5`)
+- `WHATSAPP_TEMPLATE`: template da mensagem com `{nome}` e `{plano}`
+
+Payload enviado pelo backend para o microserviço:
+
+```json
+{
+  "phone": "55DDDNUMERO",
+  "message": "mensagem formatada",
+  "order_id": "identificador-do-pedido"
+}
+```
+
+Comportamento:
+- O webhook responde rápido e o envio ocorre em background (thread timer).
+- Idempotência por `order_id` na tabela `whatsapp_auto_dispatches` (1 compra confirmada = 1 envio).

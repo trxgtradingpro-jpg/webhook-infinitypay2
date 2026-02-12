@@ -17,6 +17,7 @@ from collections import defaultdict
 
 from compactador import compactar_plano
 from email_utils import enviar_email
+from whatsapp_sender import schedule_whatsapp
 
 from database import (
     init_db,
@@ -38,7 +39,10 @@ from database import (
     registrar_evento_compra_analytics,
     buscar_user_plan_stats,
     listar_eventos_analytics,
-    backfill_analytics_from_orders
+    backfill_analytics_from_orders,
+    registrar_whatsapp_auto_agendamento,
+    marcar_whatsapp_auto_enviado,
+    registrar_falha_whatsapp_auto
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -81,6 +85,12 @@ WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
     "Olá {nome}, vi que você baixou o plano {plano}. Posso te ajudar a começar?"
 )
+WHATSAPP_TEMPLATE = os.environ.get(
+    "WHATSAPP_TEMPLATE",
+    "✅ {nome}, seu pagamento do {plano} foi confirmado. Qualquer dúvida pode me chamar!"
+)
+WA_SENDER_URL = os.environ.get("WA_SENDER_URL", "").strip()
+WA_SENDER_TOKEN = os.environ.get("WA_SENDER_TOKEN", "").strip()
 WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
 WHATSAPP_AUTO_SEND = os.environ.get("WHATSAPP_AUTO_SEND", "true").strip().lower() == "true"
 WHATSAPP_GRAPH_VERSION = os.environ.get("WHATSAPP_GRAPH_VERSION", "v21.0").strip()
@@ -310,6 +320,41 @@ def calcular_contagem_regressiva_30_dias(order):
         "dias_restantes_30": dias_restantes,
         "alerta_30_dias": alerta
     }
+
+
+def montar_mensagem_whatsapp_pos_pago(order):
+    nome = (order.get("nome") or "cliente").strip() or "cliente"
+    plano_nome = PLANOS.get(order.get("plano"), {}).get("nome", order.get("plano", "plano"))
+    return WHATSAPP_TEMPLATE.format(nome=nome, plano=plano_nome)
+
+
+def agendar_whatsapp_pos_pago(order):
+    order_id = order.get("order_id")
+    telefone = order.get("telefone")
+
+    if not order_id or not telefone:
+        return
+
+    if not WA_SENDER_URL or not WA_SENDER_TOKEN:
+        print(f"⚠️ WhatsApp sender não configurado; ignorando pedido {order_id}", flush=True)
+        return
+
+    agendado = registrar_whatsapp_auto_agendamento(order_id, delay_minutes=WHATSAPP_DELAY_MINUTES)
+    if not agendado:
+        print(f"ℹ️ WhatsApp já agendado/enviado para {order_id}", flush=True)
+        return
+
+    mensagem = montar_mensagem_whatsapp_pos_pago(order)
+    print(f"✅ Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
+
+    schedule_whatsapp(
+        phone=telefone,
+        message=mensagem,
+        order_id=order_id,
+        delay_minutes=WHATSAPP_DELAY_MINUTES,
+        on_success=marcar_whatsapp_auto_enviado,
+        on_failure=registrar_falha_whatsapp_auto
+    )
 
 
 def converter_data_para_timezone_admin(dt):
@@ -560,6 +605,7 @@ def comprar():
         order_pago = buscar_order_por_id(order_id)
         registrar_compra_analytics(order_pago)
         agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
+        agendar_whatsapp_pos_pago(order_pago)
         return redirect(plano_info["redirect_url"])
 
     checkout_url = criar_checkout_dinamico(
@@ -606,6 +652,7 @@ def webhook():
             marcar_transacao_processada(transaction_nsu)
             order_pago = buscar_order_por_id(order_id)
             registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
+            agendar_whatsapp_pos_pago(order_pago)
     finally:
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)

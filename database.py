@@ -40,6 +40,18 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS whatsapp_auto_dispatches (
+            order_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'SCHEDULED',
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            scheduled_for TIMESTAMP,
+            sent_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS user_plan_stats (
             user_key TEXT PRIMARY KEY,
             free_count INTEGER NOT NULL DEFAULT 0,
@@ -649,3 +661,56 @@ def listar_eventos_analytics(start_date=None, end_date=None, plano=None):
         })
 
     return eventos
+
+
+
+def registrar_whatsapp_auto_agendamento(order_id, delay_minutes=5):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO whatsapp_auto_dispatches (order_id, status, scheduled_for)
+        VALUES (%s, 'SCHEDULED', NOW() + (%s || ' minutes')::INTERVAL)
+        ON CONFLICT (order_id) DO NOTHING
+    """, (order_id, str(delay_minutes)))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido
+
+
+def marcar_whatsapp_auto_enviado(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE whatsapp_auto_dispatches
+        SET status = 'SENT',
+            sent_at = NOW(),
+            attempts = attempts + 1,
+            last_error = NULL
+        WHERE order_id = %s
+    """, (order_id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def registrar_falha_whatsapp_auto(order_id, erro):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE whatsapp_auto_dispatches
+        SET status = 'FAILED',
+            attempts = attempts + 1,
+            last_error = %s
+        WHERE order_id = %s
+    """, (erro, order_id))
+
+    conn.commit()
+    cur.close()
+    conn.close()
