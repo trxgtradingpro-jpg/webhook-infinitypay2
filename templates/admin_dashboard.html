@@ -81,6 +81,11 @@
             font-weight: bold;
         }
 
+        .status-gratis {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
         .status-pendente {
             color: var(--warn);
             font-weight: bold;
@@ -138,7 +143,9 @@
                 <td>{{ p.telefone or "-" }}</td>
                 <td>{{ p.plano }}</td>
                 <td>
-                    {% if p.status == "PAGO" %}
+                    {% if p.status == "PAGO" and p.plano == "trx-gratis" %}
+                        <span class="status-gratis">✔ Pago (grátis)</span>
+                    {% elif p.status == "PAGO" %}
                         <span class="status-ok">✔ Pago</span>
                     {% else %}
                         <span class="status-pendente">⏳ Pendente</span>
@@ -148,10 +155,14 @@
                 <td>
                     <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                     {% if p.whatsapp_link %}
-                        | <a href="{{ p.whatsapp_link }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-                    {% elif p.plano == "trx-gratis" and p.status == "PAGO" %}
-                        | <span style="color: var(--muted);">aguardando 5 min</span>
+                        | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                    {% elif p.whatsapp_status %}
+                        | <span style="color: var(--muted);">{{ p.whatsapp_status }}</span>
                     {% endif %}
+                    |
+                    <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');">
+                        <button type="submit" style="background:none;border:none;color:#f87171;cursor:pointer;padding:0;font:inherit;">Excluir</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}

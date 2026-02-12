@@ -49,6 +49,14 @@ def init_db():
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS erro_whatsapp TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_agendado_para TIMESTAMP")
 
+    cur.execute("""
+        UPDATE orders
+        SET whatsapp_agendado_para = created_at + INTERVAL '5 minutes'
+        WHERE plano = 'trx-gratis'
+          AND status = 'PAGO'
+          AND whatsapp_agendado_para IS NULL
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -185,7 +193,8 @@ def listar_pedidos():
 
     cur.execute("""
         SELECT order_id, nome, email, telefone,
-               plano, status, whatsapp_agendado_para, created_at
+               plano, status, whatsapp_enviado,
+               whatsapp_agendado_para, created_at
         FROM orders
         ORDER BY created_at DESC
     """)
@@ -203,8 +212,9 @@ def listar_pedidos():
             "telefone": r[3],
             "plano": r[4],
             "status": r[5],
-            "whatsapp_agendado_para": r[6],
-            "created_at": r[7]
+            "whatsapp_enviado": r[6],
+            "whatsapp_agendado_para": r[7],
+            "created_at": r[8]
         })
 
     return pedidos
@@ -324,6 +334,17 @@ def marcar_whatsapp_enviado(order_id):
             erro_whatsapp = NULL
         WHERE order_id = %s
     """, (order_id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def excluir_order(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
 
     conn.commit()
     cur.close()

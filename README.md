@@ -35,3 +35,10 @@ Para realmente enviar mensagem automática sem clique manual, configure também:
 - `WHATSAPP_GRAPH_VERSION` (padrão `v21.0`)
 
 Sem `WHATSAPP_PHONE_NUMBER_ID` e `WHATSAPP_ACCESS_TOKEN`, o sistema continua exibindo o botão no dashboard, mas não consegue disparar a mensagem sozinho.
+
+
+## Dashboard admin
+
+- Pedidos `trx-gratis` mostram status em azul.
+- Após envio automático ou clique no botão WhatsApp, aparece `mensagem enviada`.
+- Cada pedido possui botão `Excluir` com confirmação.

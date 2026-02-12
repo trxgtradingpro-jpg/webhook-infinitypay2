@@ -7,7 +7,7 @@ import json
 import uuid
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 import re
 import threading
@@ -30,7 +30,8 @@ from database import (
     agendar_whatsapp,
     listar_whatsapp_pendentes,
     registrar_falha_whatsapp,
-    marcar_whatsapp_enviado
+    marcar_whatsapp_enviado,
+    excluir_order
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -248,9 +249,13 @@ def pedido_liberado_para_whatsapp(order):
 
     agendado = order.get("whatsapp_agendado_para")
     if agendado is None:
-        return False
+        criado_em = order.get("created_at")
+        if criado_em is None:
+            return True
+        agendado = criado_em + timedelta(minutes=WHATSAPP_DELAY_MINUTES)
 
-    return agendado <= datetime.now(agendado.tzinfo) if getattr(agendado, "tzinfo", None) else agendado <= datetime.now()
+    agora = datetime.now(agendado.tzinfo) if getattr(agendado, "tzinfo", None) else datetime.now()
+    return agendado <= agora
 
 
 iniciar_worker_whatsapp()
@@ -448,14 +453,47 @@ def admin_dashboard():
 
     for pedido in pedidos:
         pedido["whatsapp_link"] = None
-        if pedido_liberado_para_whatsapp(pedido):
-            pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
+        pedido["whatsapp_status"] = ""
+
+        if pedido.get("plano") == "trx-gratis" and pedido.get("status") == "PAGO":
+            if pedido.get("whatsapp_enviado"):
+                pedido["whatsapp_status"] = "mensagem enviada"
+            elif pedido_liberado_para_whatsapp(pedido):
+                pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
+            else:
+                pedido["whatsapp_status"] = f"aguardando {WHATSAPP_DELAY_MINUTES} min"
 
     return render_template(
         "admin_dashboard.html",
         pedidos=pedidos,
         stats=stats
     )
+
+
+@app.route("/admin/whatsapp/<order_id>")
+def admin_whatsapp(order_id):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    pedido = buscar_order_por_id(order_id)
+    if not pedido:
+        return "Pedido não encontrado", 404
+
+    link = gerar_link_whatsapp(pedido)
+    if not link:
+        return "WHATSAPP_NUMERO não configurado", 400
+
+    marcar_whatsapp_enviado(order_id)
+    return redirect(link)
+
+
+@app.route("/admin/pedido/<order_id>/excluir", methods=["POST"])
+def admin_excluir_pedido(order_id):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    excluir_order(order_id)
+    return redirect("/admin/dashboard")
 
 
 def montar_dashboard_stats(pedidos):
