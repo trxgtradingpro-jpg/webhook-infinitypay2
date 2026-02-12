@@ -34,7 +34,10 @@ from database import (
     registrar_falha_whatsapp,
     incrementar_whatsapp_enviado,
     excluir_order,
-    excluir_duplicados_por_dados
+    excluir_duplicados_por_dados,
+    registrar_evento_compra_analytics,
+    buscar_user_plan_stats,
+    listar_eventos_analytics
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -318,6 +321,71 @@ def converter_data_para_timezone_admin(dt):
     return dt.astimezone(tz_admin)
 
 
+def obter_user_key(order):
+    email = (order.get("email") or "").strip().lower()
+    if email:
+        return email
+
+    telefone = re.sub(r"\D", "", order.get("telefone") or "")
+    if telefone:
+        return telefone
+
+    return (order.get("order_id") or "").strip()
+
+
+def registrar_compra_analytics(order, transaction_nsu=None):
+    if not order:
+        return False
+
+    status_pago = (order.get("status") or "").upper() == "PAGO"
+    if not status_pago:
+        return False
+
+    plano = order.get("plano")
+    if plano not in PLANOS:
+        return False
+
+    user_key = obter_user_key(order)
+    if not user_key:
+        return False
+
+    amount_centavos = int(PLANOS.get(plano, {}).get("preco") or 0)
+    return registrar_evento_compra_analytics(
+        order_id=order.get("order_id"),
+        user_key=user_key,
+        plano=plano,
+        is_paid=amount_centavos > 0,
+        amount_centavos=amount_centavos,
+        transaction_nsu=transaction_nsu,
+        created_at=order.get("created_at")
+    )
+
+
+def parse_iso_date(value):
+    if not value:
+        return None
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+def fmt_brl_from_centavos(valor):
+    return f"R$ {valor / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def agrupar_periodo(data_obj, group_by):
+    if group_by == "week":
+        iso = data_obj.isocalendar()
+        return f"{iso.year}-W{iso.week:02d}"
+    if group_by == "month":
+        return data_obj.strftime("%Y-%m")
+    return data_obj.isoformat()
+
+
+def carregar_eventos_analytics_filtrados(start=None, end=None, plano='all'):
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time()) if end else None
+    return listar_eventos_analytics(start_date=start_dt, end_date=end_dt, plano=plano)
+
+
 def identificador_online_request():
     return f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
 
@@ -483,6 +551,8 @@ def comprar():
         )
 
         marcar_order_processada(order_id)
+        order_pago = buscar_order_por_id(order_id)
+        registrar_compra_analytics(order_pago)
         agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
         return redirect(plano_info["redirect_url"])
 
@@ -528,6 +598,8 @@ def webhook():
         if sucesso:
             marcar_order_processada(order_id)
             marcar_transacao_processada(transaction_nsu)
+            order_pago = buscar_order_por_id(order_id)
+            registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
     finally:
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)
@@ -706,6 +778,207 @@ def admin_relatorios():
         },
         por_plano=por_plano
     )
+
+
+@app.route("/admin/analytics")
+def admin_analytics():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    hoje = datetime.now().date()
+    inicio_padrao = (hoje - timedelta(days=30)).isoformat()
+    return render_template("admin_analytics.html", planos=list(PLANOS.keys()), inicio_padrao=inicio_padrao, hoje=hoje.isoformat())
+
+
+@app.route("/api/analytics/users/<path:user_key>/plan-stats")
+def api_analytics_user_plan_stats(user_key):
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    registro = buscar_user_plan_stats(user_key)
+    if not registro:
+        return jsonify({
+            "userKey": user_key,
+            "free_count": 0,
+            "paid_count": 0,
+            "by_plan": {
+                "trx-gratis": 0,
+                "trx-bronze": 0,
+                "trx-prata": 0,
+                "trx-gold": 0,
+                "trx-black": 0
+            },
+            "updated_at": None
+        })
+
+    return jsonify({
+        "userKey": registro["user_key"],
+        "free_count": int(registro.get("free_count") or 0),
+        "paid_count": int(registro.get("paid_count") or 0),
+        "by_plan": {
+            "trx-gratis": int(registro.get("plan_trx_gratis_count") or 0),
+            "trx-bronze": int(registro.get("plan_trx_bronze_count") or 0),
+            "trx-prata": int(registro.get("plan_trx_prata_count") or 0),
+            "trx-gold": int(registro.get("plan_trx_gold_count") or 0),
+            "trx-black": int(registro.get("plan_trx_black_count") or 0)
+        },
+        "updated_at": registro.get("updated_at").isoformat() if registro.get("updated_at") else None
+    })
+
+
+@app.route("/api/analytics/summary")
+def api_analytics_summary():
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    try:
+        start = parse_iso_date(request.args.get("start"))
+    except Exception:
+        return jsonify({"error": "start inválido (YYYY-MM-DD)"}), 400
+
+    try:
+        end = parse_iso_date(request.args.get("end"))
+    except Exception:
+        return jsonify({"error": "end inválido (YYYY-MM-DD)"}), 400
+
+    if start and end and end < start:
+        return jsonify({"error": "end deve ser maior/igual a start"}), 400
+
+    eventos = carregar_eventos_analytics_filtrados(start=start, end=end, plano='all')
+    totals_by_plan = {plano: 0 for plano in PLANOS.keys()}
+    users = set()
+    daily_revenue = defaultdict(int)
+    daily_orders = defaultdict(int)
+    daily_paid_orders = defaultdict(int)
+    daily_free_orders = defaultdict(int)
+    daily_by_plan = {plano: defaultdict(int) for plano in PLANOS.keys()}
+
+    total_free = 0
+    total_paid = 0
+    revenue_total = 0
+
+    for evento in eventos:
+        plano = evento.get("plano")
+        if plano not in totals_by_plan:
+            continue
+
+        user_key = evento.get("user_key")
+        if user_key:
+            users.add(user_key)
+
+        date_key = evento["created_at"].date().isoformat()
+        totals_by_plan[plano] += 1
+        daily_orders[date_key] += 1
+        daily_by_plan[plano][date_key] += 1
+
+        amount = int(evento.get("amount_centavos") or 0)
+        revenue_total += amount
+        daily_revenue[date_key] += amount
+
+        if amount > 0:
+            total_paid += 1
+            daily_paid_orders[date_key] += 1
+        else:
+            total_free += 1
+            daily_free_orders[date_key] += 1
+
+    def para_lista(d):
+        return [{"date": k, "value": d[k]} for k in sorted(d.keys())]
+
+    return jsonify({
+        "total_users": len(users),
+        "total_free": total_free,
+        "total_paid": total_paid,
+        "totals_by_plan": totals_by_plan,
+        "revenue_total": revenue_total,
+        "daily_revenue": para_lista(daily_revenue),
+        "daily_orders": para_lista(daily_orders),
+        "daily_paid_orders": para_lista(daily_paid_orders),
+        "daily_free_orders": para_lista(daily_free_orders),
+        "daily_by_plan": {plano: para_lista(serie) for plano, serie in daily_by_plan.items()}
+    })
+
+
+@app.route("/api/analytics/chart")
+def api_analytics_chart():
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    metric = (request.args.get("metric") or "revenue").strip()
+    group_by = (request.args.get("groupBy") or "day").strip()
+    plan = (request.args.get("plan") or "all").strip()
+    chart_type = (request.args.get("chartType") or "line").strip()
+
+    metric_validas = {"revenue", "orders_total", "orders_paid", "orders_free", "orders_by_plan"}
+    group_validos = {"day", "week", "month"}
+
+    if metric not in metric_validas:
+        return jsonify({"error": "metric inválida"}), 400
+    if group_by not in group_validos:
+        return jsonify({"error": "groupBy inválido"}), 400
+    if plan != "all" and plan not in PLANOS:
+        return jsonify({"error": "plan inválido"}), 400
+
+    try:
+        start = parse_iso_date(request.args.get("start"))
+    except Exception:
+        return jsonify({"error": "start inválido (YYYY-MM-DD)"}), 400
+
+    try:
+        end = parse_iso_date(request.args.get("end"))
+    except Exception:
+        return jsonify({"error": "end inválido (YYYY-MM-DD)"}), 400
+
+    if start and end and end < start:
+        return jsonify({"error": "end deve ser maior/igual a start"}), 400
+
+    filtro_plano = plan if metric == "orders_by_plan" and plan != "all" else "all"
+    eventos = carregar_eventos_analytics_filtrados(start=start, end=end, plano=filtro_plano)
+
+    series = []
+
+    if metric == "orders_by_plan" and plan == "all":
+        for plano_id in PLANOS.keys():
+            agrupado = defaultdict(int)
+            for evento in eventos:
+                if evento.get("plano") != plano_id:
+                    continue
+                bucket = agrupar_periodo(evento["created_at"].date(), group_by)
+                agrupado[bucket] += 1
+            series.append({
+                "name": plano_id,
+                "data": [{"x": k, "y": agrupado[k]} for k in sorted(agrupado.keys())]
+            })
+    else:
+        agrupado = defaultdict(int)
+        for evento in eventos:
+            amount = int(evento.get("amount_centavos") or 0)
+            if metric == "orders_paid" and amount <= 0:
+                continue
+            if metric == "orders_free" and amount > 0:
+                continue
+            if metric == "orders_by_plan" and plan != "all" and evento.get("plano") != plan:
+                continue
+
+            bucket = agrupar_periodo(evento["created_at"].date(), group_by)
+            if metric == "revenue":
+                agrupado[bucket] += amount
+            else:
+                agrupado[bucket] += 1
+
+        nome = "Total" if metric != "orders_by_plan" else plan
+        series.append({
+            "name": nome,
+            "data": [{"x": k, "y": agrupado[k]} for k in sorted(agrupado.keys())]
+        })
+
+    return jsonify({
+        "metric": metric,
+        "groupBy": group_by,
+        "plan": plan,
+        "chartType": chart_type,
+        "series": series
+    })
 
 
 @app.route("/admin/whatsapp/<order_id>")

@@ -43,3 +43,19 @@ https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
 
 - Menu admin com 3 páginas: `Resumo`, `Relatórios` e `Gráficos`.
 - Preços atualizados: Prata R$ 247,00, Gold R$ 497,00, Black R$ 697,00.
+
+## Analytics (novo)
+
+Foi adicionada uma página dedicada `GET /admin/analytics` com filtros de período e gráfico, consumindo somente dados reais do banco.
+
+### Endpoints novos
+
+- `GET /api/analytics/users/<userKey>/plan-stats`
+- `GET /api/analytics/summary?start=YYYY-MM-DD&end=YYYY-MM-DD`
+- `GET /api/analytics/chart?metric=...&groupBy=day|week|month&start=...&end=...&plan=...&chartType=...`
+
+### Persistência incremental
+
+- Tabela `analytics_purchase_events` para eventos de compra (deduplicação por `order_id`).
+- Tabela `user_plan_stats` para agregados por usuário (grátis/pago e por plano).
+- Atualização automática ao confirmar pedido pago no fluxo atual (`/comprar` para grátis e webhook para pagos), sem alterar endpoints existentes.

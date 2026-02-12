@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics • Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:#050816;color:#e5ecff}
+    .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+    .menu{display:flex;gap:10px;flex-wrap:wrap}
+    .menu a{padding:10px 16px;border-radius:999px;border:1px solid #1d2a52;color:#e5ecff;text-decoration:none}
+    .menu a.active,.menu a:hover{border-color:#38bdf8;box-shadow:0 0 16px rgba(56,189,248,.25)}
+    .panel{background:#0b132b;border:1px solid #1d2a52;border-radius:14px;padding:14px;margin-bottom:14px}
+    .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}
+    label{font-size:12px;color:#94a3b8;display:block;margin-bottom:6px}
+    input,select,button{width:100%;padding:10px;border-radius:10px;border:1px solid #1d2a52;background:#08112a;color:#e5ecff}
+    button{background:#0f1b3d;cursor:pointer}
+    .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
+    .card{background:#08112a;border:1px solid #1d2a52;border-radius:10px;padding:10px}
+    .card .k{font-size:12px;color:#94a3b8}.card .v{font-size:22px;font-weight:800}
+    .chart-wrap{height:420px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1 style="margin:0">📊 Analytics</h1>
+    <nav class="menu">
+      <a href="/admin/dashboard">Resumo</a>
+      <a href="/admin/relatorios">Relatórios</a>
+      <a href="/dashboard">Gráficos</a>
+      <a class="active" href="/admin/analytics">Analytics</a>
+    </nav>
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <div><label>Data inicial</label><input id="start" type="date" value="{{ inicio_padrao }}"></div>
+      <div><label>Data final</label><input id="end" type="date" value="{{ hoje }}"></div>
+      <div><label><input id="noEnd" type="checkbox"> Sem data final</label></div>
+      <div>
+        <label>Tipo de gráfico</label>
+        <select id="chartType">
+          <option value="line">Linha</option>
+          <option value="area">Área</option>
+          <option value="bar">Barras</option>
+          <option value="doughnut">Donut</option>
+        </select>
+      </div>
+      <div>
+        <label>Métrica</label>
+        <select id="metric">
+          <option value="revenue">Faturamento</option>
+          <option value="orders_total">Pedidos</option>
+          <option value="orders_paid">Pedidos pagos</option>
+          <option value="orders_free">Pedidos grátis</option>
+          <option value="orders_by_plan">Por plano</option>
+        </select>
+      </div>
+      <div>
+        <label>Plano</label>
+        <select id="plan">
+          <option value="all">Todos</option>
+          {% for p in planos %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Agrupar por</label>
+        <select id="groupBy">
+          <option value="day">Dia</option>
+          <option value="week">Semana</option>
+          <option value="month">Mês</option>
+        </select>
+      </div>
+      <div><button id="applyBtn">Aplicar</button></div>
+    </div>
+
+    <div class="row" id="summaryCards">
+      <div class="card"><div class="k">Total usuários</div><div class="v" id="totalUsers">0</div></div>
+      <div class="card"><div class="k">Total grátis</div><div class="v" id="totalFree">0</div></div>
+      <div class="card"><div class="k">Total pagos</div><div class="v" id="totalPaid">0</div></div>
+      <div class="card"><div class="k">Faturamento</div><div class="v" id="totalRevenue">R$ 0,00</div></div>
+    </div>
+  </div>
+
+  <div class="panel chart-wrap"><canvas id="chart"></canvas></div>
+
+<script>
+let chart;
+
+function formatBRL(cents){
+  return (cents/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+async function carregarResumo(params){
+  const url = '/api/analytics/summary?' + new URLSearchParams(params).toString();
+  const r = await fetch(url);
+  if(!r.ok) return;
+  const d = await r.json();
+  document.getElementById('totalUsers').textContent = d.total_users;
+  document.getElementById('totalFree').textContent = d.total_free;
+  document.getElementById('totalPaid').textContent = d.total_paid;
+  document.getElementById('totalRevenue').textContent = formatBRL(d.revenue_total || 0);
+}
+
+async function carregarGrafico(){
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('noEnd').checked ? '' : document.getElementById('end').value;
+  const metric = document.getElementById('metric').value;
+  const chartType = document.getElementById('chartType').value;
+  const groupBy = document.getElementById('groupBy').value;
+  const plan = document.getElementById('plan').value;
+
+  const params = {start, metric, chartType, groupBy, plan};
+  if(end) params.end = end;
+
+  await carregarResumo({start, end});
+
+  const url = '/api/analytics/chart?' + new URLSearchParams(params).toString();
+  const resp = await fetch(url);
+  if(!resp.ok) return;
+  const payload = await resp.json();
+
+  const datasets = payload.series.map((serie,idx)=>(
+    {
+      label: serie.name,
+      data: serie.data.map(p=>({x:p.x,y:p.y})),
+      borderWidth: 2,
+      pointRadius: 3,
+      tension: 0.35,
+      fill: chartType === 'area',
+      backgroundColor: ['rgba(56,189,248,.35)','rgba(34,197,94,.35)','rgba(250,204,21,.35)','rgba(248,113,113,.35)','rgba(167,139,250,.35)'][idx%5],
+      borderColor: ['#38bdf8','#22c55e','#facc15','#f87171','#a78bfa'][idx%5]
+    }
+  ));
+
+  let finalType = chartType;
+  if(chartType === 'area') finalType = 'line';
+
+  if(chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'),{
+    type: finalType,
+    data:{datasets},
+    options:{
+      parsing:false,
+      maintainAspectRatio:false,
+      scales:{
+        x:{type:'category',grid:{color:'rgba(148,163,184,.15)'}},
+        y:{grid:{color:'rgba(148,163,184,.15)'}}
+      },
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label(ctx){
+              const v = ctx.raw?.y ?? 0;
+              if(metric === 'revenue') return `${ctx.dataset.label}: ${formatBRL(v)}`;
+              return `${ctx.dataset.label}: ${v}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+document.getElementById('noEnd').addEventListener('change',e=>{
+  document.getElementById('end').disabled = e.target.checked;
+});
+document.getElementById('applyBtn').addEventListener('click',carregarGrafico);
+carregarGrafico();
+</script>
+</body>
+</html>
