@@ -1,85 +1,152 @@
-# webhook-infinitypay
+# WhatsApp Sender (Baileys + Express)
 
-## WhatsApp para planos
+Microserviço independente em Node.js para envio de mensagens WhatsApp via WhatsApp Web (Baileys), consumido por outro backend via HTTP.
 
-O sistema possui:
+## Requisitos
 
-1. **Botão oficial `wa.me` no dashboard** (manual), usando o telefone do próprio pedido.
-2. **Envio automático para plano grátis** após alguns minutos (via WhatsApp Cloud API oficial da Meta).
+- Node.js 18+
+- Variáveis de ambiente configuradas
 
-## Variáveis de WhatsApp
+## Variáveis de ambiente
 
-- `WHATSAPP_MENSAGEM`: mensagem base (suporta `{nome}` e `{plano}`).
-- `WHATSAPP_DELAY_MINUTES`: atraso para plano grátis (padrão `5`).
-- `WHATSAPP_AUTO_SEND` (padrão `true`).
-- `WHATSAPP_PHONE_NUMBER_ID`.
-- `WHATSAPP_ACCESS_TOKEN`.
-- `WHATSAPP_GRAPH_VERSION` (padrão `v21.0`).
+- `PORT` (padrão: `10000`)
+- `WA_SENDER_TOKEN` (**obrigatório**)
+- `AUTH_DIR` (padrão: `./auth`)
+- `MIN_SECONDS_BETWEEN_SAME_NUMBER` (padrão: `60`)
 
-Formato do link manual:
+Se `WA_SENDER_TOKEN` não estiver definido, o serviço encerra na inicialização.
 
-```text
-https://wa.me/<telefone-do-usuario>?text=<mensagem-url-encoded>
+## Como rodar local
+
+```bash
+npm install
+WA_SENDER_TOKEN="seu-token" npm start
 ```
 
-## Dashboard admin
+Opcionalmente definindo todas as envs:
 
-- Filtro por plano: `Todos`, `Somente pagos`, `Somente grátis` e planos específicos.
-- Busca por nome, email, telefone, data, plano, status e dias restantes.
-- Destaque visual de planos com cores e símbolos.
-- Exibe: total pedidos, processados, pendentes, total pagos (somente planos com preço > 0), total grátis e faturamento total real (somando o preço de cada plano pago).
-- Exibe usuários online em tempo real aproximado (heartbeat), sem contabilizar o próprio admin na tela do dashboard.
-- Corrige exibição de horário para timezone configurável em `ADMIN_TIMEZONE` (padrão `America/Sao_Paulo`).
-- Mostra botão `WhatsApp` também para planos pagos (quando telefone válido).
-- Mantém detecção de duplicados e opção de excluir duplicados.
-- Salva contador de mensagens enviadas por pedido em `whatsapp_mensagens_enviadas`.
+```bash
+PORT=10000 \
+WA_SENDER_TOKEN="seu-token" \
+AUTH_DIR="./auth" \
+MIN_SECONDS_BETWEEN_SAME_NUMBER=60 \
+npm start
+```
 
+## Endpoints
 
-## Navegação e filtros
-
-- O admin agora tem menu com páginas separadas: `Resumo` e `Relatórios`, mantendo o mesmo estilo visual.
-- O filtro tem opção `Somente pendentes` além de `Todos`, `Somente pagos` e `Somente grátis`.
-- `Somente pagos` exclui planos grátis.
-
-- Menu admin com 3 páginas: `Resumo`, `Relatórios` e `Gráficos`.
-- Preços atualizados: Prata R$ 247,00, Gold R$ 497,00, Black R$ 697,00.
-
-## Analytics (novo)
-
-Foi adicionada uma página dedicada `GET /admin/analytics` com filtros de período e gráfico, consumindo somente dados reais do banco.
-
-### Endpoints novos
-
-- `GET /api/analytics/users/<userKey>/plan-stats`
-- `GET /api/analytics/summary?start=YYYY-MM-DD&end=YYYY-MM-DD`
-- `GET /api/analytics/chart?metric=...&groupBy=day|week|month&start=...&end=...&plan=...&chartType=...`
-
-### Persistência incremental
-
-- Tabela `analytics_purchase_events` para eventos de compra (deduplicação por `order_id`).
-- Tabela `user_plan_stats` para agregados por usuário (grátis/pago e por plano).
-- Atualização automática ao confirmar pedido pago no fluxo atual (`/comprar` para grátis e webhook para pagos), sem alterar endpoints existentes.
-
-
-## Envio automático de WhatsApp pós-pagamento (microserviço HTTP)
-
-Configurar no Render:
-
-- `WA_SENDER_URL`: endpoint HTTP do microserviço (ex: `https://meu-sender.onrender.com/send`)
-- `WA_SENDER_TOKEN`: token Bearer de autenticação
-- `WHATSAPP_DELAY_MINUTES`: atraso do envio (padrão `5`)
-- `WHATSAPP_TEMPLATE`: template da mensagem com `{nome}` e `{plano}`
-
-Payload enviado pelo backend para o microserviço:
+### `GET /`
+Retorna estado do serviço:
 
 ```json
 {
-  "phone": "55DDDNUMERO",
-  "message": "mensagem formatada",
-  "order_id": "identificador-do-pedido"
+  "ok": true,
+  "connected": false,
+  "has_qr": true
 }
 ```
 
-Comportamento:
-- O webhook responde rápido e o envio ocorre em background (thread timer).
-- Idempotência por `order_id` na tabela `whatsapp_auto_dispatches` (1 compra confirmada = 1 envio).
+### `GET /qr`
+Retorna QR atual em texto:
+
+```json
+{
+  "ok": true,
+  "qr": "codigo-qr"
+}
+```
+
+### `POST /send`
+Autenticação obrigatória:
+
+`Authorization: Bearer {WA_SENDER_TOKEN}`
+
+Body JSON:
+
+```json
+{
+  "phone": "5511999999999",
+  "message": "texto da mensagem",
+  "order_id": "id-opcional"
+}
+```
+
+Regras:
+- telefone E.164 sem `+` (10 a 15 dígitos)
+- `message` obrigatório
+- rate limit por número (`MIN_SECONDS_BETWEEN_SAME_NUMBER`)
+- envio somente com WhatsApp conectado
+
+Resposta de sucesso:
+
+```json
+{
+  "ok": true,
+  "order_id": "id-opcional",
+  "message_id": "..."
+}
+```
+
+Resposta de erro:
+
+```json
+{
+  "ok": false,
+  "error": "descrição"
+}
+```
+
+## Como escanear QR
+
+1. Suba o serviço.
+2. Chame `GET /qr` para obter o texto QR.
+3. Escaneie no WhatsApp (Aparelhos conectados).
+4. Após conexão, `GET /` retorna `connected: true`.
+
+## Deploy no Render
+
+1. Crie um Web Service no Render apontando para este repositório.
+2. Build Command: `npm install`
+3. Start Command: `npm start`
+4. Configure env vars:
+   - `WA_SENDER_TOKEN` (obrigatório)
+   - `PORT` (opcional)
+   - `AUTH_DIR` (recomendado `/var/data/auth`)
+   - `MIN_SECONDS_BETWEEN_SAME_NUMBER`
+
+## Disk Persistente (Render)
+
+Para manter sessão entre deploys/restarts:
+
+1. No Render, adicione **Persistent Disk**.
+2. Monte o disco em `/var/data`.
+3. Defina `AUTH_DIR=/var/data/auth`.
+
+Sem disco persistente, será necessário escanear QR novamente após reinícios.
+
+## Teste com curl
+
+Health:
+
+```bash
+curl -s http://localhost:10000/
+```
+
+QR:
+
+```bash
+curl -s http://localhost:10000/qr
+```
+
+Envio:
+
+```bash
+curl -X POST http://localhost:10000/send \
+  -H "Authorization: Bearer seu-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone":"5511999999999",
+    "message":"Olá! Teste de envio.",
+    "order_id":"pedido-123"
+  }'
+```
