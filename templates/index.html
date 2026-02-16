@@ -8,7 +8,7 @@
   <link rel="icon" href="/assets/favicon-32.png?v=2" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="/assets/favicon-32.png?v=2">
 
-  <meta name="description" content="TRX PRO — Robô 100% automático para Mini Índice.">
+  <meta name="description" content="TRX PRO — Robô 100% automático para Mini ndice.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -225,6 +225,128 @@
       text-align: center;
       line-height: 1.12;
       max-width: min(92vw, 420px);
+    }
+    .quiz-btn{
+      background: linear-gradient(120deg, #ffffff 0%, #defee7 30%, #ffffff 60%, #dff6ff 100%);
+      color: #041a12;
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: 0 18px 50px rgba(25,227,154,.24), 0 10px 30px rgba(0,0,0,.26);
+      overflow: hidden;
+      position: relative;
+      animation: quizBtnFloat 2.8s ease-in-out infinite, quizBtnGlow 2.8s ease-in-out infinite;
+    }
+    .quiz-btn:before{
+      content:"";
+      position:absolute;
+      top:-12%;
+      left:-55%;
+      width:36%;
+      height:124%;
+      transform: skewX(-24deg);
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.86), rgba(255,255,255,0));
+      animation: quizBtnSweep 2.2s linear infinite;
+      pointer-events:none;
+      mix-blend-mode:screen;
+    }
+    .quiz-btn:hover{
+      animation-play-state: paused;
+      transform: translateY(-2px) scale(1.02);
+      filter: brightness(1.04);
+    }
+    @keyframes quizBtnGlow{
+      0%,100%{
+        box-shadow: 0 14px 44px rgba(25,227,154,.17), 0 10px 24px rgba(0,0,0,.24);
+      }
+      50%{
+        box-shadow: 0 22px 62px rgba(25,227,154,.36), 0 14px 38px rgba(0,0,0,.28);
+      }
+    }
+    @keyframes quizBtnFloat{
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-3px); }
+    }
+    @keyframes quizBtnSweep{
+      0%{ left:-55%; }
+      100%{ left:140%; }
+    }
+    @keyframes quizFloatDock{
+      0%,100%{ transform: translate(var(--float-x), 0); }
+      50%{ transform: translate(var(--float-x), -3px); }
+    }
+
+    .quiz-strip{
+      margin: 18px auto 0;
+      width:min(980px, 96vw);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding: 14px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(25,227,154,.26);
+      background: linear-gradient(90deg, rgba(25,227,154,.10), rgba(74,163,255,.06));
+      box-shadow: 0 18px 54px rgba(0,0,0,.24);
+    }
+    .quiz-strip .label{
+      font-weight: 900;
+      color: rgba(230,245,255,.9);
+      letter-spacing: .2px;
+      text-align:center;
+    }
+    .quiz-strip .btn{ padding: 11px 14px; }
+
+    .quiz-nudge{
+      margin: 0 auto 14px;
+      width:min(980px, 96vw);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+    }
+    .quiz-nudge span{
+      color: rgba(238,246,255,.84);
+      font-weight: 900;
+      text-align:center;
+    }
+
+    .quiz-float{
+      --float-x: 0px;
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      z-index: 9998;
+      min-height: 58px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: 1000;
+      letter-spacing: .2px;
+      color: #041a12;
+      background: linear-gradient(120deg, #ffffff 0%, #defee7 40%, #ffffff 100%);
+      border: 1px solid rgba(255,255,255,.94);
+      box-shadow: 0 16px 46px rgba(25,227,154,.24), 0 10px 30px rgba(0,0,0,.35);
+      transform: translate(var(--float-x), 0);
+      animation: quizFloatDock 2.8s ease-in-out infinite, quizBtnGlow 2.8s ease-in-out infinite;
+    }
+    .quiz-float:hover{
+      transform: translate(var(--float-x), -2px);
+      filter: brightness(1.04);
+    }
+    @media (max-width: 880px){
+      .quiz-float{
+        --float-x: -50%;
+        left: 50%;
+        bottom: 88px;
+      }
     }
 
     /* Chart */
@@ -771,6 +893,55 @@
       text-align:center;
       box-shadow: 0 18px 55px rgba(0,0,0,.25);
     }
+
+    .site-footer{
+      width:min(980px, 96vw);
+      margin: 0 auto 34px;
+      text-align:center;
+      color: rgba(224,236,247,.92);
+    }
+    .site-seals{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .site-seals span{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:800;
+      color: rgba(228,239,250,.88);
+    }
+    .site-copy{
+      font-weight:1000;
+      letter-spacing:.3px;
+      font-size:24px;
+    }
+    .site-rights{
+      margin-top:6px;
+      font-size:15px;
+      color: rgba(228,239,250,.62);
+    }
+    .site-links{
+      margin-top:14px;
+      display:flex;
+      justify-content:center;
+      gap:26px;
+      flex-wrap:wrap;
+    }
+    .site-links a{
+      color: rgba(228,239,250,.62);
+      text-decoration:none;
+      font-weight:700;
+      transition:.15s color ease;
+    }
+    .site-links a:hover{
+      color: #ffffff;
+    }
   </style>
 </head>
 
@@ -807,13 +978,13 @@
       </div>
 
       <div class="sub">
-        Robô <b>100% AUTOMÁTICO</b> opera no Mini Índice<br/>
+        Robô <b>100% AUTOMTICO</b> opera no Mini ndice<br/>
         enquanto você dorme 💤
       </div>
 
       <div class="cta">
         <a class="btn green" href="#planos">🚀 ATIVAR ROBÔ AGORA</a>
-        <a class="btn white quiz-btn" href="/quiz">Ver meu plano ideal</a>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
       </div>
 
       <!-- Curva -->
@@ -843,7 +1014,7 @@
           <span>Entrada e saída rápidas</span>
         </div>
         <div class="feat">
-          <strong>🛡️ Gestão de risco automática</strong>
+          <strong>🛡 Gestão de risco automática</strong>
           <span>Stops e controle</span>
         </div>
         <div class="feat">
@@ -858,9 +1029,12 @@
 
       <div class="sp"></div>
 
-      <a class="btn white" href="#planos" style="padding:14px 20px; display:inline-flex;">
-        VER PLANOS AGORA →
-      </a>
+      <div class="cta">
+        <a class="btn white" href="#planos" style="padding:14px 20px; display:inline-flex;">
+          VER PLANOS AGORA 
+        </a>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+      </div>
 
     </div>
   </header>
@@ -871,7 +1045,7 @@
       <div class="pill">✨ BÔNUS EXCLUSIVO</div>
 
       <h2 class="title">
-        Ganhe <span class="accent-orange">GRÁTIS</span><br> o Módulo de Automação
+        Ganhe <span class="accent-orange">GRTIS</span><br> o Módulo de Automação
       </h2>
 
       <div class="subtitle">
@@ -890,7 +1064,7 @@
             <div class="bitem">
               <div class="bicon">✓</div>
               <div class="btext">
-                <h4>Módulo de Automação GRÁTIS</h4>
+                <h4>Módulo de Automação GRTIS</h4>
                 <p>Configure e ative o TRX PRO sem custo adicional ao abrir sua conta</p>
               </div>
             </div>
@@ -914,7 +1088,7 @@
             <div class="bitem">
               <div class="bicon" style="background: rgba(255,138,31,.12); border-color: rgba(255,138,31,.22); color: rgba(255,170,100,1);">✓</div>
               <div class="btext">
-                <h4>Profit Pro GRÁTIS</h4>
+                <h4>Profit Pro GRTIS</h4>
                 <p>Plataforma profissional de análise e execução sem mensalidade</p>
               </div>
             </div>
@@ -925,6 +1099,11 @@
       <div class="important">
         <b>Importante:</b> Não é obrigatório usar nossa corretora parceira. Você pode operar o TRX PRO em qualquer corretora de sua preferência.
         Os benefícios acima são exclusivos para quem optar pela parceria.
+      </div>
+
+      <div class="quiz-strip">
+        <span class="label">Nao sabe qual plano escolher agora?</span>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
       </div>
     </div>
   </section>
@@ -937,12 +1116,17 @@
         <span class="accent-green">PODER DE FOGO</span>
       </h2>
 
+      <div class="quiz-nudge">
+        <span>Quer recomendacao automatica antes de decidir?</span>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+      </div>
+
       <div class="plan-stage">
       <div class="plan-grid">
 
-        <!-- GRÁTIS -->
+        <!-- GRTIS -->
         <article class="plan-card free" data-plan="gratis">
-          <div class="plan-badge">⚡ TESTE GRÁTIS -<br>TEMPO LIMITADO ⚡</div>
+          <div class="plan-badge">⚡ TESTE GRTIS -<br>TEMPO LIMITADO ⚡</div>
           <div class="plan-body">
             <div class="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
@@ -950,15 +1134,15 @@
                 <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="#ffd21a" stroke-width="2"/>
               </svg>
             </div>
-            <div class="plan-name">GRÁTIS</div>
+            <div class="plan-name">GRTIS</div>
             <div class="plan-desc">Teste Limitado</div>
 
             <div class="plan-price only">
-              <span class="val">GRÁTIS</span>
+              <span class="val">GRTIS</span>
             </div>
 
             <button class="plan-btn" onclick="goCheckout('gratis')">
-              <span style="font-size:18px">🎁</span> GRÁTIS
+              <span style="font-size:18px"></span> GRTIS
             </button>
           </div>
         </article>
@@ -1067,16 +1251,37 @@
       </div>
 
       <div class="price-bar">
-        ⚠️ Preço sobe em <span id="priceCountdown">13min 13s</span>
+        ⚠ Preço sobe em <span id="priceCountdown">13min 13s</span>
         <small>Não deixe para depois. Outro(a) já está lendo isso AGORA.</small>
       </div>
 
+      <div class="quiz-strip">
+        <span class="label">Ainda esta em duvida entre os planos?</span>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+      </div>
+
       <div class="disclaimer">
-        ⚠️ AVISO IMPORTANTE: Trading envolve riscos. Resultados passados não garantem resultados futuros.
+        ⚠ AVISO IMPORTANTE: Trading envolve riscos. Resultados passados não garantem resultados futuros.
         Esta página não oferece aconselhamento financeiro.
       </div>
     </div>
   </section>
+
+  <footer class="site-footer">
+    <div class="site-seals">
+      <span>SSL Seguro</span>
+      <span>Dados Criptografados</span>
+      <span>Compra Protegida</span>
+      <span>Suporte Oficial TRX PRO</span>
+    </div>
+    <div class="site-copy">TRX PRO © 2026</div>
+    <div class="site-rights">Todos os direitos reservados</div>
+    <div class="site-links">
+      <a href="/termos">Termos de Uso</a>
+      <a href="/privacidade">Privacidade</a>
+      <a href="/contato">Contato</a>
+    </div>
+  </footer>
 
   <script>
     // LINKS (seus links oficiais)
@@ -1121,7 +1326,16 @@
       if (liveEl) liveEl.textContent = `${base} ROBÔS OPERANDO AGORA`;
     }, 2500);
   </script>
-  <!-- Botão flutuante WhatsApp -->
+  <a
+    href="/quiz"
+    class="quiz-float"
+    aria-label="Abrir quiz de plano ideal"
+    title="Abrir quiz de plano ideal"
+  >
+    Ver meu plano ideal (30seg)
+  </a>
+
+  <!-- Boto flutuante WhatsApp -->
 <a
   href="https://wa.me/5511940431906?text=Oi!%20Quero%20tirar%20d%C3%BAvidas%20sobre%20o%20TRX%20PRO."
   class="whatsapp-float"
@@ -1130,7 +1344,7 @@
   aria-label="Falar no WhatsApp"
   title="Falar no WhatsApp"
 >
-  <!-- Ícone WhatsApp (SVG) -->
+  <!-- cone WhatsApp (SVG) -->
   <svg viewBox="0 0 32 32" aria-hidden="true">
     <path d="M19.11 17.53c-.28-.14-1.64-.81-1.9-.9-.25-.09-.44-.14-.62.14-.18.28-.71.9-.87 1.09-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.38-.83-.74-1.4-1.65-1.56-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.43-.48.14-.16.18-.28.28-.46.09-.18.05-.35-.02-.48-.07-.14-.62-1.49-.85-2.04-.23-.55-.46-.48-.62-.49-.16 0-.35-.02-.53-.02-.18 0-.48.07-.73.35-.25.28-.96.94-.96 2.29s.98 2.66 1.11 2.85c.14.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.66.21 1.26.18 1.73.11.53-.08 1.64-.67 1.87-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/>
     <path d="M26.66 5.33C24.02 2.69 20.51 1.24 16.77 1.24 9.12 1.24 2.9 7.47 2.9 15.11c0 2.44.64 4.82 1.86 6.92L2.78 30.76l8.93-1.95c2.03 1.11 4.33 1.7 6.69 1.7h.01c7.65 0 13.87-6.22 13.87-13.87 0-3.74-1.46-7.25-4.1-9.89zm-9.89 22.82h-.01c-2.07 0-4.1-.56-5.88-1.62l-.42-.25-5.3 1.16 1.13-5.16-.27-.44c-1.14-1.81-1.75-3.9-1.75-6.06 0-6.32 5.14-11.46 11.46-11.46 3.06 0 5.94 1.19 8.1 3.36 2.16 2.16 3.35 5.04 3.35 8.1 0 6.32-5.14 11.46-11.46 11.46z"/>
@@ -1166,3 +1380,4 @@
 
 </body>
 </html>
+

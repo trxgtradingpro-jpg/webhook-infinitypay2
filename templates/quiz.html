@@ -318,11 +318,63 @@
       background: rgba(255,255,255,.04);
     }
 
+    .site-footer{
+      margin: 20px auto 4px;
+      text-align:center;
+      width:min(980px, 96vw);
+      color: rgba(224,236,247,.92);
+    }
+    .site-seals{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .site-seals span{
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:12px;
+      font-weight:800;
+      color: rgba(228,239,250,.88);
+    }
+    .site-copy{
+      font-weight:1000;
+      letter-spacing:.3px;
+      font-size:24px;
+    }
+    .site-rights{
+      margin-top:6px;
+      font-size:15px;
+      color: rgba(228,239,250,.62);
+    }
+    .site-links{
+      margin-top:14px;
+      display:flex;
+      justify-content:center;
+      gap:26px;
+      flex-wrap:wrap;
+    }
+    .site-links a{
+      color: rgba(228,239,250,.62);
+      text-decoration:none;
+      font-weight:700;
+      transition:.15s color ease;
+    }
+    .site-links a:hover{
+      color: #ffffff;
+    }
+
     @media (max-width: 640px){
       .quiz-page{ margin-top:16px; }
       .quiz-card{ padding:16px; border-radius:18px; }
       .answer-btn{ font-size:15px; padding:13px 14px; }
       .progress-meta{ font-size:12px; }
+      .site-copy{ font-size:20px; }
+      .site-rights{ font-size:14px; }
+      .site-links{ gap:14px; }
     }
   </style>
 </head>
@@ -355,6 +407,22 @@
 
       <div class="quiz-screen" id="quizScreen"></div>
     </section>
+
+    <footer class="site-footer">
+      <div class="site-seals">
+        <span>SSL Seguro</span>
+        <span>Dados Criptografados</span>
+        <span>Compra Protegida</span>
+        <span>Suporte Oficial TRX PRO</span>
+      </div>
+      <div class="site-copy">TRX PRO © 2026</div>
+      <div class="site-rights">Todos os direitos reservados</div>
+      <div class="site-links">
+        <a href="/termos">Termos de Uso</a>
+        <a href="/privacidade">Privacidade</a>
+        <a href="/contato">Contato</a>
+      </div>
+    </footer>
   </main>
 
   <script>
@@ -444,7 +512,9 @@
 
     const state = {
       step: 0,
-      answers: {}
+      answers: {},
+      submitted: false,
+      submissionId: null
     };
 
     const progressText = document.getElementById("progressText");
@@ -481,10 +551,19 @@
         const total = QUIZ_CONFIG.questions.length;
         state.step = Math.max(0, Math.min(saved.step, total));
         state.answers = saved.answers || {};
+        state.submitted = Boolean(saved.submitted);
+        state.submissionId = typeof saved.submissionId === "string" ? saved.submissionId : null;
         return true;
       } catch (e) {
         return false;
       }
+    }
+
+    function newSubmissionId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return `quiz-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
 
     function updateProgress(isResult = false) {
@@ -663,12 +742,47 @@
       };
     }
 
+    async function submitQuizResult(result) {
+      if (state.submitted) {
+        return;
+      }
+
+      if (!state.submissionId) {
+        state.submissionId = newSubmissionId();
+      }
+      saveState();
+
+      const payload = {
+        submission_id: state.submissionId,
+        answers: state.answers,
+        recommended_plan: result.recommended,
+        next_level_plan: result.nextLevel || null,
+        show_free_secondary: Boolean(result.showFreeSecondary),
+        reasons: result.reasons || []
+      };
+
+      try {
+        const resp = await fetch("/api/quiz/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (resp.ok) {
+          state.submitted = true;
+          saveState();
+        }
+      } catch (e) {
+      }
+    }
+
     function renderResultView() {
       updateProgress(true);
       state.step = QUIZ_CONFIG.questions.length;
       saveState();
 
       const result = getRecommendation(state.answers);
+      submitQuizResult(result);
       const plan = QUIZ_CONFIG.plans[result.recommended];
       const freePlan = QUIZ_CONFIG.plans.gratis;
 
@@ -733,6 +847,8 @@
         restart.addEventListener("click", () => {
           state.step = 0;
           state.answers = {};
+          state.submitted = false;
+          state.submissionId = null;
           clearState();
           animateSwap(buildQuestionView);
         });

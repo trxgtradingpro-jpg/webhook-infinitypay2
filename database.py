@@ -1,5 +1,6 @@
 import psycopg2
 import os
+import json
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
@@ -81,6 +82,24 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_events_created_at ON analytics_purchase_events(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_events_user_key ON analytics_purchase_events(user_key)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_events_plano ON analytics_purchase_events(plano)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS quiz_submissions (
+            id BIGSERIAL PRIMARY KEY,
+            submission_id TEXT UNIQUE NOT NULL,
+            user_key TEXT NOT NULL,
+            ip_address TEXT,
+            user_agent TEXT,
+            answers JSONB NOT NULL,
+            recommended_plan TEXT NOT NULL,
+            next_level_plan TEXT,
+            show_free_secondary BOOLEAN NOT NULL DEFAULT FALSE,
+            reasons JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_created_at ON quiz_submissions(created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_user_key ON quiz_submissions(user_key)")
 
     # 🔥 MIGRATIONS SEGURAS
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS nome TEXT")
@@ -714,3 +733,53 @@ def registrar_falha_whatsapp_auto(order_id, erro):
     conn.commit()
     cur.close()
     conn.close()
+
+
+def registrar_quiz_submission(
+    submission_id,
+    user_key,
+    ip_address,
+    user_agent,
+    answers,
+    recommended_plan,
+    next_level_plan=None,
+    show_free_secondary=False,
+    reasons=None
+):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO quiz_submissions (
+            submission_id,
+            user_key,
+            ip_address,
+            user_agent,
+            answers,
+            recommended_plan,
+            next_level_plan,
+            show_free_secondary,
+            reasons,
+            created_at
+        )
+        VALUES (
+            %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, NOW()
+        )
+        ON CONFLICT (submission_id) DO NOTHING
+    """, (
+        submission_id,
+        user_key,
+        ip_address,
+        user_agent,
+        json.dumps(answers or {}, ensure_ascii=False),
+        recommended_plan,
+        next_level_plan,
+        bool(show_free_secondary),
+        json.dumps(reasons or [], ensure_ascii=False)
+    ))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido

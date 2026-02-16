@@ -42,7 +42,8 @@ from database import (
     backfill_analytics_from_orders,
     registrar_whatsapp_auto_agendamento,
     marcar_whatsapp_auto_enviado,
-    registrar_falha_whatsapp_auto
+    registrar_falha_whatsapp_auto,
+    registrar_quiz_submission
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -449,6 +450,23 @@ def identificador_online_request():
     return f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
 
 
+def obter_quiz_user_key():
+    key = (session.get("quiz_user_key") or "").strip()
+    if key:
+        return key
+
+    key = str(uuid.uuid4())
+    session["quiz_user_key"] = key
+    return key
+
+
+def obter_ip_request():
+    forwarded = (request.headers.get("X-Forwarded-For") or "").strip()
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return (request.remote_addr or "").strip()
+
+
 def registrar_usuario_online():
     identificador = identificador_online_request()
     agora = time.time()
@@ -568,7 +586,71 @@ def home():
 
 @app.route("/quiz")
 def quiz():
+    obter_quiz_user_key()
     return render_template("quiz.html")
+
+
+@app.route("/termos")
+def termos():
+    return render_template("termos.html")
+
+
+@app.route("/privacidade")
+def privacidade():
+    return render_template("privacidade.html")
+
+
+@app.route("/contato")
+def contato():
+    return render_template("contato.html")
+
+
+@app.route("/api/quiz/submit", methods=["POST"])
+def api_quiz_submit():
+    payload = request.get_json(silent=True) or {}
+
+    answers = payload.get("answers")
+    recommended_plan = (payload.get("recommended_plan") or "").strip().lower()
+    next_level_plan = (payload.get("next_level_plan") or "").strip().lower() or None
+    show_free_secondary = bool(payload.get("show_free_secondary"))
+    reasons = payload.get("reasons") or []
+    submission_id = (payload.get("submission_id") or "").strip()
+
+    if not isinstance(answers, dict):
+        return jsonify({"ok": False, "error": "answers inválido"}), 400
+
+    planos_validos = {"gratis", "bronze", "prata", "gold", "black"}
+    if recommended_plan not in planos_validos:
+        return jsonify({"ok": False, "error": "recommended_plan inválido"}), 400
+
+    if next_level_plan and next_level_plan not in planos_validos:
+        return jsonify({"ok": False, "error": "next_level_plan inválido"}), 400
+
+    if not isinstance(reasons, list):
+        reasons = []
+
+    reasons_limpo = [str(item)[:300] for item in reasons[:5]]
+
+    if not submission_id:
+        submission_id = str(uuid.uuid4())
+
+    inserido = registrar_quiz_submission(
+        submission_id=submission_id,
+        user_key=obter_quiz_user_key(),
+        ip_address=obter_ip_request(),
+        user_agent=(request.headers.get("User-Agent") or "")[:300],
+        answers=answers,
+        recommended_plan=recommended_plan,
+        next_level_plan=next_level_plan,
+        show_free_secondary=show_free_secondary,
+        reasons=reasons_limpo
+    )
+
+    return jsonify({
+        "ok": True,
+        "saved": inserido,
+        "submission_id": submission_id
+    })
 
 
 @app.route("/checkout/<plano>")

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -111,25 +111,53 @@
       box-shadow: 0 10px 20px rgba(39,174,96,0.3);
     }
 
-    .trust {
+    .site-seals {
       margin-top: 24px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
+      flex-wrap: wrap;
       gap: 8px;
+      text-align: center;
+    }
+    .site-seals span {
+      border: 1px solid #d8e0e7;
+      background: #f4f7fa;
+      border-radius: 999px;
+      padding: 8px 11px;
       font-size: 12px;
-      color: #95a5a6;
-      text-align: center;
+      font-weight: 800;
+      color: #334155;
     }
 
-    .trust span {
-      flex: 1;
-    }
-
-    .footer {
+    .site-footer {
       margin-top: 18px;
-      font-size: 11px;
-      color: #bdc3c7;
       text-align: center;
+    }
+    .site-copy {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .site-rights {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #64748b;
+    }
+    .site-links {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .site-links a {
+      color: #334155;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .site-links a:hover {
+      color: #0f172a;
     }
   </style>
 </head>
@@ -139,7 +167,7 @@
   <div class="checkout-container">
 
     <div class="badge-secure">
-      🔒 Ambiente seguro • Pagamento processado pela InfinitePay
+      Ambiente seguro - Pagamento processado pela InfinitePay
     </div>
 
     <h1>Finalizar compra</h1>
@@ -169,7 +197,7 @@
         required
       />
       <div class="info">
-        O acesso será enviado para este e-mail
+        O acesso serÃ¡ enviado para este e-mail
       </div>
 
       <label for="telefone">WhatsApp</label>
@@ -182,7 +210,7 @@
         required
       />
       <div class="info">
-        Usado para suporte e comunicação
+        Usado para suporte e comunicaÃ§Ã£o
       </div>
 
       <!-- PLANO (VEM DA URL) -->
@@ -194,14 +222,21 @@
 
     </form>
 
-    <div class="trust">
-      <span>🔐 Dados protegidos</span>
-      <span>⚡ Entrega automática</span>
-      <span>📧 Acesso imediato</span>
+    <div class="site-seals">
+      <span>SSL Seguro</span>
+      <span>Dados Criptografados</span>
+      <span>Compra Protegida</span>
+      <span>Suporte Oficial TRX PRO</span>
     </div>
 
-    <div class="footer">
-      Ambiente seguro • Compra protegida
+    <div class="site-footer">
+      <div class="site-copy">TRX PRO &copy; 2026</div>
+      <div class="site-rights">Todos os direitos reservados</div>
+      <div class="site-links">
+        <a href="/termos">Termos de Uso</a>
+        <a href="/privacidade">Privacidade</a>
+        <a href="/contato">Contato</a>
+      </div>
     </div>
 
   </div>
@@ -218,3 +253,4 @@
   </script>
 </body>
 </html>
+
