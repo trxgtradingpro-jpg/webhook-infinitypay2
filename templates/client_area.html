@@ -660,11 +660,14 @@
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
         <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
         <p class="line"><span>Periodo do CSV:</span> {{ capital_chart.start_date }} ate {{ capital_chart.csv_end_date }}</p>
+        {% if capital_chart.csv_value_mode == "points" %}
+        <p class="line"><span>Conversao:</span> 1 ponto = R$ {{ "{:,.2f}".format(capital_chart.csv_brl_per_point).replace(",", "X").replace(".", ",").replace("X", ".") }} (1 contrato)</p>
+        {% endif %}
         <p class="line"><span>Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
         <div class="kpi" style="margin-top:8px;">
           <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
           <span class="pill">Dias no CSV: {{ capital_chart.csv_last_day }}</span>
-          <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
+          <span class="pill ok">Dia atualizado: {{ capital_chart.current_day }}</span>
           <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
           <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
           <span class="pill">Saldo total no CSV: <strong id="csvTotalValueText">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
@@ -674,12 +677,12 @@
           <div class="chart-window-controls">
             {% for mode_id, mode in capital_chart.window_modes.items() %}
               <button
-                type="button"
-                class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'back15_forward15') else '' }}"
-                data-chart-mode="{{ mode_id }}"
-              >
-                {{ mode.title }}
-              </button>
+              type="button"
+              class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'forward30') else '' }}"
+              data-chart-mode="{{ mode_id }}"
+            >
+              {{ mode.title }}
+            </button>
             {% endfor %}
           </div>
           {% endif %}
@@ -706,7 +709,7 @@
         <p class="chart-hint" id="chartHintText">Passe o mouse sobre a linha para ver a data e o valor do dia.</p>
       {% else %}
         <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
-        <p class="empty">CSV esperado: <code>dia,valor</code> (ex.: <code>1,10000</code> ... <code>30,12800</code>).</p>
+        <p class="empty">CSV esperado: <code>dia,pontos</code> (ex.: <code>1,600</code>, <code>2,-300</code>). Marcador opcional do ultimo dia atualizado: <code>13,11260g</code>. Conversao padrao: <code>600 pontos = R$ 120,00</code> por contrato.</p>
       {% endif %}
     </section>
 
@@ -919,10 +922,16 @@
           if (!modeData) {
             return "Passe o mouse sobre a linha para ver a data e o valor do dia.";
           }
+          if (modeData.id === "forward30") {
+            if (payload.marker_detected) {
+              return "Janela de 30 dias posteriores. Mostra do inicio do plano ate o dia marcado com g no CSV (dia " + payload.marker_day + "). Contratos aplicados: " + activeContracts + ".";
+            }
+            return "Janela de 30 dias posteriores. Mostra do inicio do plano ate o ultimo dia atualizado. Contratos aplicados: " + activeContracts + ".";
+          }
           if (modeData.id === "back30") {
             return "Janela de 30 dias anteriores. O dia atual fica no fim do grafico. Contratos aplicados: " + activeContracts + ".";
           }
-          return "Janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva. Contratos aplicados: " + activeContracts + ".";
+          return "Janela da curva no periodo selecionado. Contratos aplicados: " + activeContracts + ".";
         }
 
         const initialModeData = getScaledModeData(getModeData(activeMode));

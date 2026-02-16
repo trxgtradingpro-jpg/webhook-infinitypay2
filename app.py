@@ -110,6 +110,14 @@ PASTA_SAIDA = "saida"
 os.makedirs(PASTA_SAIDA, exist_ok=True)
 CAPITAL_CURVE_CSV_PATH = (os.environ.get("CAPITAL_CURVE_CSV_PATH") or os.path.join("assets", "capital_curve.csv")).strip()
 CAPITAL_CURVE_AXIS_PADDING = float(os.environ.get("CAPITAL_CURVE_AXIS_PADDING", "100"))
+CAPITAL_CURVE_VALUE_MODE = (os.environ.get("CAPITAL_CURVE_VALUE_MODE") or "points").strip().lower()
+if CAPITAL_CURVE_VALUE_MODE not in {"points", "brl"}:
+    CAPITAL_CURVE_VALUE_MODE = "points"
+try:
+    CAPITAL_CURVE_BRL_PER_POINT = float(os.environ.get("CAPITAL_CURVE_BRL_PER_POINT", "0.2"))
+except (TypeError, ValueError):
+    CAPITAL_CURVE_BRL_PER_POINT = 0.2
+CAPITAL_CURVE_BRL_PER_POINT = max(0.0, CAPITAL_CURVE_BRL_PER_POINT)
 
 # ======================================================
 # INFINITEPAY CONFIG
@@ -223,7 +231,7 @@ CLIENT_PLAN_EXPIRY_DAYS = {
 }
 
 CLIENT_PLAN_CONTRACT_LIMITS = {
-    "trx-gratis": 1,
+    "trx-gratis": 300,
     "trx-teste": 1,
     "trx-bronze": 1,
     "trx-prata": 5,
@@ -1484,6 +1492,20 @@ def parse_numero_curva_csv(valor):
         return None
 
 
+def converter_valor_curva_para_brl(valor):
+    valor_float = float(valor or 0.0)
+    if CAPITAL_CURVE_VALUE_MODE == "points":
+        return round(valor_float * CAPITAL_CURVE_BRL_PER_POINT, 2)
+    return valor_float
+
+
+def valor_curva_tem_marcador_atualizacao(valor):
+    texto = (str(valor or "")).strip().lower()
+    if not texto:
+        return False
+    return texto.endswith("g")
+
+
 def parse_dia_curva_csv(valor):
     texto = (str(valor or "")).strip()
     if not re.fullmatch(r"\d{1,3}", texto):
@@ -1523,6 +1545,7 @@ def carregar_curva_capital_csv(path_csv=None):
 
     valores_por_dia = {}
     valores_sequencia = []
+    dia_marcador = None
 
     for row in reader:
         cols = [(c or "").strip() for c in row]
@@ -1532,17 +1555,23 @@ def carregar_curva_capital_csv(path_csv=None):
             continue
 
         if len(cols) == 1:
+            marcador = valor_curva_tem_marcador_atualizacao(cols[0])
             valor = parse_numero_curva_csv(cols[0])
             if valor is not None:
-                valores_sequencia.append(float(valor))
+                valores_sequencia.append(converter_valor_curva_para_brl(valor))
+                if marcador:
+                    dia_seq = len(valores_sequencia)
+                    dia_marcador = max(int(dia_marcador or 0), dia_seq)
             continue
 
         dia = parse_dia_curva_csv(cols[0])
         valor = None
+        marcador = False
         for item in cols[1:]:
             candidato = parse_numero_curva_csv(item)
             if candidato is not None:
-                valor = float(candidato)
+                valor = converter_valor_curva_para_brl(candidato)
+                marcador = valor_curva_tem_marcador_atualizacao(item)
                 break
 
         if valor is None:
@@ -1550,14 +1579,22 @@ def carregar_curva_capital_csv(path_csv=None):
 
         if dia is not None:
             valores_por_dia[dia] = valor
+            if marcador:
+                dia_marcador = max(int(dia_marcador or 0), int(dia))
         else:
             valores_sequencia.append(valor)
+            if marcador:
+                dia_seq = len(valores_sequencia)
+                dia_marcador = max(int(dia_marcador or 0), dia_seq)
 
     has_data = bool(valores_por_dia or valores_sequencia)
     return {
         "has_data": has_data,
         "by_day": valores_por_dia,
         "sequence": valores_sequencia,
+        "marker_day": int(dia_marcador or 0),
+        "value_mode": CAPITAL_CURVE_VALUE_MODE,
+        "brl_per_point": float(CAPITAL_CURVE_BRL_PER_POINT),
         "path": caminho,
     }
 
@@ -1592,6 +1629,7 @@ def montar_curva_capital_plano(order):
 
     by_day = curva_csv.get("by_day") or {}
     sequence = curva_csv.get("sequence") or []
+    marker_day_raw = int(curva_csv.get("marker_day") or 0)
     dias_csv = len(sequence)
     if by_day:
         dias_csv = max(dias_csv, max(by_day.keys()))
@@ -1615,16 +1653,23 @@ def montar_curva_capital_plano(order):
         saldo += float(delta)
         valores_acumulados.append(round(saldo, 2))
 
-    valor_atual = valores_acumulados[dia_atual_idx - 1]
+    dia_ultimo_atualizado = dia_atual_idx
+    if marker_day_raw > 0:
+        dia_ultimo_atualizado = min(dias_plano, dias_csv, marker_day_raw)
+    else:
+        dia_ultimo_atualizado = min(dias_plano, dia_atual_idx)
+    dia_ultimo_atualizado = max(1, int(dia_ultimo_atualizado))
+
+    valor_atual = valores_acumulados[dia_ultimo_atualizado - 1]
     saldo_total_csv = 0.0
-    for dia in range(1, dias_csv + 1):
+    for dia in range(1, dia_ultimo_atualizado + 1):
         saldo_total_csv += obter_delta_dia(dia)
     saldo_total_csv = round(saldo_total_csv, 2)
     axis_padding_base = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
 
     plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
     dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
-    dia_fim_csv = dia_inicio + timedelta(days=dias_csv - 1)
+    dia_fim_csv = dia_inicio + timedelta(days=dia_ultimo_atualizado - 1)
 
     def construir_janela(inicio_dia, fim_dia, ocultar_futuro=False):
         inicio_dia = int(max(1, min(dias_plano, inicio_dia)))
@@ -1640,7 +1685,7 @@ def montar_curva_capital_plano(order):
             labels.append(str(dia))
             date_labels.append(data_ref.strftime("%d/%m/%Y"))
 
-            if ocultar_futuro and dia > dia_atual_idx:
+            if ocultar_futuro and dia > dia_ultimo_atualizado:
                 valores.append(None)
                 continue
 
@@ -1676,27 +1721,27 @@ def montar_curva_capital_plano(order):
             "y_max": round(y_max, 2),
         }
 
-    janela_padrao = construir_janela(
-        inicio_dia=max(1, dia_atual_idx - 15),
-        fim_dia=min(dias_plano, dia_atual_idx + 15),
-        ocultar_futuro=True
+    janela_30_posteriores = construir_janela(
+        inicio_dia=1,
+        fim_dia=dia_ultimo_atualizado,
+        ocultar_futuro=False
     )
     janela_30_anteriores = construir_janela(
-        inicio_dia=max(1, dia_atual_idx - 30),
-        fim_dia=dia_atual_idx,
+        inicio_dia=max(1, dia_ultimo_atualizado - 30),
+        fim_dia=dia_ultimo_atualizado,
         ocultar_futuro=False
     )
     modos_janela = {
-        "back15_forward15": {
-            "id": "back15_forward15",
-            "title": "15 dias para tras + 15 para frente",
-            "description": "Mostra ate hoje e deixa os dias futuros sem curva.",
-            **janela_padrao
+        "forward30": {
+            "id": "forward30",
+            "title": "30 dias posteriores",
+            "description": "Mostra do inicio do plano ate o ultimo dia atualizado (marcado com g no CSV).",
+            **janela_30_posteriores
         },
         "back30": {
             "id": "back30",
             "title": "30 dias anteriores",
-            "description": "Mostra os ultimos 30 dias e posiciona o dia atual no fim.",
+            "description": "Mostra os ultimos 30 dias e posiciona o ultimo dia atualizado no fim.",
             **janela_30_anteriores
         }
     }
@@ -1707,21 +1752,25 @@ def montar_curva_capital_plano(order):
         "plan_days": dias_plano,
         "start_date": dia_inicio.strftime("%d/%m/%Y"),
         "end_date": dia_fim.strftime("%d/%m/%Y"),
-        "csv_last_day": dias_csv,
+        "csv_last_day": dia_ultimo_atualizado,
         "csv_end_date": dia_fim_csv.strftime("%d/%m/%Y"),
         "csv_total_value": saldo_total_csv,
-        "default_window_mode": "back15_forward15",
+        "csv_value_mode": curva_csv.get("value_mode") or "brl",
+        "csv_brl_per_point": float(curva_csv.get("brl_per_point") or 0.0),
+        "marker_day": int(marker_day_raw or 0),
+        "marker_detected": bool(marker_day_raw > 0),
+        "default_window_mode": "forward30",
         "window_modes": modos_janela,
-        "window_start_day": janela_padrao["window_start_day"],
-        "window_end_day": janela_padrao["window_end_day"],
-        "window_start_date": janela_padrao["window_start_date"],
-        "window_end_date": janela_padrao["window_end_date"],
-        "labels": janela_padrao["labels"],
-        "date_labels": janela_padrao["date_labels"],
-        "values": janela_padrao["values"],
-        "y_min": janela_padrao["y_min"],
-        "y_max": janela_padrao["y_max"],
-        "current_day": dia_atual_idx,
+        "window_start_day": janela_30_posteriores["window_start_day"],
+        "window_end_day": janela_30_posteriores["window_end_day"],
+        "window_start_date": janela_30_posteriores["window_start_date"],
+        "window_end_date": janela_30_posteriores["window_end_date"],
+        "labels": janela_30_posteriores["labels"],
+        "date_labels": janela_30_posteriores["date_labels"],
+        "values": janela_30_posteriores["values"],
+        "y_min": janela_30_posteriores["y_min"],
+        "y_max": janela_30_posteriores["y_max"],
+        "current_day": dia_ultimo_atualizado,
         "current_value": round(valor_atual, 2),
         "contract_limit": limite_contratos,
         "contract_default": contrato_padrao,
