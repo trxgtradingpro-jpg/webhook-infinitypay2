@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar Codigo | TRX PRO</title>
+  <style>
+    :root{
+      --bg:#070b16;
+      --panel:#0e162a;
+      --line:#253657;
+      --txt:#e8efff;
+      --muted:#9db0d4;
+      --ok:#22c55e;
+      --danger:#ef4444;
+      --info:#38bdf8;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--txt);
+      background:
+        radial-gradient(850px 520px at 12% -10%, rgba(239,68,68,.12), transparent 60%),
+        radial-gradient(900px 540px at 90% 0%, rgba(56,189,248,.12), transparent 60%),
+        var(--bg);
+      display:grid;
+      place-items:center;
+      padding:18px;
+    }
+    .card{
+      width:min(480px,100%);
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(14,22,42,.95), rgba(8,12,24,.97));
+      box-shadow:0 24px 80px rgba(0,0,0,.48);
+      padding:20px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:26px;
+      letter-spacing:-.3px;
+    }
+    .sub{
+      margin:0 0 14px;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:14px;
+    }
+    .email{
+      margin:0 0 10px;
+      color:#b8caeb;
+      font-size:13px;
+    }
+    .meta{
+      margin:0 0 12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      font-size:12px;
+      color:#d2def5;
+    }
+    .pill{
+      padding:6px 9px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#0b1324;
+    }
+    .pill.warn{
+      border-color:rgba(245,158,11,.45);
+      color:#fde68a;
+      background:rgba(245,158,11,.12);
+    }
+    .msg{
+      margin:0 0 12px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      font-size:14px;
+      line-height:1.4;
+    }
+    .msg.err{
+      border-color:rgba(239,68,68,.45);
+      background:rgba(239,68,68,.12);
+      color:#fecaca;
+    }
+    .msg.ok{
+      border-color:rgba(34,197,94,.45);
+      background:rgba(34,197,94,.12);
+      color:#bbf7d0;
+    }
+    label{
+      display:block;
+      margin:10px 0 6px;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+    input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#0a1325;
+      color:var(--txt);
+      font-size:24px;
+      letter-spacing:8px;
+      text-align:center;
+      font-weight:900;
+      padding:12px 13px;
+      outline:none;
+    }
+    input:focus{
+      border-color:#3b82f6;
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    button{
+      width:100%;
+      margin-top:14px;
+      border:0;
+      border-radius:10px;
+      padding:12px 14px;
+      background:linear-gradient(180deg, #22c55e, #16a34a);
+      color:#04120a;
+      font-weight:900;
+      font-size:15px;
+      cursor:pointer;
+    }
+    .links{
+      margin-top:12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .links a{
+      color:var(--info);
+      text-decoration:none;
+      font-size:13px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Confirmar codigo</h1>
+    <p class="sub">Digite o codigo de 6 digitos enviado para seu e-mail para finalizar a troca de senha.</p>
+    <p class="email">Conta: <strong>{{ email }}</strong></p>
+
+    <div class="meta">
+      <span class="pill">Tentativas: {{ attempts_used }}/{{ max_attempts }}</span>
+      <span class="pill warn">Validade: <span id="countdown">{{ ttl_seconds }}</span>s</span>
+    </div>
+
+    {% if erro %}
+      <div class="msg err">{{ erro }}</div>
+    {% endif %}
+    {% if info %}
+      <div class="msg ok">{{ info }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login/confirmar-codigo" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <label for="codigo">Codigo de confirmacao</label>
+      <input id="codigo" name="codigo" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" required autocomplete="one-time-code">
+
+      <button type="submit">Confirmar e entrar</button>
+    </form>
+
+    <div class="links">
+      <a href="/login/primeiro-acesso">Gerar novo codigo</a>
+      <a href="/login">Voltar ao login</a>
+    </div>
+  </section>
+
+  <script>
+    (function(){
+      const codeInput = document.getElementById("codigo");
+      const countdown = document.getElementById("countdown");
+      codeInput.addEventListener("input", () => {
+        codeInput.value = (codeInput.value || "").replace(/\D/g, "").slice(0, 6);
+      });
+
+      let secs = {{ ttl_seconds|int }};
+      setInterval(() => {
+        secs = Math.max(0, secs - 1);
+        if (countdown) countdown.textContent = String(secs);
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>

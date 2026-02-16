@@ -134,6 +134,27 @@ def init_db():
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_backup_runs_started_at ON backup_runs(started_at DESC)")
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS customer_accounts (
+            id BIGSERIAL PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            nome TEXT,
+            telefone TEXT,
+            password_hash TEXT,
+            first_access_required BOOLEAN NOT NULL DEFAULT TRUE,
+            verification_code_hash TEXT,
+            verification_expires_at TIMESTAMP,
+            verification_attempts INTEGER NOT NULL DEFAULT 0,
+            pending_password_hash TEXT,
+            remember_token_hash TEXT,
+            remember_expires_at TIMESTAMP,
+            last_login_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(email)")
+
     # 🔥 MIGRATIONS SEGURAS
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS nome TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS telefone TEXT")
@@ -151,6 +172,20 @@ def init_db():
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_telefone TEXT")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_checkout_slug ON orders(checkout_slug)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_affiliate_slug ON orders(affiliate_slug)")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS nome TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS telefone TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS password_hash TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS first_access_required BOOLEAN NOT NULL DEFAULT TRUE")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS verification_code_hash TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMP")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS verification_attempts INTEGER NOT NULL DEFAULT 0")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS pending_password_hash TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS remember_token_hash TEXT")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS remember_expires_at TIMESTAMP")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_remember_token_hash ON customer_accounts(remember_token_hash)")
 
     cur.execute("""
         UPDATE orders
@@ -994,6 +1029,358 @@ def registrar_quiz_submission(
     cur.close()
     conn.close()
     return inserido
+
+
+def _normalizar_email_interno(email):
+    return (email or "").strip().lower()[:190]
+
+
+def buscar_conta_cliente_por_email(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT email, nome, telefone, password_hash, first_access_required,
+               verification_code_hash, verification_expires_at, verification_attempts,
+               pending_password_hash, remember_token_hash, remember_expires_at,
+               last_login_at, created_at, updated_at
+        FROM customer_accounts
+        WHERE email = %s
+        LIMIT 1
+    """, (email_norm,))
+
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "email": row[0],
+        "nome": row[1],
+        "telefone": row[2],
+        "password_hash": row[3],
+        "first_access_required": bool(row[4]),
+        "verification_code_hash": row[5],
+        "verification_expires_at": row[6],
+        "verification_attempts": int(row[7] or 0),
+        "pending_password_hash": row[8],
+        "remember_token_hash": row[9],
+        "remember_expires_at": row[10],
+        "last_login_at": row[11],
+        "created_at": row[12],
+        "updated_at": row[13],
+    }
+
+
+def criar_ou_atualizar_conta_cliente(email, nome=None, telefone=None, password_hash=None, first_access_required=True):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return {"created": False, "account": None}
+
+    conta = buscar_conta_cliente_por_email(email_norm)
+    if conta:
+        conn = get_conn()
+        cur = conn.cursor()
+        if not (conta.get("password_hash") or "").strip() and (password_hash or "").strip():
+            cur.execute("""
+                UPDATE customer_accounts
+                SET nome = COALESCE(NULLIF(%s, ''), nome),
+                    telefone = COALESCE(NULLIF(%s, ''), telefone),
+                    password_hash = %s,
+                    first_access_required = %s,
+                    updated_at = NOW()
+                WHERE email = %s
+            """, (
+                (nome or "").strip(),
+                (telefone or "").strip(),
+                (password_hash or "").strip(),
+                bool(first_access_required),
+                email_norm
+            ))
+        else:
+            cur.execute("""
+                UPDATE customer_accounts
+                SET nome = COALESCE(NULLIF(%s, ''), nome),
+                    telefone = COALESCE(NULLIF(%s, ''), telefone),
+                    updated_at = NOW()
+                WHERE email = %s
+            """, ((nome or "").strip(), (telefone or "").strip(), email_norm))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"created": False, "account": buscar_conta_cliente_por_email(email_norm)}
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO customer_accounts (
+            email, nome, telefone, password_hash, first_access_required,
+            verification_attempts, created_at, updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, 0, NOW(), NOW())
+    """, (
+        email_norm,
+        (nome or "").strip() or None,
+        (telefone or "").strip() or None,
+        (password_hash or "").strip() or None,
+        bool(first_access_required),
+    ))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"created": True, "account": buscar_conta_cliente_por_email(email_norm)}
+
+
+def registrar_codigo_primeiro_acesso(email, pending_password_hash, code_hash, expires_at):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET pending_password_hash = %s,
+            verification_code_hash = %s,
+            verification_expires_at = %s,
+            verification_attempts = 0,
+            updated_at = NOW()
+        WHERE email = %s
+    """, (
+        (pending_password_hash or "").strip() or None,
+        (code_hash or "").strip() or None,
+        expires_at,
+        email_norm
+    ))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def incrementar_tentativa_codigo_cliente(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET verification_attempts = COALESCE(verification_attempts, 0) + 1,
+            updated_at = NOW()
+        WHERE email = %s
+    """, (email_norm,))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def limpar_codigo_cliente(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET pending_password_hash = NULL,
+            verification_code_hash = NULL,
+            verification_expires_at = NULL,
+            verification_attempts = 0,
+            updated_at = NOW()
+        WHERE email = %s
+    """, (email_norm,))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def confirmar_senha_conta_cliente(email, password_hash):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET password_hash = %s,
+            first_access_required = FALSE,
+            pending_password_hash = NULL,
+            verification_code_hash = NULL,
+            verification_expires_at = NULL,
+            verification_attempts = 0,
+            last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE email = %s
+    """, ((password_hash or "").strip() or None, email_norm))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def atualizar_ultimo_login_conta_cliente(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE email = %s
+    """, (email_norm,))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def salvar_remember_token_cliente(email, token_hash, expires_at):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET remember_token_hash = %s,
+            remember_expires_at = %s,
+            updated_at = NOW()
+        WHERE email = %s
+    """, ((token_hash or "").strip() or None, expires_at, email_norm))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def limpar_remember_token_cliente(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET remember_token_hash = NULL,
+            remember_expires_at = NULL,
+            updated_at = NOW()
+        WHERE email = %s
+    """, (email_norm,))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
+def buscar_conta_cliente_por_remember_hash(token_hash):
+    token_hash = (token_hash or "").strip()
+    if not token_hash:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT email, nome, telefone, password_hash, first_access_required,
+               verification_code_hash, verification_expires_at, verification_attempts,
+               pending_password_hash, remember_token_hash, remember_expires_at,
+               last_login_at, created_at, updated_at
+        FROM customer_accounts
+        WHERE remember_token_hash = %s
+        LIMIT 1
+    """, (token_hash,))
+
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "email": row[0],
+        "nome": row[1],
+        "telefone": row[2],
+        "password_hash": row[3],
+        "first_access_required": bool(row[4]),
+        "verification_code_hash": row[5],
+        "verification_expires_at": row[6],
+        "verification_attempts": int(row[7] or 0),
+        "pending_password_hash": row[8],
+        "remember_token_hash": row[9],
+        "remember_expires_at": row[10],
+        "last_login_at": row[11],
+        "created_at": row[12],
+        "updated_at": row[13],
+    }
+
+
+def listar_pedidos_pagos_por_email(email, limite=20):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return []
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT order_id, plano, nome, email, telefone, status, created_at,
+               checkout_slug, affiliate_slug
+        FROM orders
+        WHERE LOWER(COALESCE(email, '')) = %s
+          AND status = 'PAGO'
+        ORDER BY created_at DESC
+        LIMIT %s
+    """, (email_norm, int(max(1, limite))))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    pedidos = []
+    for row in rows:
+        pedidos.append({
+            "order_id": row[0],
+            "plano": row[1],
+            "nome": row[2],
+            "email": row[3],
+            "telefone": row[4],
+            "status": row[5],
+            "created_at": row[6],
+            "checkout_slug": row[7],
+            "affiliate_slug": row[8],
+        })
+
+    return pedidos
+
+
+def buscar_ultimo_pedido_pago_por_email(email):
+    pedidos = listar_pedidos_pagos_por_email(email, limite=1)
+    if not pedidos:
+        return None
+    return pedidos[0]
 
 
 def _valor_json_compat(v):

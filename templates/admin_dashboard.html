@@ -117,9 +117,9 @@
                 {% for p in pedidos %}
                 <tr>
                     <td><span class="mono">{{ p.order_id[:8] }}...</span></td>
-                    <td>{{ p.nome or '-' }}</td>
-                    <td>{{ p.email }}</td>
-                    <td>{{ p.telefone or '-' }}</td>
+                    <td>{{ p.nome_masked or '-' }}</td>
+                    <td>{{ p.email_masked or '-' }}</td>
+                    <td>{{ p.telefone_masked or '-' }}</td>
                     <td>
                         {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
                         {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
@@ -133,7 +133,7 @@
                         {% if p.affiliate_slug %}
                             <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
                             <div class="muted mono">/{{ p.affiliate_slug }}</div>
-                            {% if p.affiliate_email %}<div class="muted">{{ p.affiliate_email }}</div>{% endif %}
+                            {% if p.affiliate_email_masked %}<div class="muted">{{ p.affiliate_email_masked }}</div>{% endif %}
                         {% else %}
                             <span class="muted">Direto</span>
                         {% endif %}

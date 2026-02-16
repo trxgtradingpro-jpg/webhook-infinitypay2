@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Conta | TRX PRO</title>
+  <style>
+    :root{
+      --bg:#050914;
+      --panel:#0d1629;
+      --line:#223253;
+      --txt:#e8efff;
+      --muted:#9db0d4;
+      --ok:#22c55e;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --info:#38bdf8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--txt);
+      background:
+        radial-gradient(1000px 560px at 0% -10%, rgba(56,189,248,.14), transparent 60%),
+        radial-gradient(900px 540px at 100% 0%, rgba(34,197,94,.12), transparent 60%),
+        var(--bg);
+    }
+    .wrap{
+      width:min(1060px, 94vw);
+      margin:20px auto;
+      display:grid;
+      gap:12px;
+    }
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .title{
+      font-size:30px;
+      letter-spacing:-.4px;
+      font-weight:900;
+      margin:0;
+    }
+    .subtitle{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .logout{
+      border:1px solid rgba(239,68,68,.45);
+      border-radius:10px;
+      background:rgba(239,68,68,.14);
+      color:#fecaca;
+      font-weight:800;
+      padding:10px 14px;
+      cursor:pointer;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns:1fr; }
+    }
+    .card{
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(13,22,41,.95), rgba(8,12,23,.96));
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+      padding:16px;
+    }
+    h2{
+      margin:0 0 10px;
+      font-size:18px;
+      letter-spacing:-.2px;
+    }
+    .line{
+      margin:6px 0;
+      color:#dbe7ff;
+      font-size:14px;
+    }
+    .line span{
+      color:var(--muted);
+      display:inline-block;
+      min-width:90px;
+    }
+    .kpi{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:7px 10px;
+      background:#0b1324;
+      color:#dce7fd;
+      font-size:12px;
+      font-weight:800;
+    }
+    .pill.ok{
+      border-color:rgba(34,197,94,.45);
+      background:rgba(34,197,94,.12);
+      color:#bbf7d0;
+    }
+    .pill.warn{
+      border-color:rgba(245,158,11,.45);
+      background:rgba(245,158,11,.12);
+      color:#fde68a;
+    }
+    .pill.bad{
+      border-color:rgba(239,68,68,.45);
+      background:rgba(239,68,68,.12);
+      color:#fecaca;
+    }
+    .table-wrap{
+      overflow-x:auto;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:780px;
+    }
+    th,td{
+      padding:10px;
+      text-align:left;
+      border-bottom:1px solid #1b2946;
+      font-size:13px;
+    }
+    th{
+      color:var(--muted);
+      font-weight:700;
+      background:#0a1222;
+    }
+    td strong{
+      font-size:13px;
+    }
+    .status{
+      display:inline-block;
+      border-radius:999px;
+      padding:5px 8px;
+      font-size:11px;
+      font-weight:900;
+    }
+    .status.ok{
+      color:#bbf7d0;
+      background:rgba(34,197,94,.16);
+      border:1px solid rgba(34,197,94,.35);
+    }
+    .status.bad{
+      color:#fecaca;
+      background:rgba(239,68,68,.16);
+      border:1px solid rgba(239,68,68,.35);
+    }
+    .empty{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+    .back{
+      color:var(--info);
+      text-decoration:none;
+      font-size:13px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <h1 class="title">Minha Conta</h1>
+        <p class="subtitle">Bem-vindo, {{ conta_nome or 'Cliente' }}.</p>
+      </div>
+      <form method="POST" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="logout" type="submit">Sair</button>
+      </form>
+    </header>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Dados do cliente</h2>
+        <p class="line"><span>Nome:</span> {{ conta_nome or '-' }}</p>
+        <p class="line"><span>E-mail:</span> {{ email }}</p>
+        <p class="line"><span>Telefone:</span> {{ conta.telefone or '-' }}</p>
+        <p class="line"><span>Conta criada:</span> {{ conta.created_at.strftime("%d/%m/%Y %H:%M") if conta.created_at else '-' }}</p>
+      </article>
+
+      <article class="card">
+        <h2>Status dos planos</h2>
+        <div class="kpi">
+          <span class="pill">Total liberado: {{ pedidos|length }}</span>
+          <span class="pill ok">Ativos: {{ ativos|length }}</span>
+          <span class="pill warn">Expirados: {{ (pedidos|length) - (ativos|length) }}</span>
+        </div>
+        {% if ultimo_pedido %}
+          <p class="line" style="margin-top:10px;"><span>Plano mais recente:</span> <strong>{{ ultimo_pedido.plano_nome }}</strong></p>
+          <p class="line"><span>Expira em:</span> {{ ultimo_pedido.expira_em_fmt }}</p>
+        {% else %}
+          <p class="empty">Nenhum plano encontrado para este e-mail.</p>
+        {% endif %}
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Historico de acessos liberados</h2>
+      {% if pedidos %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Plano</th>
+                <th>Liberado em</th>
+                <th>Expira em</th>
+                <th>Status</th>
+                <th>Dias restantes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in pedidos %}
+              <tr>
+                <td><code>{{ p.order_id[:8] }}...</code></td>
+                <td>
+                  <strong>{{ p.plano_nome }}</strong><br>
+                  <span style="color:#9db0d4;">{{ 'Pago' if p.is_paid else 'Gratuito' }}</span>
+                </td>
+                <td>{{ p.created_at_fmt }}</td>
+                <td>{{ p.expira_em_fmt }}</td>
+                <td>
+                  {% if p.ativo %}
+                    <span class="status ok">Ativo</span>
+                  {% else %}
+                    <span class="status bad">Expirado</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.ativo %}
+                    {{ p.dias_restantes }} dia(s)
+                  {% else %}
+                    0
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty">Ainda nao encontramos planos ativos para esta conta.</p>
+      {% endif %}
+    </section>
+
+    <a class="back" href="/">Voltar para a pagina inicial</a>
+  </main>
+</body>
+</html>

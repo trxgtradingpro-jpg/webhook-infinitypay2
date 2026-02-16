@@ -1,12 +1,13 @@
-from flask import (
+﻿from flask import (
     Flask, request, jsonify, render_template,
-    redirect, session, send_from_directory
+    g, redirect, session, send_from_directory
 )
 import os
 import json
 import uuid
 import requests
 import time
+import base64
 from datetime import datetime, timedelta, timezone
 import math
 from urllib.parse import quote
@@ -18,10 +19,11 @@ import secrets
 from collections import defaultdict, deque
 from zoneinfo import ZoneInfo
 from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
+from cryptography.fernet import Fernet, InvalidToken
 
 from compactador import compactar_plano
-from email_utils import enviar_email, enviar_email_com_anexo
+from email_utils import enviar_email, enviar_email_com_anexo, enviar_email_simples
 from whatsapp_sender import schedule_whatsapp
 from backup_utils import criar_backup_criptografado, remover_backups_antigos
 
@@ -58,10 +60,22 @@ from database import (
     registrar_backup_execucao,
     listar_backups_execucao,
     adquirir_lock_backup_distribuido,
-    liberar_lock_backup_distribuido
+    liberar_lock_backup_distribuido,
+    buscar_conta_cliente_por_email,
+    criar_ou_atualizar_conta_cliente,
+    registrar_codigo_primeiro_acesso,
+    incrementar_tentativa_codigo_cliente,
+    limpar_codigo_cliente,
+    confirmar_senha_conta_cliente,
+    atualizar_ultimo_login_conta_cliente,
+    listar_pedidos_pagos_por_email,
+    buscar_ultimo_pedido_pago_por_email,
+    salvar_remember_token_cliente,
+    limpar_remember_token_cliente,
+    buscar_conta_cliente_por_remember_hash
 )
 
-print("ðŸš€ APP INICIADO", flush=True)
+print("Ã°Å¸Å¡â‚¬ APP INICIADO", flush=True)
 
 # ======================================================
 # APP
@@ -71,7 +85,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # ======================================================
-# SEGURANÃ‡A (ENV)
+# SEGURANÃƒâ€¡A (ENV)
 # ======================================================
 
 ADMIN_SECRET = os.environ["ADMIN_SECRET"]
@@ -116,24 +130,24 @@ app.config.update(
 )
 
 # ======================================================
-# WHATSAPP FOLLOW-UP (PLANO GRÃTIS)
+# WHATSAPP FOLLOW-UP (PLANO GRÃƒÂTIS)
 # ======================================================
 
 WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
     (
-        "OlÃ¡ {nome}\n\n"
-        "Seu {plano} foi liberado com sucesso âœ…\n\n"
+        "OlÃƒÂ¡ {nome}\n\n"
+        "Seu {plano} foi liberado com sucesso Ã¢Å“â€¦\n\n"
         "Quero confirmar se conseguiu instalar corretamente.\n"
-        "Caso tenha qualquer dÃºvida ou dificuldade, Ã© sÃ³ me chamar que te dou suporte imediato ðŸ¤\n\n"
-        "Lembre-se de entrar na nossa comunidade para receber atualizaÃ§Ãµes do nosso robÃ´:\n"
+        "Caso tenha qualquer dÃƒÂºvida ou dificuldade, ÃƒÂ© sÃƒÂ³ me chamar que te dou suporte imediato Ã°Å¸Â¤Â\n\n"
+        "Lembre-se de entrar na nossa comunidade para receber atualizaÃƒÂ§ÃƒÂµes do nosso robÃƒÂ´:\n"
         "https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE\n\n"
-        "Estou Ã  disposiÃ§Ã£o."
+        "Estou ÃƒÂ  disposiÃƒÂ§ÃƒÂ£o."
     )
 )
 WHATSAPP_TEMPLATE = os.environ.get(
     "WHATSAPP_TEMPLATE",
-    "âœ… {nome}, seu pagamento do {plano} foi confirmado. Qualquer dÃºvida pode me chamar!"
+    "Ã¢Å“â€¦ {nome}, seu pagamento do {plano} foi confirmado. Qualquer dÃƒÂºvida pode me chamar!"
 )
 WA_SENDER_URL = os.environ.get("WA_SENDER_URL", "").strip()
 WA_SENDER_TOKEN = os.environ.get("WA_SENDER_TOKEN", "").strip()
@@ -169,8 +183,28 @@ _failed_login_lock = threading.Lock()
 _request_rate_limit = {}
 _request_rate_lock = threading.Lock()
 
+CLIENT_SESSION_EMAIL_KEY = "cliente_email"
+CLIENT_PENDING_EMAIL_KEY = "cliente_pending_email"
+CLIENT_VERIFY_EMAIL_KEY = "cliente_verify_email"
+CLIENT_PENDING_REMEMBER_KEY = "cliente_pending_remember"
+CLIENT_REMEMBER_COOKIE = "trx_client_remember"
+CLIENT_REMEMBER_DAYS = int(os.environ.get("CLIENT_REMEMBER_DAYS", "30"))
+CLIENT_CODE_TTL_SECONDS = int(os.environ.get("CLIENT_CODE_TTL_SECONDS", "120"))
+CLIENT_CODE_MAX_ATTEMPTS = int(os.environ.get("CLIENT_CODE_MAX_ATTEMPTS", "5"))
+
+CLIENT_PLAN_EXPIRY_DAYS = {
+    "trx-gratis": int(os.environ.get("EXP_DIAS_TRX_GRATIS", "30")),
+    "trx-teste": int(os.environ.get("EXP_DIAS_TRX_TESTE", "30")),
+    "trx-bronze": int(os.environ.get("EXP_DIAS_TRX_BRONZE", "30")),
+    "trx-prata": int(os.environ.get("EXP_DIAS_TRX_PRATA", "30")),
+    "trx-gold": int(os.environ.get("EXP_DIAS_TRX_GOLD", "30")),
+    "trx-black": int(os.environ.get("EXP_DIAS_TRX_BLACK", "30")),
+}
+
+_CLIENT_DATA_FERNET = None
+
 # ======================================================
-# PLANOS (COM TESTE + GRÃTIS)
+# PLANOS (COM TESTE + GRÃƒÂTIS)
 # ======================================================
 
 PLANOS = {
@@ -205,7 +239,7 @@ PLANOS = {
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     },
     "trx-gratis": {
-        "nome": "TRX GRÃTIS",
+        "nome": "TRX GRÃƒÂTIS",
         "pasta": "Licencas/TRX GRATIS",
         "preco": 0,
         "gratis": True,
@@ -221,6 +255,11 @@ RESERVED_AFFILIATE_SLUGS = {
     "checkout",
     "comprar",
     "dashboard",
+    "login",
+    "logout",
+    "minha-conta",
+    "primeiro-acesso",
+    "confirmar-codigo",
     "diagnostico-de-perfil-trx",
     "quiz",
     "termos",
@@ -335,7 +374,7 @@ REGEX_RELATORIO_MENSAL = re.compile(
     flags=re.IGNORECASE
 )
 
-# Valor oficial do acumulado final do ciclo (fev -> jan), alinhado Ã  curva anual.
+# Valor oficial do acumulado final do ciclo (fev -> jan), alinhado ÃƒÂ  curva anual.
 ACUMULADO_FINAL_CICLO = 78210.00
 
 
@@ -359,10 +398,43 @@ backfill_analytics_from_orders({
 # ======================================================
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+PASSWORD_HAS_UPPER_RE = re.compile(r"[A-Z]")
+PASSWORD_HAS_LOWER_RE = re.compile(r"[a-z]")
+PASSWORD_HAS_DIGIT_RE = re.compile(r"\d")
+PASSWORD_HAS_SPECIAL_RE = re.compile(r"[^A-Za-z0-9]")
 
 
 def agora_utc():
     return datetime.now(timezone.utc)
+
+
+def obter_fernet_cliente():
+    global _CLIENT_DATA_FERNET
+    if _CLIENT_DATA_FERNET is not None:
+        return _CLIENT_DATA_FERNET
+
+    chave_raw = hashlib.sha256(f"{ADMIN_SECRET}:client-data:v1".encode("utf-8")).digest()
+    chave = base64.urlsafe_b64encode(chave_raw)
+    _CLIENT_DATA_FERNET = Fernet(chave)
+    return _CLIENT_DATA_FERNET
+
+
+def criptografar_texto_cliente(valor):
+    texto = (valor or "").strip()
+    if not texto:
+        return None
+    token = obter_fernet_cliente().encrypt(texto.encode("utf-8"))
+    return token.decode("utf-8")
+
+
+def descriptografar_texto_cliente(valor):
+    texto = (valor or "").strip()
+    if not texto:
+        return ""
+    try:
+        return obter_fernet_cliente().decrypt(texto.encode("utf-8")).decode("utf-8")
+    except (InvalidToken, ValueError, TypeError):
+        return texto
 
 
 def gerar_csrf_token():
@@ -454,6 +526,43 @@ def normalizar_telefone(telefone):
     return re.sub(r"\D", "", telefone or "")[:20]
 
 
+def mascarar_nome(nome):
+    nome = (nome or "").strip()
+    if not nome:
+        return "-"
+    partes = [p for p in nome.split(" ") if p]
+    if not partes:
+        return "-"
+    saida = []
+    for p in partes:
+        if len(p) <= 2:
+            saida.append(p[0] + "*")
+        else:
+            saida.append(p[0] + "*" * (len(p) - 2) + p[-1])
+    return " ".join(saida)
+
+
+def mascarar_email(email):
+    email = (email or "").strip().lower()
+    if not email or "@" not in email:
+        return "-"
+    user, domain = email.split("@", 1)
+    if len(user) <= 2:
+        user_mask = user[:1] + "*"
+    else:
+        user_mask = user[:2] + "*" * max(2, len(user) - 2)
+    return f"{user_mask}@{domain}"
+
+
+def mascarar_telefone(telefone):
+    nums = re.sub(r"\D", "", telefone or "")
+    if not nums:
+        return "-"
+    if len(nums) >= 4:
+        return "*" * max(0, len(nums) - 4) + nums[-4:]
+    return "*" * len(nums)
+
+
 def validar_cadastro_cliente(nome, email, telefone):
     nome = normalizar_nome(nome)
     email = normalizar_email(email)
@@ -472,6 +581,292 @@ def validar_cadastro_cliente(nome, email, telefone):
         "nome": nome,
         "email": email,
         "telefone": telefone_num
+    }
+
+
+def senha_forte_valida(senha):
+    senha = senha or ""
+    if len(senha) < 10:
+        return False, "A senha precisa ter pelo menos 10 caracteres."
+    if not PASSWORD_HAS_UPPER_RE.search(senha):
+        return False, "A senha precisa ter pelo menos uma letra maiuscula."
+    if not PASSWORD_HAS_LOWER_RE.search(senha):
+        return False, "A senha precisa ter pelo menos uma letra minuscula."
+    if not PASSWORD_HAS_DIGIT_RE.search(senha):
+        return False, "A senha precisa ter pelo menos um numero."
+    if not PASSWORD_HAS_SPECIAL_RE.search(senha):
+        return False, "A senha precisa ter pelo menos um caractere especial."
+    return True, ""
+
+
+def gerar_senha_temporaria():
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*"
+    while True:
+        senha = "".join(secrets.choice(chars) for _ in range(12))
+        ok, _ = senha_forte_valida(senha)
+        if ok:
+            return senha
+
+
+def hash_codigo_validacao(email, codigo):
+    base = f"{normalizar_email(email)}:{codigo}:{ADMIN_SECRET}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def gerar_codigo_seis_digitos():
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def cliente_logado():
+    return bool((session.get(CLIENT_SESSION_EMAIL_KEY) or "").strip())
+
+
+def obter_email_cliente_logado():
+    return normalizar_email(session.get(CLIENT_SESSION_EMAIL_KEY))
+
+
+def limpar_sessao_cliente():
+    session.pop(CLIENT_SESSION_EMAIL_KEY, None)
+    session.pop(CLIENT_PENDING_EMAIL_KEY, None)
+    session.pop(CLIENT_VERIFY_EMAIL_KEY, None)
+    session.pop(CLIENT_PENDING_REMEMBER_KEY, None)
+
+
+def montar_url_absoluta(path):
+    base = (PUBLIC_BASE_URL or request.host_url.rstrip("/")).rstrip("/")
+    path = "/" + (path or "").lstrip("/")
+    return f"{base}{path}"
+
+
+def _remember_cookie_samesite():
+    valor = (SESSION_COOKIE_SAMESITE or "Lax").strip()
+    if valor.lower() in {"lax", "strict", "none"}:
+        return valor.capitalize()
+    return "Lax"
+
+
+def hash_token_remember_cliente(token):
+    token = (token or "").strip()
+    base = f"{token}:{ADMIN_SECRET}:client-remember:v1"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def gerar_token_remember_cliente():
+    return secrets.token_urlsafe(48)
+
+
+def autenticar_cliente_resposta(email, remember=False):
+    email = normalizar_email(email)
+    remember = bool(remember)
+
+    session.pop(CLIENT_PENDING_EMAIL_KEY, None)
+    session.pop(CLIENT_VERIFY_EMAIL_KEY, None)
+    session.pop(CLIENT_PENDING_REMEMBER_KEY, None)
+    session[CLIENT_SESSION_EMAIL_KEY] = email
+    session.permanent = remember
+    atualizar_ultimo_login_conta_cliente(email)
+
+    response = redirect("/minha-conta")
+    if remember:
+        token = gerar_token_remember_cliente()
+        token_hash = hash_token_remember_cliente(token)
+        expira_em = agora_utc() + timedelta(days=max(1, CLIENT_REMEMBER_DAYS))
+        salvar_remember_token_cliente(email, token_hash, expira_em)
+        response.set_cookie(
+            CLIENT_REMEMBER_COOKIE,
+            token,
+            max_age=max(1, CLIENT_REMEMBER_DAYS) * 86400,
+            httponly=True,
+            secure=SESSION_COOKIE_SECURE,
+            samesite=_remember_cookie_samesite(),
+            path="/"
+        )
+    else:
+        limpar_remember_token_cliente(email)
+        response.delete_cookie(
+            CLIENT_REMEMBER_COOKIE,
+            path="/",
+            secure=SESSION_COOKIE_SECURE,
+            samesite=_remember_cookie_samesite()
+        )
+    return response
+
+
+def tentar_login_automatico_cliente():
+    if cliente_logado():
+        return None
+
+    token = (request.cookies.get(CLIENT_REMEMBER_COOKIE) or "").strip()
+    if not token:
+        return None
+
+    token_hash = hash_token_remember_cliente(token)
+    conta = buscar_conta_cliente_por_remember_hash(token_hash)
+    if not conta:
+        return "clear_cookie"
+
+    if conta.get("first_access_required"):
+        return "clear_cookie"
+
+    expira_em = conta.get("remember_expires_at")
+    if not expira_em:
+        return "clear_cookie"
+
+    agora = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
+    if expira_em < agora:
+        limpar_remember_token_cliente(conta.get("email"))
+        return "clear_cookie"
+
+    session[CLIENT_SESSION_EMAIL_KEY] = conta.get("email")
+    session.permanent = True
+    atualizar_ultimo_login_conta_cliente(conta.get("email"))
+    return "ok"
+
+
+def enviar_email_primeiro_acesso_cliente(destinatario, nome, senha_temporaria):
+    nome_exibicao = (nome or "Cliente").strip() or "Cliente"
+    link_login = montar_url_absoluta("/login")
+    assunto = "Seu acesso a Area do Cliente TRX PRO"
+    mensagem = (
+        f"Ola, {nome_exibicao}!\n\n"
+        "Sua compra foi confirmada e sua Area do Cliente ja esta liberada.\n\n"
+        f"Login: {normalizar_email(destinatario)}\n"
+        f"Senha temporaria: {senha_temporaria}\n\n"
+        f"Acesse agora: {link_login}\n\n"
+        "No primeiro acesso voce vai criar sua nova senha segura.\n"
+        "Se nao foi voce, responda este email imediatamente.\n\n"
+        "Equipe TRX PRO"
+    )
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#060b16;padding:24px;">
+      <div style="max-width:620px;margin:0 auto;background:#0d1629;border:1px solid #203354;border-radius:14px;overflow:hidden;">
+        <div style="padding:18px 20px;background:linear-gradient(90deg,#16a34a,#0ea5e9);color:#04111d;font-weight:800;font-size:18px;">
+          Acesso Area do Cliente TRX PRO
+        </div>
+        <div style="padding:22px 20px;color:#eaf2ff;line-height:1.55;">
+          <p style="margin:0 0 12px;">Ola, <strong>{nome_exibicao}</strong>!</p>
+          <p style="margin:0 0 12px;">Sua compra foi confirmada e sua Area do Cliente ja esta liberada.</p>
+          <div style="margin:14px 0;padding:14px;border:1px solid #27436c;border-radius:12px;background:#0a1323;">
+            <div style="margin-bottom:8px;"><strong>Login:</strong> {normalizar_email(destinatario)}</div>
+            <div><strong>Senha temporaria:</strong> {senha_temporaria}</div>
+          </div>
+          <p style="margin:0 0 14px;">No primeiro acesso voce vai criar sua nova senha segura.</p>
+          <a href="{link_login}" style="display:inline-block;padding:11px 18px;border-radius:10px;background:#22c55e;color:#04120a;text-decoration:none;font-weight:800;">
+            Entrar na Area do Cliente
+          </a>
+          <p style="margin:16px 0 0;color:#9eb2d4;font-size:12px;">
+            Se nao foi voce, responda este e-mail imediatamente.
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+    enviar_email_simples(destinatario=destinatario, assunto=assunto, mensagem=mensagem, html=html)
+
+
+def enviar_email_codigo_cliente(destinatario, nome, codigo, ttl_seconds):
+    nome_exibicao = (nome or "Cliente").strip() or "Cliente"
+    minutos = max(1, int(math.ceil(float(ttl_seconds) / 60.0)))
+    assunto = "Codigo de confirmacao - TRX PRO"
+    mensagem = (
+        f"Ola, {nome_exibicao}!\n\n"
+        f"Seu codigo de confirmacao e: {codigo}\n"
+        f"Validade: {minutos} minuto(s).\n\n"
+        "Se voce nao solicitou essa alteracao, ignore este e-mail."
+    )
+    html = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;background:#050912;padding:24px;">
+      <div style="max-width:620px;margin:0 auto;background:#0d1629;border:1px solid #203354;border-radius:14px;overflow:hidden;">
+        <div style="padding:18px 20px;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#1c0902;font-weight:800;font-size:18px;">
+          Confirmacao de Seguranca TRX PRO
+        </div>
+        <div style="padding:22px 20px;color:#eaf2ff;line-height:1.55;">
+          <p style="margin:0 0 12px;">Ola, <strong>{nome_exibicao}</strong>.</p>
+          <p style="margin:0 0 10px;">Use o codigo abaixo para confirmar sua nova senha:</p>
+          <div style="margin:14px 0;padding:16px;border:1px dashed #43689b;border-radius:12px;background:#0a1323;text-align:center;">
+            <div style="font-size:34px;letter-spacing:8px;font-weight:900;color:#f8fafc;">{codigo}</div>
+          </div>
+          <p style="margin:0 0 12px;">Este codigo expira em <strong>{minutos} minuto(s)</strong>.</p>
+          <p style="margin:0;color:#9eb2d4;font-size:12px;">Se voce nao solicitou essa alteracao, ignore este e-mail.</p>
+        </div>
+      </div>
+    </div>
+    """
+    enviar_email_simples(destinatario=destinatario, assunto=assunto, mensagem=mensagem, html=html)
+
+
+def garantir_conta_cliente_para_order(order, enviar_email_credenciais=False):
+    if not order:
+        return False, None
+
+    email = normalizar_email(order.get("email"))
+    if not EMAIL_RE.fullmatch(email):
+        return False, None
+
+    nome = normalizar_nome(order.get("nome") or "")
+    telefone = normalizar_telefone(order.get("telefone") or "")
+    nome_enc = criptografar_texto_cliente(nome)
+    telefone_enc = criptografar_texto_cliente(telefone)
+    conta = buscar_conta_cliente_por_email(email)
+    if conta:
+        criar_ou_atualizar_conta_cliente(email=email, nome=nome_enc, telefone=telefone_enc)
+        return False, None
+
+    senha_temporaria = gerar_senha_temporaria()
+    senha_hash = generate_password_hash(senha_temporaria)
+    resultado = criar_ou_atualizar_conta_cliente(
+        email=email,
+        nome=nome_enc,
+        telefone=telefone_enc,
+        password_hash=senha_hash,
+        first_access_required=True
+    )
+    if not resultado.get("created"):
+        return False, None
+
+    if enviar_email_credenciais:
+        try:
+            enviar_email_primeiro_acesso_cliente(
+                destinatario=email,
+                nome=nome,
+                senha_temporaria=senha_temporaria
+            )
+        except Exception as exc:
+            print(f"[CLIENTE] Falha ao enviar credenciais para {email}: {exc}", flush=True)
+
+    return True, senha_temporaria
+
+
+def provisionar_conta_cliente_por_email(email):
+    email = normalizar_email(email)
+    if not EMAIL_RE.fullmatch(email):
+        return False
+
+    if buscar_conta_cliente_por_email(email):
+        return False
+
+    ultimo = buscar_ultimo_pedido_pago_por_email(email)
+    if not ultimo:
+        return False
+
+    criado, _ = garantir_conta_cliente_para_order(ultimo, enviar_email_credenciais=True)
+    return bool(criado)
+
+
+def montar_expiracao_pedido(order):
+    criado = order.get("created_at")
+    plano = (order.get("plano") or "").strip().lower()
+    dias = int(CLIENT_PLAN_EXPIRY_DAYS.get(plano, 30))
+    if not criado:
+        return None
+
+    expira_em = criado + timedelta(days=max(1, dias))
+    agora = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
+    ativo = expira_em >= agora
+    return {
+        "expira_em": expira_em,
+        "ativo": ativo,
+        "dias_restantes": int(math.ceil((expira_em - agora).total_seconds() / 86400.0))
     }
 
 
@@ -506,7 +901,7 @@ def formatar_telefone_infinitepay(telefone):
         numeros = numeros[2:]
 
     if len(numeros) != 11:
-        raise ValueError("Telefone invÃ¡lido")
+        raise ValueError("Telefone invÃƒÂ¡lido")
 
     return f"+55{numeros}"
 
@@ -523,7 +918,7 @@ def formatar_telefone_whatsapp(telefone):
     if len(numeros) in (10, 11):
         return f"55{numeros}"
 
-    raise ValueError("Telefone invÃ¡lido para WhatsApp")
+    raise ValueError("Telefone invÃƒÂ¡lido para WhatsApp")
 
 
 def gerar_link_whatsapp(order):
@@ -549,7 +944,7 @@ def enviar_whatsapp_automatico(order):
 
     if not WHATSAPP_PHONE_NUMBER_ID or not WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError(
-            "Configure WHATSAPP_PHONE_NUMBER_ID e WHATSAPP_ACCESS_TOKEN para envio automÃ¡tico"
+            "Configure WHATSAPP_PHONE_NUMBER_ID e WHATSAPP_ACCESS_TOKEN para envio automÃƒÂ¡tico"
         )
 
     numero_destino = formatar_telefone_whatsapp(order.get("telefone"))
@@ -595,14 +990,14 @@ def processar_fila_whatsapp():
         try:
             enviar_whatsapp_automatico(pedido)
             incrementar_whatsapp_enviado(pedido["order_id"])
-            print(f"ðŸ“² WhatsApp automÃ¡tico enviado: {pedido['order_id']}", flush=True)
+            print(f"Ã°Å¸â€œÂ² WhatsApp automÃƒÂ¡tico enviado: {pedido['order_id']}", flush=True)
         except Exception as e:
             registrar_falha_whatsapp(
                 pedido["order_id"],
                 tentativas + 1,
                 str(e)
             )
-            print(f"âŒ Falha WhatsApp automÃ¡tico {pedido['order_id']}: {e}", flush=True)
+            print(f"Ã¢ÂÅ’ Falha WhatsApp automÃƒÂ¡tico {pedido['order_id']}: {e}", flush=True)
 
 
 def iniciar_worker_whatsapp():
@@ -611,7 +1006,7 @@ def iniciar_worker_whatsapp():
             try:
                 processar_fila_whatsapp()
             except Exception as e:
-                print(f"âš ï¸ Worker WhatsApp com erro: {e}", flush=True)
+                print(f"Ã¢Å¡Â Ã¯Â¸Â Worker WhatsApp com erro: {e}", flush=True)
             time.sleep(20)
 
     thread = threading.Thread(target=worker_loop, daemon=True)
@@ -800,7 +1195,7 @@ def calcular_contagem_regressiva_30_dias(order):
 
     alerta = ""
     if dias_restantes in (5, 3):
-        alerta = f"âš  Faltam {dias_restantes} dias para completar 30 dias"
+        alerta = f"Ã¢Å¡Â  Faltam {dias_restantes} dias para completar 30 dias"
 
     return {
         "dias_restantes_30": dias_restantes,
@@ -822,16 +1217,16 @@ def agendar_whatsapp_pos_pago(order):
         return
 
     if not WA_SENDER_URL or not WA_SENDER_TOKEN:
-        print(f"âš ï¸ WhatsApp sender nÃ£o configurado; ignorando pedido {order_id}", flush=True)
+        print(f"Ã¢Å¡Â Ã¯Â¸Â WhatsApp sender nÃƒÂ£o configurado; ignorando pedido {order_id}", flush=True)
         return
 
     agendado = registrar_whatsapp_auto_agendamento(order_id, delay_minutes=WHATSAPP_DELAY_MINUTES)
     if not agendado:
-        print(f"â„¹ï¸ WhatsApp jÃ¡ agendado/enviado para {order_id}", flush=True)
+        print(f"Ã¢â€žÂ¹Ã¯Â¸Â WhatsApp jÃƒÂ¡ agendado/enviado para {order_id}", flush=True)
         return
 
     mensagem = montar_mensagem_whatsapp_pos_pago(order)
-    print(f"âœ… Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
+    print(f"Ã¢Å“â€¦ Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
 
     schedule_whatsapp(
         phone=telefone,
@@ -1024,6 +1419,15 @@ def aplicar_protecoes_request():
     method = request.method.upper()
     ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
 
+    if not cliente_logado():
+        caminho_publico = not path.startswith("/admin") and not path.startswith("/api")
+        caminho_publico = caminho_publico and path != "/webhook/infinitypay"
+        caminho_publico = caminho_publico and not path.startswith("/assets") and not path.startswith("/static")
+        if caminho_publico:
+            auto = tentar_login_automatico_cliente()
+            if auto == "clear_cookie":
+                g.clear_client_remember_cookie = True
+
     if method == "POST" and path == "/comprar":
         if excedeu_rate_limit(f"post_comprar:{ip}", limite=18, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos e tente novamente.", 429
@@ -1039,6 +1443,18 @@ def aplicar_protecoes_request():
     if method == "POST" and path == "/admin/login":
         if excedeu_rate_limit(f"post_admin_login:{ip}", limite=12, janela_segundos=60):
             return "Muitas tentativas de login. Aguarde alguns segundos.", 429
+
+    if method == "POST" and path == "/login":
+        if excedeu_rate_limit(f"post_cliente_login:{ip}", limite=12, janela_segundos=60):
+            return "Muitas tentativas de login. Aguarde alguns segundos.", 429
+
+    if method == "POST" and path == "/login/primeiro-acesso":
+        if excedeu_rate_limit(f"post_cliente_primeiro_acesso:{ip}", limite=10, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
+
+    if method == "POST" and path == "/login/confirmar-codigo":
+        if excedeu_rate_limit(f"post_cliente_confirmar_codigo:{ip}", limite=14, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
 
     if path.startswith("/admin") and method in {"POST", "PUT", "PATCH", "DELETE"}:
         token = (request.form.get("csrf_token") or request.headers.get(CSRF_HEADER_NAME) or "").strip()
@@ -1065,6 +1481,17 @@ def aplicar_headers_seguranca(response):
     if request.path.startswith("/admin"):
         response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         response.headers.setdefault("Pragma", "no-cache")
+    if request.path.startswith("/login") or request.path.startswith("/minha-conta"):
+        response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        response.headers.setdefault("Pragma", "no-cache")
+
+    if getattr(g, "clear_client_remember_cookie", False):
+        response.delete_cookie(
+            CLIENT_REMEMBER_COOKIE,
+            path="/",
+            secure=SESSION_COOKIE_SECURE,
+            samesite=_remember_cookie_samesite()
+        )
 
     return response
 
@@ -1139,7 +1566,7 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
     return False
 
 # ======================================================
-# ROTAS PÃšBLICAS
+# ROTAS PÃƒÅ¡BLICAS
 # ======================================================
 
 @app.route("/assets/<path:filename>")
@@ -1194,6 +1621,289 @@ def privacidade():
 @app.route("/contato")
 def contato():
     return render_template("contato.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def cliente_login():
+    if cliente_logado():
+        return redirect("/minha-conta")
+
+    erro = ""
+    info = (request.args.get("info") or "").strip()
+    email_form = normalizar_email(request.args.get("email") or "")
+    remember_checked = False
+
+    if request.method == "POST":
+        token = (request.form.get("csrf_token") or "").strip()
+        if not validar_csrf_token(token):
+            return "Falha de validacao CSRF.", 403
+
+        email_form = normalizar_email(request.form.get("email") or "")
+        senha = request.form.get("senha") or ""
+        remember_checked = (request.form.get("remember_me") or "").strip().lower() in {"1", "on", "true", "yes"}
+
+        if not EMAIL_RE.fullmatch(email_form) or not senha:
+            erro = "Informe email e senha validos."
+        else:
+            conta = buscar_conta_cliente_por_email(email_form)
+            if not conta:
+                criado = provisionar_conta_cliente_por_email(email_form)
+                if criado:
+                    info = "Criamos sua conta e enviamos a senha temporaria para seu e-mail."
+                else:
+                    erro = "Email ou senha invalidos."
+            else:
+                senha_hash = (conta.get("password_hash") or "").strip()
+                if not senha_hash:
+                    try:
+                        senha_temp = gerar_senha_temporaria()
+                        senha_temp_hash = generate_password_hash(senha_temp)
+                        criar_ou_atualizar_conta_cliente(
+                            email=email_form,
+                            nome=conta.get("nome"),
+                            telefone=conta.get("telefone"),
+                            password_hash=senha_temp_hash,
+                            first_access_required=True
+                        )
+                        enviar_email_primeiro_acesso_cliente(
+                            destinatario=email_form,
+                            nome=descriptografar_texto_cliente(conta.get("nome")),
+                            senha_temporaria=senha_temp
+                        )
+                        info = "Enviamos uma senha temporaria nova para seu e-mail."
+                    except Exception:
+                        erro = "Nao foi possivel preparar o primeiro acesso agora."
+                elif not check_password_hash(senha_hash, senha):
+                    erro = "Email ou senha invalidos."
+                else:
+                    session[CLIENT_PENDING_EMAIL_KEY] = email_form
+                    session[CLIENT_PENDING_REMEMBER_KEY] = "1" if remember_checked else "0"
+                    if conta.get("first_access_required"):
+                        return redirect("/login/primeiro-acesso")
+
+                    return autenticar_cliente_resposta(email_form, remember=remember_checked)
+
+    return render_template(
+        "client_login.html",
+        csrf_token=gerar_csrf_token(),
+        erro=erro,
+        info=info,
+        email=email_form,
+        remember_checked=remember_checked
+    )
+
+
+@app.route("/login/primeiro-acesso", methods=["GET", "POST"])
+def cliente_primeiro_acesso():
+    email = normalizar_email(session.get(CLIENT_PENDING_EMAIL_KEY))
+    if not EMAIL_RE.fullmatch(email):
+        return redirect("/login")
+
+    conta = buscar_conta_cliente_por_email(email)
+    if not conta:
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    nome_conta = descriptografar_texto_cliente(conta.get("nome"))
+
+    if not conta.get("first_access_required"):
+        remember_pending = (session.get(CLIENT_PENDING_REMEMBER_KEY) or "").strip() == "1"
+        return autenticar_cliente_resposta(email, remember=remember_pending)
+
+    erro = ""
+
+    if request.method == "POST":
+        token = (request.form.get("csrf_token") or "").strip()
+        if not validar_csrf_token(token):
+            return "Falha de validacao CSRF.", 403
+
+        senha_nova = request.form.get("senha_nova") or ""
+        senha_repetida = request.form.get("senha_repetida") or ""
+
+        ok, msg = senha_forte_valida(senha_nova)
+        if not ok:
+            erro = msg
+        elif senha_nova != senha_repetida:
+            erro = "As senhas nao conferem."
+        elif conta.get("password_hash") and check_password_hash(conta["password_hash"], senha_nova):
+            erro = "A nova senha precisa ser diferente da senha temporaria."
+        else:
+            codigo = gerar_codigo_seis_digitos()
+            codigo_hash = hash_codigo_validacao(email, codigo)
+            pending_hash = generate_password_hash(senha_nova)
+            expira_em = agora_utc() + timedelta(seconds=CLIENT_CODE_TTL_SECONDS)
+
+            ok_save = registrar_codigo_primeiro_acesso(
+                email=email,
+                pending_password_hash=pending_hash,
+                code_hash=codigo_hash,
+                expires_at=expira_em
+            )
+            if not ok_save:
+                erro = "Falha ao iniciar confirmacao. Tente novamente."
+            else:
+                try:
+                    enviar_email_codigo_cliente(
+                        destinatario=email,
+                        nome=nome_conta,
+                        codigo=codigo,
+                        ttl_seconds=CLIENT_CODE_TTL_SECONDS
+                    )
+                    session[CLIENT_VERIFY_EMAIL_KEY] = email
+                    return redirect("/login/confirmar-codigo")
+                except Exception as exc:
+                    print(f"[CLIENTE] Falha ao enviar codigo de confirmacao para {email}: {exc}", flush=True)
+                    limpar_codigo_cliente(email)
+                    erro = "Falha ao enviar codigo por e-mail. Tente novamente em instantes."
+
+    return render_template(
+        "client_first_access.html",
+        csrf_token=gerar_csrf_token(),
+        email=email,
+        erro=erro,
+        ttl_seconds=CLIENT_CODE_TTL_SECONDS
+    )
+
+
+@app.route("/login/confirmar-codigo", methods=["GET", "POST"])
+def cliente_confirmar_codigo():
+    email = normalizar_email(session.get(CLIENT_VERIFY_EMAIL_KEY) or session.get(CLIENT_PENDING_EMAIL_KEY))
+    if not EMAIL_RE.fullmatch(email):
+        return redirect("/login")
+
+    conta = buscar_conta_cliente_por_email(email)
+    if not conta:
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    erro = ""
+    info = ""
+
+    if request.method == "POST":
+        token = (request.form.get("csrf_token") or "").strip()
+        if not validar_csrf_token(token):
+            return "Falha de validacao CSRF.", 403
+
+        codigo = re.sub(r"\D", "", request.form.get("codigo") or "")[:6]
+        if len(codigo) != 6:
+            erro = "Informe um codigo de 6 digitos."
+        else:
+            tentativas = int(conta.get("verification_attempts") or 0)
+            if tentativas >= CLIENT_CODE_MAX_ATTEMPTS:
+                erro = "Limite de tentativas excedido. Solicite um novo codigo."
+            elif not conta.get("verification_code_hash") or not conta.get("verification_expires_at"):
+                erro = "Codigo nao encontrado. Gere um novo codigo no primeiro acesso."
+            else:
+                expira_em = conta.get("verification_expires_at")
+                agora = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
+                if expira_em < agora:
+                    erro = "Codigo expirado. Gere um novo codigo no primeiro acesso."
+                else:
+                    recebido_hash = hash_codigo_validacao(email, codigo)
+                    esperado_hash = conta.get("verification_code_hash") or ""
+                    if not hmac.compare_digest(recebido_hash, esperado_hash):
+                        incrementar_tentativa_codigo_cliente(email)
+                        restantes = max(0, CLIENT_CODE_MAX_ATTEMPTS - (tentativas + 1))
+                        erro = f"Codigo invalido. Tentativas restantes: {restantes}."
+                    else:
+                        pending_hash = (conta.get("pending_password_hash") or "").strip()
+                        if not pending_hash:
+                            erro = "Nova senha pendente nao encontrada. RefaÃ§a o primeiro acesso."
+                        else:
+                            confirmar_senha_conta_cliente(email, pending_hash)
+                            remember_pending = (session.get(CLIENT_PENDING_REMEMBER_KEY) or "").strip() == "1"
+                            return autenticar_cliente_resposta(email, remember=remember_pending)
+
+        conta = buscar_conta_cliente_por_email(email) or conta
+
+    if request.args.get("enviado") == "1":
+        info = "Codigo enviado para seu e-mail."
+
+    return render_template(
+        "client_verify_code.html",
+        csrf_token=gerar_csrf_token(),
+        email=email,
+        erro=erro,
+        info=info,
+        ttl_seconds=CLIENT_CODE_TTL_SECONDS,
+        max_attempts=CLIENT_CODE_MAX_ATTEMPTS,
+        attempts_used=int(conta.get("verification_attempts") or 0)
+    )
+
+
+@app.route("/logout", methods=["POST"])
+def cliente_logout():
+    token = (request.form.get("csrf_token") or "").strip()
+    if not validar_csrf_token(token):
+        return "Falha de validacao CSRF.", 403
+
+    email = obter_email_cliente_logado()
+    if EMAIL_RE.fullmatch(email):
+        limpar_remember_token_cliente(email)
+
+    limpar_sessao_cliente()
+    response = redirect("/login")
+    response.delete_cookie(
+        CLIENT_REMEMBER_COOKIE,
+        path="/",
+        secure=SESSION_COOKIE_SECURE,
+        samesite=_remember_cookie_samesite()
+    )
+    return response
+
+
+@app.route("/minha-conta")
+def cliente_area():
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    conta = buscar_conta_cliente_por_email(email)
+    if not conta:
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    conta_nome_decrypt = descriptografar_texto_cliente(conta.get("nome"))
+    conta_telefone_decrypt = descriptografar_texto_cliente(conta.get("telefone"))
+    conta_view = dict(conta)
+    conta_view["nome"] = conta_nome_decrypt
+    conta_view["telefone"] = conta_telefone_decrypt
+
+    pedidos = listar_pedidos_pagos_por_email(email, limite=30)
+    pedidos_view = []
+    for pedido in pedidos:
+        plano_id = pedido.get("plano")
+        plano_info = PLANOS.get(plano_id, {})
+        exp = montar_expiracao_pedido(pedido)
+        created_at_local = converter_data_para_timezone_admin(pedido.get("created_at"))
+        expira_local = converter_data_para_timezone_admin(exp["expira_em"]) if exp else None
+        pedidos_view.append({
+            "order_id": pedido.get("order_id"),
+            "nome": pedido.get("nome") or "",
+            "plano_id": plano_id,
+            "plano_nome": plano_info.get("nome", plano_id or "-"),
+            "is_paid": int(plano_info.get("preco") or 0) > 0,
+            "created_at_fmt": created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
+            "expira_em_fmt": expira_local.strftime("%d/%m/%Y %H:%M") if expira_local else "-",
+            "ativo": bool(exp and exp.get("ativo")),
+            "dias_restantes": int(exp.get("dias_restantes") or 0) if exp else 0,
+        })
+
+    conta_nome = conta_nome_decrypt or (pedidos_view[0]["nome"] if pedidos_view else "")
+    ativos = [p for p in pedidos_view if p.get("ativo")]
+    ultimo_pedido = pedidos_view[0] if pedidos_view else None
+
+    return render_template(
+        "client_area.html",
+        csrf_token=gerar_csrf_token(),
+        conta=conta_view,
+        conta_nome=conta_nome,
+        email=email,
+        pedidos=pedidos_view,
+        ativos=ativos,
+        ultimo_pedido=ultimo_pedido
+    )
 
 
 @app.route("/<affiliate_slug>")
@@ -1265,14 +1975,14 @@ def api_quiz_submit():
     submission_id = (payload.get("submission_id") or "").strip()
 
     if not isinstance(answers, dict):
-        return jsonify({"ok": False, "error": "answers invÃ¡lido"}), 400
+        return jsonify({"ok": False, "error": "answers invÃƒÂ¡lido"}), 400
 
     planos_validos = {"gratis", "bronze", "prata", "gold", "black"}
     if recommended_plan not in planos_validos:
-        return jsonify({"ok": False, "error": "recommended_plan invÃ¡lido"}), 400
+        return jsonify({"ok": False, "error": "recommended_plan invÃƒÂ¡lido"}), 400
 
     if next_level_plan and next_level_plan not in planos_validos:
-        return jsonify({"ok": False, "error": "next_level_plan invÃ¡lido"}), 400
+        return jsonify({"ok": False, "error": "next_level_plan invÃƒÂ¡lido"}), 400
 
     if not isinstance(reasons, list):
         reasons = []
@@ -1306,13 +2016,13 @@ def checkout(plano):
     registrar_usuario_online()
     plano_base, affiliate_slug = decompor_plano_checkout(plano)
     if plano_base not in PLANOS:
-        return "Plano invÃ¡lido", 404
+        return "Plano invÃƒÂ¡lido", 404
 
     afiliado = None
     if affiliate_slug:
         afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
         if not afiliado:
-            return "Afiliado invÃ¡lido", 404
+            return "Afiliado invÃƒÂ¡lido", 404
         session["affiliate_slug"] = afiliado["slug"]
 
     return render_template(
@@ -1325,12 +2035,12 @@ def checkout(plano):
         email=session.get("email", ""),
         telefone=session.get("telefone", "")
     )
-# ðŸš« nunca permitir GET em /comprar
+# Ã°Å¸Å¡Â« nunca permitir GET em /comprar
 @app.route("/comprar", methods=["GET"])
 def comprar_get():
     return redirect("/")
 
-# âœ… POST real
+# Ã¢Å“â€¦ POST real
 @app.route("/comprar", methods=["POST"])
 def comprar():
     nome_raw = request.form.get("nome")
@@ -1390,6 +2100,10 @@ def comprar():
 
             marcar_order_processada(order_id)
             order_pago = buscar_order_por_id(order_id)
+            try:
+                garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
+            except Exception as exc:
+                print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago)
             agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
             agendar_whatsapp_pos_pago(order_pago)
@@ -1459,6 +2173,10 @@ def webhook():
             marcar_order_processada(order_id)
             marcar_transacao_processada(transaction_nsu)
             order_pago = buscar_order_por_id(order_id)
+            try:
+                garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
+            except Exception as exc:
+                print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
             agendar_whatsapp_pos_pago(order_pago)
     except Exception as exc:
@@ -1593,13 +2311,17 @@ def admin_dashboard():
 
         pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
         if not pedido["whatsapp_link"] and (pedido.get("telefone") or ""):
-            pedido["whatsapp_status"] = "telefone invÃ¡lido"
+            pedido["whatsapp_status"] = "telefone invÃƒÂ¡lido"
 
         if mensagens_enviadas > 0:
             pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
 
         data_local = converter_data_para_timezone_admin(pedido.get("created_at"))
         pedido["created_at_local"] = data_local.strftime("%d/%m/%Y %H:%M") if data_local else "-"
+        pedido["nome_masked"] = mascarar_nome(pedido.get("nome"))
+        pedido["email_masked"] = mascarar_email(pedido.get("email"))
+        pedido["telefone_masked"] = mascarar_telefone(pedido.get("telefone"))
+        pedido["affiliate_email_masked"] = mascarar_email(pedido.get("affiliate_email"))
 
         info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
         pedido.update(info_30_dias)
@@ -1880,12 +2602,12 @@ def api_analytics_summary():
     try:
         start = parse_iso_date(request.args.get("start"))
     except Exception:
-        return jsonify({"error": "start invÃ¡lido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "start invÃƒÂ¡lido (YYYY-MM-DD)"}), 400
 
     try:
         end = parse_iso_date(request.args.get("end"))
     except Exception:
-        return jsonify({"error": "end invÃ¡lido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "end invÃƒÂ¡lido (YYYY-MM-DD)"}), 400
 
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
@@ -1959,21 +2681,21 @@ def api_analytics_chart():
     group_validos = {"day", "week", "month"}
 
     if metric not in metric_validas:
-        return jsonify({"error": "metric invÃ¡lida"}), 400
+        return jsonify({"error": "metric invÃƒÂ¡lida"}), 400
     if group_by not in group_validos:
-        return jsonify({"error": "groupBy invÃ¡lido"}), 400
+        return jsonify({"error": "groupBy invÃƒÂ¡lido"}), 400
     if plan != "all" and plan not in PLANOS:
-        return jsonify({"error": "plan invÃ¡lido"}), 400
+        return jsonify({"error": "plan invÃƒÂ¡lido"}), 400
 
     try:
         start = parse_iso_date(request.args.get("start"))
     except Exception:
-        return jsonify({"error": "start invÃ¡lido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "start invÃƒÂ¡lido (YYYY-MM-DD)"}), 400
 
     try:
         end = parse_iso_date(request.args.get("end"))
     except Exception:
-        return jsonify({"error": "end invÃ¡lido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "end invÃƒÂ¡lido (YYYY-MM-DD)"}), 400
 
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
@@ -2034,11 +2756,11 @@ def admin_whatsapp(order_id):
 
     pedido = buscar_order_por_id(order_id)
     if not pedido:
-        return "Pedido nÃ£o encontrado", 404
+        return "Pedido nÃƒÂ£o encontrado", 404
 
     link = gerar_link_whatsapp(pedido)
     if not link:
-        return "Telefone do usuÃ¡rio nÃ£o encontrado/invÃ¡lido", 400
+        return "Telefone do usuÃƒÂ¡rio nÃƒÂ£o encontrado/invÃƒÂ¡lido", 400
 
     incrementar_whatsapp_enviado(order_id)
     return redirect(link)
@@ -2130,9 +2852,16 @@ def admin_pedido(order_id):
 
     pedido = buscar_pedido_detalhado(order_id)
     if not pedido:
-        return "Pedido nÃ£o encontrado", 404
+        return "Pedido nao encontrado", 404
 
-    return render_template("admin_pedido.html", pedido=pedido)
+    pedido_view = dict(pedido)
+    pedido_view["nome_masked"] = mascarar_nome(pedido.get("nome"))
+    pedido_view["email_masked"] = mascarar_email(pedido.get("email"))
+    pedido_view["telefone_masked"] = mascarar_telefone(pedido.get("telefone"))
+    pedido_view["affiliate_email_masked"] = mascarar_email(pedido.get("affiliate_email"))
+    pedido_view["affiliate_telefone_masked"] = mascarar_telefone(pedido.get("affiliate_telefone"))
+
+    return render_template("admin_pedido.html", pedido=pedido_view)
 
 # ======================================================
 # START
@@ -2141,6 +2870,9 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+
+
 
 
 

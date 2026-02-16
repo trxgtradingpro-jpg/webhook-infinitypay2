@@ -11,6 +11,19 @@ GOOGLE_EMAIL_WEBHOOK = os.environ.get(
 ).strip()
 
 
+def _enviar_payload_email(payload):
+    if not GOOGLE_EMAIL_WEBHOOK:
+        raise RuntimeError("GOOGLE_EMAIL_WEBHOOK nao configurado.")
+
+    response = requests.post(
+        GOOGLE_EMAIL_WEBHOOK,
+        json=payload,
+        timeout=60,
+    )
+    if response.status_code != 200:
+        raise RuntimeError(f"Falha no envio de email. Status={response.status_code} Body={response.text}")
+
+
 def _arquivo_para_base64(caminho_arquivo):
     if not os.path.exists(caminho_arquivo):
         raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_arquivo}")
@@ -20,9 +33,6 @@ def _arquivo_para_base64(caminho_arquivo):
 
 
 def enviar_email_com_anexo(destinatario, assunto, mensagem, caminho_arquivo):
-    if not GOOGLE_EMAIL_WEBHOOK:
-        raise RuntimeError("GOOGLE_EMAIL_WEBHOOK nao configurado.")
-
     arquivo_base64 = _arquivo_para_base64(caminho_arquivo)
     payload = {
         "email": destinatario,
@@ -31,14 +41,18 @@ def enviar_email_com_anexo(destinatario, assunto, mensagem, caminho_arquivo):
         "filename": os.path.basename(caminho_arquivo),
         "file_base64": arquivo_base64,
     }
+    _enviar_payload_email(payload)
 
-    response = requests.post(
-        GOOGLE_EMAIL_WEBHOOK,
-        json=payload,
-        timeout=60,
-    )
-    if response.status_code != 200:
-        raise RuntimeError(f"Falha no envio de email. Status={response.status_code} Body={response.text}")
+
+def enviar_email_simples(destinatario, assunto, mensagem, html=None):
+    payload = {
+        "email": destinatario,
+        "assunto": assunto,
+        "mensagem": mensagem,
+    }
+    if html:
+        payload["html"] = html
+    _enviar_payload_email(payload)
 
 
 def enviar_email(destinatario, nome_plano, arquivo, senha):

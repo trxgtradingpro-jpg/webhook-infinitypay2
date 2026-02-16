@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Primeiro Acesso | TRX PRO</title>
+  <style>
+    :root{
+      --bg:#070b16;
+      --panel:#0e162a;
+      --line:#253657;
+      --txt:#e8efff;
+      --muted:#9db0d4;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --info:#38bdf8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--txt);
+      background:
+        radial-gradient(1000px 600px at 0% -10%, rgba(56,189,248,.13), transparent 60%),
+        radial-gradient(900px 520px at 100% 0%, rgba(34,197,94,.10), transparent 60%),
+        var(--bg);
+      display:grid;
+      place-items:center;
+      padding:18px;
+    }
+    .card{
+      width:min(560px, 100%);
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(14,22,42,.95), rgba(8,12,24,.97));
+      box-shadow:0 24px 80px rgba(0,0,0,.48);
+      padding:20px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:26px;
+      letter-spacing:-.3px;
+    }
+    .sub{
+      margin:0 0 14px;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:14px;
+    }
+    .email{
+      margin:0 0 12px;
+      font-size:13px;
+      color:#b6caf0;
+    }
+    .msg{
+      margin:0 0 12px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      font-size:14px;
+      line-height:1.4;
+    }
+    .msg.err{
+      border-color:rgba(239,68,68,.45);
+      background:rgba(239,68,68,.12);
+      color:#fecaca;
+    }
+    label{
+      display:block;
+      margin:10px 0 6px;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+    input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#0a1325;
+      color:var(--txt);
+      font-size:15px;
+      padding:12px 13px;
+      outline:none;
+    }
+    input:focus{
+      border-color:#3b82f6;
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    .meter{
+      margin-top:10px;
+      display:grid;
+      gap:8px;
+    }
+    .meter-bars{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:6px;
+    }
+    .meter-bars span{
+      height:8px;
+      border-radius:999px;
+      background:#203150;
+      border:1px solid #2a3e63;
+    }
+    .meter-label{
+      font-size:13px;
+      font-weight:800;
+      color:#b8c8e8;
+    }
+    .rules{
+      margin:10px 0 0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap:6px;
+      font-size:12px;
+      color:#9fb2d5;
+    }
+    .rules li.ok{ color:#86efac; }
+    .rules li.bad{ color:#fca5a5; }
+    button{
+      width:100%;
+      margin-top:14px;
+      border:0;
+      border-radius:10px;
+      padding:12px 14px;
+      background:linear-gradient(180deg, #22c55e, #16a34a);
+      color:#04120a;
+      font-weight:900;
+      font-size:15px;
+      cursor:pointer;
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+    .foot{
+      margin-top:12px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .back{
+      margin-top:12px;
+      display:inline-block;
+      color:var(--info);
+      text-decoration:none;
+      font-size:13px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Primeiro acesso</h1>
+    <p class="sub">Crie sua nova senha forte. Depois enviaremos um codigo de 6 digitos para confirmar a alteracao.</p>
+    <p class="email">Conta: <strong>{{ email }}</strong></p>
+
+    {% if erro %}
+      <div class="msg err">{{ erro }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login/primeiro-acesso" id="firstAccessForm" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <label for="senha_nova">Nova senha</label>
+      <input id="senha_nova" name="senha_nova" type="password" autocomplete="new-password" required>
+
+      <div class="meter">
+        <div class="meter-bars" id="meterBars">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="meter-label" id="meterLabel">Forca: aguardando senha...</div>
+      </div>
+
+      <ul class="rules">
+        <li id="ruleLen" class="bad">Minimo de 10 caracteres</li>
+        <li id="ruleUpper" class="bad">Ao menos uma letra maiuscula</li>
+        <li id="ruleLower" class="bad">Ao menos uma letra minuscula</li>
+        <li id="ruleDigit" class="bad">Ao menos um numero</li>
+        <li id="ruleSpecial" class="bad">Ao menos um caractere especial</li>
+      </ul>
+
+      <label for="senha_repetida">Repita a nova senha</label>
+      <input id="senha_repetida" name="senha_repetida" type="password" autocomplete="new-password" required>
+
+      <button id="submitBtn" type="submit">Enviar codigo de confirmacao</button>
+    </form>
+
+    <p class="foot">O codigo de confirmacao expira em aproximadamente {{ (ttl_seconds / 60) | round | int }} minuto(s).</p>
+    <a href="/login" class="back">Voltar ao login</a>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js"></script>
+  <script>
+    (function(){
+      const inputPass = document.getElementById("senha_nova");
+      const inputRepeat = document.getElementById("senha_repetida");
+      const meterLabel = document.getElementById("meterLabel");
+      const bars = Array.from(document.querySelectorAll("#meterBars span"));
+      const btn = document.getElementById("submitBtn");
+      const form = document.getElementById("firstAccessForm");
+
+      const ruleLen = document.getElementById("ruleLen");
+      const ruleUpper = document.getElementById("ruleUpper");
+      const ruleLower = document.getElementById("ruleLower");
+      const ruleDigit = document.getElementById("ruleDigit");
+      const ruleSpecial = document.getElementById("ruleSpecial");
+
+      function setRule(el, ok){
+        el.classList.toggle("ok", !!ok);
+        el.classList.toggle("bad", !ok);
+      }
+
+      function parseScore(value){
+        if (!value) return 0;
+        if (typeof zxcvbn === "function") {
+          return zxcvbn(value).score;
+        }
+        let score = 0;
+        if (value.length >= 10) score++;
+        if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+        if (/\d/.test(value)) score++;
+        if (/[^A-Za-z0-9]/.test(value)) score++;
+        return Math.max(0, Math.min(4, score));
+      }
+
+      function meterColor(index){
+        if (index <= 0) return "#203150";
+        if (index === 1) return "#7f1d1d";
+        if (index === 2) return "#f59e0b";
+        if (index === 3) return "#22c55e";
+        return "#14b8a6";
+      }
+
+      function meterText(score){
+        if (score <= 0) return "Forca: aguardando senha...";
+        if (score === 1) return "Forca: muito fraca";
+        if (score === 2) return "Forca: fraca";
+        if (score === 3) return "Forca: boa";
+        return "Forca: forte";
+      }
+
+      function validate(){
+        const pass = inputPass.value || "";
+        const repeat = inputRepeat.value || "";
+
+        const hasLen = pass.length >= 10;
+        const hasUpper = /[A-Z]/.test(pass);
+        const hasLower = /[a-z]/.test(pass);
+        const hasDigit = /\d/.test(pass);
+        const hasSpecial = /[^A-Za-z0-9]/.test(pass);
+        const score = parseScore(pass);
+
+        setRule(ruleLen, hasLen);
+        setRule(ruleUpper, hasUpper);
+        setRule(ruleLower, hasLower);
+        setRule(ruleDigit, hasDigit);
+        setRule(ruleSpecial, hasSpecial);
+
+        meterLabel.textContent = meterText(score);
+        bars.forEach((bar, idx) => {
+          const level = idx + 1;
+          const active = score >= level;
+          bar.style.background = active ? meterColor(level) : "#203150";
+          bar.style.borderColor = active ? "transparent" : "#2a3e63";
+        });
+
+        const policyOk = hasLen && hasUpper && hasLower && hasDigit && hasSpecial;
+        const matchOk = repeat.length > 0 && pass === repeat;
+        btn.disabled = !(policyOk && matchOk && score >= 3);
+      }
+
+      inputPass.addEventListener("input", validate);
+      inputRepeat.addEventListener("input", validate);
+      form.addEventListener("submit", (event) => {
+        validate();
+        if (btn.disabled) {
+          event.preventDefault();
+        }
+      });
+
+      validate();
+    })();
+  </script>
+</body>
+</html>

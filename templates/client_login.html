@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login do Cliente | TRX PRO</title>
+  <style>
+    :root{
+      --bg:#060a14;
+      --panel:#0f172a;
+      --line:#233252;
+      --txt:#e8efff;
+      --muted:#9fb0d0;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --info:#38bdf8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--txt);
+      background:
+        radial-gradient(900px 500px at 10% -10%, rgba(56,189,248,.14), transparent 60%),
+        radial-gradient(700px 420px at 90% 10%, rgba(34,197,94,.12), transparent 60%),
+        var(--bg);
+      display:grid;
+      place-items:center;
+      padding:18px;
+    }
+    .card{
+      width:min(460px, 100%);
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(16,24,43,.95), rgba(8,13,24,.96));
+      box-shadow:0 24px 70px rgba(0,0,0,.45);
+      padding:20px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:26px;
+      letter-spacing:-.3px;
+    }
+    .sub{
+      margin:0 0 16px;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:14px;
+    }
+    .msg{
+      margin:0 0 12px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      font-size:14px;
+      line-height:1.4;
+    }
+    .msg.err{
+      border-color:rgba(239,68,68,.45);
+      background:rgba(239,68,68,.12);
+      color:#fecaca;
+    }
+    .msg.ok{
+      border-color:rgba(34,197,94,.45);
+      background:rgba(34,197,94,.12);
+      color:#bbf7d0;
+    }
+    label{
+      display:block;
+      margin:10px 0 6px;
+      color:var(--muted);
+      font-size:13px;
+      font-weight:700;
+    }
+    input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#0a1325;
+      color:var(--txt);
+      font-size:15px;
+      padding:12px 13px;
+      outline:none;
+    }
+    input:focus{
+      border-color:#3b82f6;
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
+    }
+    .remember{
+      margin-top:10px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#c9d8f2;
+      font-size:13px;
+      font-weight:700;
+    }
+    .remember input{
+      width:16px;
+      height:16px;
+      accent-color:#22c55e;
+      box-shadow:none;
+    }
+    button{
+      width:100%;
+      margin-top:14px;
+      border:0;
+      border-radius:10px;
+      padding:12px 14px;
+      background:linear-gradient(180deg, #22c55e, #16a34a);
+      color:#04120a;
+      font-weight:900;
+      font-size:15px;
+      cursor:pointer;
+    }
+    .foot{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .back{
+      margin-top:12px;
+      display:inline-block;
+      color:var(--info);
+      text-decoration:none;
+      font-size:13px;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Area do Cliente</h1>
+    <p class="sub">Use seu e-mail de compra e senha para acessar seus dados e datas de expiracao dos planos.</p>
+
+    {% if erro %}
+      <div class="msg err">{{ erro }}</div>
+    {% endif %}
+    {% if info %}
+      <div class="msg ok">{{ info }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" required autocomplete="username" value="{{ email or '' }}">
+
+      <label for="senha">Senha</label>
+      <input id="senha" name="senha" type="password" required autocomplete="current-password">
+
+      <label class="remember">
+        <input type="checkbox" name="remember_me" value="1" {% if remember_checked %}checked{% endif %}>
+        Manter login automatico neste dispositivo
+      </label>
+
+      <button type="submit">Entrar</button>
+    </form>
+
+    <p class="foot">Primeiro acesso: use a senha temporaria enviada no seu e-mail e finalize a troca de senha segura.</p>
+    <a href="/" class="back">Voltar para a pagina inicial</a>
+  </section>
+</body>
+</html>

@@ -23,17 +23,17 @@
 
         <ul>
             <li><strong>ID:</strong> {{ pedido.order_id }}</li>
-            <li><strong>Nome:</strong> {{ pedido.nome }}</li>
-            <li><strong>E-mail:</strong> {{ pedido.email }}</li>
-            <li><strong>Telefone:</strong> {{ pedido.telefone }}</li>
+            <li><strong>Nome:</strong> {{ pedido.nome_masked }}</li>
+            <li><strong>E-mail:</strong> {{ pedido.email_masked }}</li>
+            <li><strong>Telefone:</strong> {{ pedido.telefone_masked }}</li>
             <li><strong>Plano base:</strong> {{ pedido.plano }}</li>
             <li><strong>Checkout ref:</strong> {{ pedido.checkout_slug or pedido.plano }}</li>
             <li><strong>Status:</strong> {{ pedido.status }}</li>
             <li><strong>Criado em:</strong> {{ pedido.created_at.strftime("%d/%m/%Y %H:%M") if pedido.created_at else '-' }}</li>
             <li><strong>Afiliado (slug):</strong> {{ pedido.affiliate_slug or '-' }}</li>
             <li><strong>Afiliado (nome):</strong> {{ pedido.affiliate_nome or '-' }}</li>
-            <li><strong>Afiliado (e-mail):</strong> {{ pedido.affiliate_email or '-' }}</li>
-            <li><strong>Afiliado (telefone):</strong> {{ pedido.affiliate_telefone or '-' }}</li>
+            <li><strong>Afiliado (e-mail):</strong> {{ pedido.affiliate_email_masked or '-' }}</li>
+            <li><strong>Afiliado (telefone):</strong> {{ pedido.affiliate_telefone_masked or '-' }}</li>
         </ul>
 
         {% if pedido.affiliate_slug %}
