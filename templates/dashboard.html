@@ -9,23 +9,27 @@
 
 <style>
 :root{
-  --bg:#0b1020;
-  --panel:#111a2e;
-  --card:#0f172a;
+  --bg:#05070f;
+  --panel:#0b1224;
+  --card:#0b1328;
   --primary:#22c55e;
   --blue:#38bdf8;
   --yellow:#facc15;
   --red:#ef4444;
-  --text:#e5e7eb;
-  --muted:#9ca3af;
-  --border:#1f2937;
+  --text:#f3f4f6;
+  --muted:#94a3b8;
+  --border:#1c2541;
+  --glow:rgba(56,189,248,.12);
 }
 
 *{box-sizing:border-box}
 
 body{
   margin:0;
-  background:linear-gradient(180deg,#050816,#0b1020);
+  background:
+    radial-gradient(circle at top,rgba(34,197,94,.08),transparent 45%),
+    radial-gradient(circle at 20% 20%,rgba(56,189,248,.08),transparent 40%),
+    linear-gradient(180deg,#03040a 0%,#05070f 100%);
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
 }
@@ -34,13 +38,16 @@ body{
 header{
   padding:24px 36px;
   border-bottom:1px solid var(--border);
-  background:rgba(15,23,42,.85);
-  backdrop-filter:blur(10px);
+  background:rgba(9,14,28,.92);
+  backdrop-filter:blur(12px);
 }
 header h1{
   margin:0;
   font-size:24px;
 }
+.menu{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+.menu a{padding:8px 14px;border-radius:999px;border:1px solid var(--border);color:var(--text);text-decoration:none}
+.menu a.active,.menu a:hover{border-color:var(--blue);box-shadow:0 0 12px var(--glow)}
 header span{
   font-size:14px;
   color:var(--muted);
@@ -61,11 +68,11 @@ header span{
   margin-bottom:30px;
 }
 .stat{
-  background:var(--panel);
+  background:linear-gradient(150deg,rgba(11,18,36,.95),rgba(8,12,24,.98));
   border:1px solid var(--border);
   border-radius:16px;
   padding:22px;
-  box-shadow:0 20px 40px rgba(0,0,0,.35);
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
   animation:fadeUp .6s ease;
 }
 .stat h3{
@@ -89,11 +96,14 @@ header span{
   gap:24px;
 }
 .card{
-  background:var(--panel);
+  background:linear-gradient(160deg,rgba(11,19,40,.98),rgba(8,13,26,.98));
   border-radius:18px;
   padding:24px;
   border:1px solid var(--border);
-  box-shadow:0 30px 60px rgba(0,0,0,.4);
+  box-shadow:0 26px 60px rgba(0,0,0,.55);
+}
+.card canvas{
+  filter:drop-shadow(0 0 16px var(--glow));
 }
 .card h2{
   margin:0 0 16px;
@@ -121,6 +131,12 @@ footer{
 <header>
   <h1>Dashboard</h1>
   <span>Visão geral do negócio • Dados em tempo real</span>
+  <nav class="menu">
+    <a href="/admin/dashboard">Resumo</a>
+    <a href="/admin/relatorios">Relatórios</a>
+    <a class="active" href="/dashboard">Gráficos</a>
+    <a href="/admin/analytics">Analytics</a>
+  </nav>
 </header>
 
 <div class="container">
@@ -136,12 +152,12 @@ footer{
     <p class="blue">R$ {{ "%.2f"|format(stats.total_faturado/100) }}</p>
   </div>
   <div class="stat">
-    <h3>Pagamentos PIX</h3>
-    <p>{{ stats.pagamentos_pix }}</p>
+    <h3>Pedidos Pagos</h3>
+    <p>{{ stats.pagos }}</p>
   </div>
   <div class="stat">
-    <h3>Pagamentos Cartão</h3>
-    <p>{{ stats.pagamentos_cartao }}</p>
+    <h3>Pedidos Pendentes</h3>
+    <p>{{ stats.pendentes }}</p>
   </div>
 </div>
 

@@ -5,17 +5,10 @@
   <title>Finalizar compra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Google tag (gtag.js) - Google Ads (TAG BASE) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17947870140"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'AW-17947870140');
-  </script>
-
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -128,7 +121,9 @@
       text-align: center;
     }
 
-    .trust span { flex: 1; }
+    .trust span {
+      flex: 1;
+    }
 
     .footer {
       margin-top: 18px;
@@ -193,9 +188,6 @@
       <!-- PLANO (VEM DA URL) -->
       <input type="hidden" name="plano" value="{{ plano }}">
 
-      <!-- (RECOMENDADO) Guarda o gclid para atribuição de conversão -->
-      <input type="hidden" id="gclid" name="gclid" value="">
-
       <button type="submit">
         Continuar para pagamento
       </button>
@@ -214,21 +206,15 @@
 
   </div>
 
-  <!-- Captura o gclid da URL e preenche no formulário (recomendado) -->
   <script>
-    (function () {
-      const url = new URL(window.location.href);
-      const gclidFromUrl = url.searchParams.get("gclid");
+    async function pingOnline() {
+      try {
+        await fetch('/online/ping', { method: 'POST' });
+      } catch (e) {}
+    }
 
-      if (gclidFromUrl) {
-        localStorage.setItem("gclid", gclidFromUrl);
-      }
-
-      const gclid = localStorage.getItem("gclid") || "";
-      const input = document.getElementById("gclid");
-      if (input) input.value = gclid;
-    })();
+    pingOnline();
+    setInterval(pingOnline, 30000);
   </script>
-
 </body>
 </html>
