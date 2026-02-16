@@ -651,8 +651,8 @@ def validar_cadastro_cliente(nome, email, telefone):
 
 def senha_forte_valida(senha):
     senha = senha or ""
-    if len(senha) < 10:
-        return False, "A senha precisa ter pelo menos 10 caracteres."
+    if len(senha) < 9:
+        return False, "A senha precisa ter pelo menos 9 caracteres."
     if not PASSWORD_HAS_UPPER_RE.search(senha):
         return False, "A senha precisa ter pelo menos uma letra maiuscula."
     if not PASSWORD_HAS_LOWER_RE.search(senha):

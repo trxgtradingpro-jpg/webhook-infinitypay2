@@ -176,7 +176,7 @@
       </div>
 
       <ul class="rules">
-        <li id="ruleLen" class="bad">Minimo de 10 caracteres</li>
+        <li id="ruleLen" class="bad">Minimo de 9 caracteres</li>
         <li id="ruleUpper" class="bad">Ao menos uma letra maiuscula</li>
         <li id="ruleLower" class="bad">Ao menos uma letra minuscula</li>
         <li id="ruleDigit" class="bad">Ao menos um numero</li>
@@ -220,7 +220,7 @@
           return zxcvbn(value).score;
         }
         let score = 0;
-        if (value.length >= 10) score++;
+        if (value.length >= 9) score++;
         if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
         if (/\d/.test(value)) score++;
         if (/[^A-Za-z0-9]/.test(value)) score++;
@@ -247,7 +247,7 @@
         const pass = inputPass.value || "";
         const repeat = inputRepeat.value || "";
 
-        const hasLen = pass.length >= 10;
+        const hasLen = pass.length >= 9;
         const hasUpper = /[A-Z]/.test(pass);
         const hasLower = /[a-z]/.test(pass);
         const hasDigit = /\d/.test(pass);
