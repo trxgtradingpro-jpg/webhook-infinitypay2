@@ -8,14 +8,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        body{margin:0;font-family:'Inter',sans-serif;background:#060b1a;color:#e5ecff;padding:24px}
+        body{margin:0;font-family:'Inter',sans-serif;background:#060b1a;color:#e5ecff;padding:clamp(12px,2.5vw,24px)}
         .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
         .title{font-size:28px;font-weight:800}
-        .menu{display:flex;gap:10px}.menu a{padding:10px 16px;border-radius:999px;border:1px solid #1d2a52;text-decoration:none;color:#e5ecff}.menu a.active,.menu a:hover{border-color:#38bdf8;box-shadow:0 0 16px rgba(56,189,248,.2)}
+        .menu{display:flex;gap:10px;flex-wrap:wrap}.menu a{padding:10px 16px;border-radius:999px;border:1px solid #1d2a52;text-decoration:none;color:#e5ecff}.menu a.active,.menu a:hover{border-color:#38bdf8;box-shadow:0 0 16px rgba(56,189,248,.2)}
         .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
         .card{background:#0b132b;border:1px solid #1d2a52;border-radius:12px;padding:14px}.label{color:#94a3b8;font-size:12px}.val{font-size:24px;font-weight:800}
-        table{width:100%;border-collapse:collapse;background:#0b132b;border:1px solid #1d2a52;border-radius:12px;overflow:hidden}
-        th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left}th{color:#94a3b8;background:#071126}
+        .table-wrap{width:100%;overflow:auto;border:1px solid #1d2a52;border-radius:12px;background:#0b132b}
+        table{width:max-content;min-width:100%;border-collapse:collapse}
+        th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+        th{color:#94a3b8;background:#071126;position:sticky;top:0;z-index:1}
+        @media (max-width: 900px){
+            .title{font-size:22px}
+            th,td{font-size:12px;padding:10px}
+        }
     </style>
 </head>
 <body>
@@ -37,18 +43,20 @@
         <div class="card"><div class="label">Online agora</div><div class="val" id="online-count">{{ stats.online }}</div></div>
     </div>
 
-    <table>
-        <thead><tr><th>Plano</th><th>Quantidade (PAGO)</th><th>Faturado</th></tr></thead>
-        <tbody>
-            {% for row in por_plano %}
-            <tr>
-                <td>{{ row.nome }} <small style="color:#94a3b8">({{ row.plano_id }})</small></td>
-                <td>{{ row.quantidade }}</td>
-                <td>{{ row.faturado }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Plano</th><th>Quantidade (PAGO)</th><th>Faturado</th></tr></thead>
+            <tbody>
+                {% for row in por_plano %}
+                <tr>
+                    <td>{{ row.nome }} <small style="color:#94a3b8">({{ row.plano_id }})</small></td>
+                    <td>{{ row.quantidade }}</td>
+                    <td>{{ row.faturado }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <script>
         async function atualizarOnline(){

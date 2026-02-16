@@ -32,6 +32,7 @@ body{
     linear-gradient(180deg,#03040a 0%,#05070f 100%);
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+  overflow-x:hidden;
 }
 
 /* HEADER */
@@ -57,7 +58,7 @@ header span{
 .container{
   max-width:1400px;
   margin:auto;
-  padding:32px;
+  padding:clamp(14px,3vw,32px);
 }
 
 /* STATS */
@@ -122,6 +123,24 @@ footer{
 @keyframes fadeUp{
   from{opacity:0;transform:translateY(20px)}
   to{opacity:1;transform:translateY(0)}
+}
+
+@media (max-width: 1024px){
+  header{
+    padding:18px 14px;
+  }
+  .grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 640px){
+  .stat p{
+    font-size:24px;
+  }
+  .card{
+    padding:16px;
+  }
 }
 </style>
 </head>

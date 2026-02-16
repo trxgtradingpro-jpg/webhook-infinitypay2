@@ -10,7 +10,7 @@
     <style>
         :root { --bg:#050816; --panel:#0b132b; --border:#1d2a52; --txt:#e5ecff; --muted:#94a3b8; --cyan:#38bdf8; --green:#22c55e; --amber:#f59e0b; --red:#f87171; }
         *{box-sizing:border-box}
-        body{margin:0;font-family:'Inter',sans-serif;color:var(--txt);background:radial-gradient(circle at 10% 10%,#12244f 0%,transparent 40%),radial-gradient(circle at 90% 0%,#1f1155 0%,transparent 35%),var(--bg);padding:24px}
+        body{margin:0;font-family:'Inter',sans-serif;color:var(--txt);background:radial-gradient(circle at 10% 10%,#12244f 0%,transparent 40%),radial-gradient(circle at 90% 0%,#1f1155 0%,transparent 35%),var(--bg);padding:clamp(12px,2.5vw,24px)}
         .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
         .title{font-size:28px;font-weight:800}
         .menu{display:flex;gap:10px;flex-wrap:wrap}
@@ -23,11 +23,12 @@
         .card .value{font-size:24px;font-weight:800;margin-top:4px}
         .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
         .filters input,.filters select{background:#08112a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px}
+        .filters input[type="text"]{flex:1 1 360px;min-width:240px}
         .filters button,.filters a{background:#0a1734;border:1px solid var(--border);color:var(--cyan);border-radius:10px;padding:10px 14px;text-decoration:none}
-        .table-wrap{overflow-x:auto}
-        table{width:100%;border-collapse:collapse;background:rgba(10,18,40,.92);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:1280px}
-        th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left;font-size:13px;vertical-align:top}
-        th{background:#071126;color:var(--muted)}
+        .table-wrap{width:100%;overflow:auto;border:1px solid var(--border);border-radius:14px;background:rgba(10,18,40,.92)}
+        table{width:max-content;min-width:100%;border-collapse:collapse;background:transparent}
+        th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left;font-size:13px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+        th{background:#071126;color:var(--muted);position:sticky;top:0;z-index:1}
         tr:hover{background:rgba(56,189,248,.06)}
         .plan{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;transition:all .2s ease}
         .bronze{color:#f59e0b;background:rgba(245,158,11,.12)}
@@ -47,11 +48,19 @@
         .expired{color:var(--red);font-weight:700}
         .muted{color:var(--muted)}
         .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+        .no-wrap{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+        .actions-cell{min-width:240px}
         .aff-name{font-weight:700}
         .actions-inline{display:inline}
         .btn-link{background:none;border:none;color:#f59e0b;cursor:pointer;padding:0}
         .btn-link-danger{background:none;border:none;color:#f87171;cursor:pointer;padding:0}
         a{color:var(--cyan);text-decoration:none}
+        @media (max-width: 900px){
+            .title{font-size:22px}
+            .topbar{align-items:flex-start}
+            th,td{font-size:12px;padding:10px}
+            .actions-cell{min-width:210px}
+        }
     </style>
 </head>
 <body>
@@ -116,7 +125,7 @@
             <tbody>
                 {% for p in pedidos %}
                 <tr>
-                    <td><span class="mono">{{ p.order_id[:8] }}...</span></td>
+                    <td><span class="mono no-wrap">{{ p.order_id[:8] }}...</span></td>
                     <td>{{ p.nome_masked or '-' }}</td>
                     <td>{{ p.email_masked or '-' }}</td>
                     <td>{{ p.telefone_masked or '-' }}</td>
@@ -160,7 +169,7 @@
                             {{ p.dias_restantes_30 }} dias
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="actions-cell">
                         <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                         {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
                         {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}

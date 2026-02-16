@@ -5,7 +5,7 @@
     <title>Pedido {{ pedido.order_id }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f8;margin:0;padding:30px}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f8;margin:0;padding:clamp(12px,3vw,30px)}
         .box{background:#fff;padding:25px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.06);max-width:780px}
         h2{margin-top:0}
         ul{list-style:none;padding:0;margin:0}
@@ -14,6 +14,11 @@
         .muted{color:#64748b}
         .erro{margin-top:20px;padding:15px;background:#fff4f4;border-radius:8px;color:#c0392b}
         a{display:inline-block;margin-top:20px;color:#3498db;text-decoration:none;font-weight:500}
+        @media (max-width: 720px){
+            .box{padding:16px}
+            strong{min-width:115px}
+            li{font-size:14px}
+        }
     </style>
 </head>
 <body>
