@@ -270,7 +270,7 @@
 
         const policyOk = hasLen && hasUpper && hasLower && hasDigit && hasSpecial;
         const matchOk = repeat.length > 0 && pass === repeat;
-        btn.disabled = !(policyOk && matchOk && score >= 3);
+        btn.disabled = !(policyOk && matchOk);
       }
 
       inputPass.addEventListener("input", validate);
