@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TRX PRO — Página Oficial</title>
+  <link rel="icon" href="assets/favicon.ico" sizes="any">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="assets/favicon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/favicon-192.png">
+
+  <meta name="description" content="TRX PRO — Robô 100% automático para Mini Índice.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#05070a;
+      --bg2:#070b12;
+      --text:#eef6ff;
+      --muted:rgba(238,246,255,.68);
+      --muted2:rgba(238,246,255,.55);
+
+      --stroke:rgba(255,255,255,.10);
+      --stroke2:rgba(255,255,255,.14);
+      --shadow: 0 26px 90px rgba(0,0,0,.60);
+      --radius:22px;
+
+      --green:#19e39a;
+      --green2:#0bbf7f;
+      --red:#ff3a3a;
+
+      --orange:#ff8a1f;
+      --orange2:#f05a1a;
+      --yellow:#ffd21a;
+      --silver:#cfd6df;
+      --purple:#a855f7;
+      --blue:#4aa3ff;
+
+      --grid: rgba(255,255,255,.09);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1100px 650px at 20% 8%, rgba(25,227,154,.18), transparent 58%),
+        radial-gradient(900px 600px at 80% 18%, rgba(255,138,31,.12), transparent 62%),
+        radial-gradient(900px 700px at 60% 86%, rgba(168,85,247,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
+      overflow-x:hidden;
+    }
+
+    /* Fundo grid + vinheta */
+    .grid-bg{
+      position:fixed; inset:0;
+      pointer-events:none;
+      opacity:.16;
+      background:
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at 50% 18%, rgba(0,0,0,1) 0%, rgba(0,0,0,.65) 45%, rgba(0,0,0,0) 76%);
+    }
+    .vignette{
+      position:fixed; inset:-40px;
+      pointer-events:none;
+      background: radial-gradient(circle at 50% 22%, transparent 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.75) 90%);
+    }
+
+    .container{width:min(1120px, 92vw); margin:0 auto;}
+    .sp{height:18px}
+
+    /* Barra superior com logo2 */
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      backdrop-filter: blur(14px);
+      background: rgba(5,7,10,.55);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .topbar .inner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 0;
+      gap: 12px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 170px;
+    }
+    .brand img{
+      height: 26px;
+      width:auto;
+      display:block;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.45));
+      opacity:.98;
+    }
+    .mini-pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(25,227,154,.28);
+      background: rgba(25,227,154,.08);
+      color: rgba(25,227,154,1);
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 18px 55px rgba(25,227,154,.08);
+      white-space:nowrap;
+    }
+    .mini-pill .dot{
+      width:9px;height:9px;border-radius:999px;background:rgba(25,227,154,1);
+      box-shadow: 0 0 16px rgba(25,227,154,.55);
+    }
+    .topbar-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    /* Pílula topo (timer) */
+    .top-pill{
+      margin: 14px auto 10px;
+      width: fit-content;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,58,58,.80);
+      color: rgba(255,130,130,1);
+      background: rgba(255,58,58,.06);
+      font-weight: 900;
+      letter-spacing:.2px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      box-shadow: 0 16px 45px rgba(255,58,58,.10);
+    }
+    .top-pill .dot{
+      width:10px; height:10px;
+      border-radius:999px;
+      background: rgba(255,58,58,1);
+      box-shadow: 0 0 18px rgba(255,58,58,.55);
+    }
+
+    /* Botões */
+    .btn{
+      appearance:none;
+      border:0;
+      cursor:pointer;
+      font-weight: 1000;
+      letter-spacing:.2px;
+      border-radius: 14px;
+      padding: 12px 16px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      transition: .18s transform, .18s filter, .18s box-shadow;
+      user-select:none;
+      position:relative;
+      isolation:isolate;
+      text-decoration:none;
+      white-space:nowrap;
+    }
+    .btn:hover{transform: translateY(-1px); filter: brightness(1.06);}
+    .btn:active{transform: translateY(0px) scale(.99);}
+    .btn.green{
+      background: linear-gradient(180deg, rgba(25,227,154,1), rgba(11,191,127,1));
+      color:#03100b;
+      box-shadow: 0 18px 46px rgba(25,227,154,.18);
+    }
+    .btn.green:before{
+      content:"";
+      position:absolute; inset:0;
+      border-radius: inherit;
+      background: radial-gradient(320px 90px at 30% 10%, rgba(255,255,255,.35), transparent 60%);
+      opacity:.55;
+      z-index:-1;
+      pointer-events:none;
+    }
+    .btn.white{
+      background:#fff;
+      color:#000;
+      box-shadow: 0 16px 50px rgba(0,0,0,.25);
+    }
+    .btn.ghost{
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.90);
+    }
+
+    /* HERO */
+    header.hero{
+      padding: 10px 0 18px;
+      text-align:center;
+    }
+    .logo-wrap{
+      margin-top: 6px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+    }
+    .logo-box{
+      width:min(460px, 88vw);
+      aspect-ratio: 16/10;
+      border-radius: 16px;
+      background: rgba(0,0,0,.30);
+      border: 1px solid rgba(255,255,255,.06);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      display:grid; place-items:center;
+      overflow:hidden;
+      position:relative;
+    }
+    .logo-box:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(520px 220px at 50% 25%, rgba(25,227,154,.18), transparent 62%);
+      pointer-events:none;
+    }
+    .logo-box img{
+      max-width: 78%;
+      height:auto;
+      display:block;
+      filter: drop-shadow(0 14px 32px rgba(0,0,0,.7));
+      position:relative; z-index:1;
+    }
+
+    .live-pill{
+      width: fit-content;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: 2px solid rgba(25,227,154,.55);
+      color: rgba(25,227,154,1);
+      background: rgba(25,227,154,.08);
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: 0 18px 55px rgba(25,227,154,.10);
+    }
+    .live-pill .live-dot{
+      width:10px;height:10px;border-radius:999px;background:rgba(25,227,154,1);
+      box-shadow: 0 0 18px rgba(25,227,154,.60);
+    }
+
+    .headline{
+      margin: 22px auto 0;
+      width:min(960px, 96vw);
+      line-height: .92;
+      letter-spacing: -1.2px;
+      font-weight: 1000;
+      text-transform: uppercase;
+    }
+    .headline .r{color: var(--red)}
+    .headline .g{color: rgba(25,227,154,.85)}
+    .headline .w{color:#fff}
+    .headline .big{font-size: clamp(44px, 6.5vw, 98px)}
+    .sub{
+      margin: 14px auto 0;
+      width:min(760px, 92vw);
+      color: var(--muted);
+      font-size: clamp(14px, 1.4vw, 18px);
+      font-weight: 800;
+    }
+    .sub b{color: var(--green)}
+    .cta{margin-top:18px; display:flex; justify-content:center; gap: 10px; flex-wrap:wrap;}
+
+    /* Chart */
+    .chart{
+      margin: 18px auto 0;
+      width:min(980px, 96vw);
+      border-radius: 18px;
+      border: 2px solid rgba(25,227,154,.32);
+      background: rgba(8,14,12,.55);
+      box-shadow: 0 20px 95px rgba(0,0,0,.55);
+      overflow:hidden;
+      position:relative;
+    }
+    .chart:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(700px 250px at 50% 0%, rgba(25,227,154,.12), transparent 60%);
+      pointer-events:none;
+    }
+    .chart-head{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 1000;
+      color: rgba(255,255,255,.95);
+      gap:10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      position:relative;
+      z-index:1;
+    }
+    .chart img{width:100%; display:block; position:relative; z-index:1;}
+
+    .metrics{
+      display:grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 10px;
+      padding: 12px;
+      background: rgba(8,14,12,.65);
+      border-top: 1px solid rgba(255,255,255,.06);
+      position:relative;
+      z-index:1;
+    }
+    @media (max-width: 700px){ .metrics{grid-template-columns:1fr} }
+    .metric{
+      text-align:center;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .metric .v{
+      font-weight: 1000;
+      font-size: 24px;
+      letter-spacing:-.2px;
+    }
+    .metric .l{
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted2);
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    .metric .v.green{color: var(--green)}
+    .metric .v.yellow{color: var(--yellow)}
+    .metric .v.blue{color: #67b0ff}
+
+    /* Features */
+    .row4{
+      margin: 26px auto 0;
+      width:min(980px, 96vw);
+      display:grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 14px;
+    }
+    @media (max-width: 980px){ .row4{grid-template-columns:1fr 1fr} }
+    @media (max-width: 560px){ .row4{grid-template-columns:1fr} }
+
+    .feat{
+      padding: 16px 16px;
+      border-radius: 16px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 60px rgba(0,0,0,.30);
+      position:relative;
+      overflow:hidden;
+      text-align:center;
+    }
+    .feat:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(360px 120px at 10% 0%, rgba(25,227,154,.12), transparent 60%);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .feat strong{font-weight:1000; display:block; position:relative}
+    .feat span{color: var(--muted2); font-weight:800; font-size: 13px; display:block; margin-top:6px; position:relative}
+
+    /* Bonus */
+    section.bonus{
+      padding: 44px 0 10px;
+    }
+    .pill{
+      width: fit-content;
+      margin:0 auto 12px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 1000;
+      letter-spacing:.2px;
+    }
+    .bonus .pill{
+      border: 2px solid rgba(255,138,31,.42);
+      background: rgba(255,138,31,.08);
+      color: rgba(255,180,120,1);
+    }
+    .title{
+      text-align:center;
+      margin: 0 auto;
+      width:min(980px, 96vw);
+      font-weight: 1000;
+      letter-spacing:-.8px;
+      line-height:1.06;
+      font-size: clamp(28px, 3.8vw, 56px);
+    }
+    .title .accent-orange{color: var(--orange);}
+    .title .accent-green{color: rgba(25,227,154,.85);}
+    .subtitle{
+      text-align:center;
+      margin: 10px auto 0;
+      width:min(760px, 92vw);
+      color: var(--muted2);
+      font-weight: 800;
+    }
+
+    .bonus-grid{
+      margin: 24px auto 0;
+      width:min(980px, 96vw);
+      display:grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 14px;
+      align-items:stretch;
+    }
+    @media (max-width: 900px){ .bonus-grid{grid-template-columns:1fr} }
+
+    .panel{
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .panel:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(700px 220px at 40% 0%, rgba(255,138,31,.12), transparent 60%);
+      pointer-events:none;
+    }
+
+    .elliot{
+      min-height: 280px;
+      display:grid;
+      place-items:center;
+      padding: 18px;
+      border: 2px solid rgba(255,138,31,.22);
+      background: rgba(255,138,31,.06);
+    }
+    .elliot .box{
+      width: 100%;
+      max-width: 360px;
+      aspect-ratio: 1/1;
+      border-radius: 18px;
+      background: rgba(0,0,0,.34);
+      border: 1px solid rgba(255,255,255,.09);
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      position:relative;
+    }
+    .elliot .box:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(380px 180px at 50% 20%, rgba(255,138,31,.16), transparent 60%);
+      pointer-events:none;
+    }
+    .elliot img{max-width: 80%; height:auto; display:block; position:relative; z-index:1;}
+
+    .bonus-list{display:grid; gap: 12px; padding: 18px;}
+    .bitem{
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      display:flex;
+      gap: 14px;
+      align-items:flex-start;
+      box-shadow: 0 18px 55px rgba(0,0,0,.25);
+      position:relative;
+      overflow:hidden;
+    }
+    .bitem:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(460px 140px at 10% 0%, rgba(25,227,154,.10), transparent 62%);
+      opacity:.8;
+      pointer-events:none;
+    }
+    .bicon{
+      width: 40px; height:40px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      background: rgba(25,227,154,.12);
+      border: 1px solid rgba(25,227,154,.22);
+      flex: 0 0 auto;
+      margin-top:2px;
+      font-weight:1000;
+      color: rgba(25,227,154,1);
+      box-shadow: 0 12px 30px rgba(25,227,154,.10);
+      position:relative;
+      z-index:1;
+    }
+    .btext{position:relative; z-index:1;}
+    .bitem h4{margin:0; font-weight:1000; letter-spacing:-.2px}
+    .bitem p{margin:6px 0 0; color: var(--muted2); font-weight:800; font-size: 13px; line-height:1.4;}
+
+    .important{
+      margin: 16px auto 0;
+      width:min(980px, 96vw);
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.72);
+      font-weight:800;
+      font-size: 13px;
+      text-align:center;
+      box-shadow: 0 18px 60px rgba(0,0,0,.25);
+    }
+    .important b{color:#fff;}
+
+    /* ======= PLANOS (IGUAL AO PRINT) ======= */
+    section.plans{
+      padding: 30px 0 70px;
+    }
+    .plan-grid{
+      width:min(1100px, 96vw);
+      margin: 18px auto 0;
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      align-items:stretch;
+    }
+    @media (max-width: 1120px){ .plan-grid{grid-template-columns: 1fr 1fr;} }
+    @media (max-width: 560px){ .plan-grid{grid-template-columns: 1fr;} }
+
+    .plan-card{
+      position:relative;
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 22px 70px rgba(0,0,0,.45);
+      overflow:hidden;
+      transition: .18s transform, .18s filter;
+      min-height: 290px;
+    }
+    .plan-card:hover{ transform: translateY(-2px); filter: brightness(1.02); }
+
+    .plan-card:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(520px 200px at 10% 0%, var(--glow, rgba(255,255,255,.08)), transparent 60%);
+      pointer-events:none;
+      opacity:.9;
+    }
+    .plan-card:after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius: 18px;
+      padding: 1.5px;
+      background: var(--border, linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.06)));
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events:none;
+      opacity:.95;
+    }
+
+    .plan-badge{
+      position:absolute;
+      top:0; left:0; right:0;
+      padding: 10px 12px;
+      font-weight: 1000;
+      letter-spacing:.2px;
+      font-size: 12px;
+      text-transform: uppercase;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      background: linear-gradient(90deg, rgba(255,58,58,.95), rgba(255,138,31,.95));
+      color:#120000;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      z-index:2;
+    }
+
+    .plan-body{
+      position:relative;
+      z-index:1;
+      padding-top: 6px;
+      display:flex;
+      flex-direction:column;
+      height: 100%;
+    }
+
+    .icon{
+      width: 54px; height: 54px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      margin-top: 8px;
+    }
+    .icon svg{ width: 36px; height: 36px; }
+
+    .plan-name{
+      margin-top: 14px;
+      font-weight: 1000;
+      font-size: 26px;
+      letter-spacing:-.6px;
+      text-transform: uppercase;
+    }
+    .plan-desc{
+      margin-top: 4px;
+      color: var(--muted2);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .plan-price{
+      margin-top: 22px;
+      display:flex;
+      align-items:baseline;
+      gap: 8px;
+      color: rgba(255,255,255,.90);
+      font-weight: 900;
+    }
+    .plan-price .rs{
+      font-size: 14px;
+      opacity:.75;
+      font-weight: 800;
+    }
+    .plan-price .val{
+      font-size: 44px;
+      letter-spacing:-1px;
+      line-height: 1;
+    }
+    .plan-price .per{
+      font-size: 13px;
+      opacity:.70;
+      font-weight: 800;
+    }
+    .plan-price.only{
+      margin-top: 18px;
+      font-weight: 1000;
+    }
+    .plan-price.only .val{
+      font-size: 44px;
+    }
+
+    .plan-btn{
+      margin-top:auto;
+      width: 100%;
+      border:0;
+      cursor:pointer;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-weight: 1000;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      box-shadow: 0 16px 44px rgba(0,0,0,.28);
+      transition:.18s transform, .18s filter;
+    }
+    .plan-btn:hover{ transform: translateY(-1px); filter: brightness(1.06); }
+    .plan-btn:active{ transform: translateY(0px) scale(.99); }
+
+    .rocket{
+      width: 18px; height: 18px;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+    }
+
+    /* Temas */
+    .free{
+      --border: linear-gradient(90deg, rgba(25,227,154,.70), rgba(25,227,154,.10));
+      --glow: rgba(25,227,154,.20);
+      background: rgba(10,18,14,.30);
+    }
+    .free .plan-name{ color: rgba(25,227,154,1); }
+    .free .plan-btn{
+      background: linear-gradient(90deg, rgba(255,58,58,.92), rgba(255,210,26,.95));
+      color:#130300;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .bronze{
+      --border: linear-gradient(90deg, rgba(255,138,31,.75), rgba(255,138,31,.12));
+      --glow: rgba(255,138,31,.16);
+      background: rgba(18,10,4,.32);
+    }
+    .bronze .plan-name{ color: rgba(255,138,31,1); }
+    .bronze .plan-btn{
+      background: linear-gradient(180deg, rgba(255,138,31,1), rgba(235,110,10,1));
+      color:#140700;
+    }
+    .bronze .plan-price .val{ color: rgba(255,138,31,1); }
+
+    .prata{
+      --border: linear-gradient(90deg, rgba(220,230,245,.65), rgba(220,230,245,.10));
+      --glow: rgba(255,255,255,.14);
+      background: rgba(14,18,22,.34);
+    }
+    .prata .plan-name{ color: rgba(220,230,245,1); }
+    .prata .plan-btn{
+      background: linear-gradient(180deg, rgba(225,232,242,.96), rgba(200,210,224,.92));
+      color:#000;
+    }
+    .prata .plan-price .val{ color: rgba(220,230,245,1); }
+
+    .gold{
+      --border: linear-gradient(90deg, rgba(255,210,26,.75), rgba(255,210,26,.12));
+      --glow: rgba(255,210,26,.18);
+      background: rgba(16,14,4,.34);
+    }
+    .gold .plan-name{ color: rgba(255,210,26,1); }
+    .gold .plan-btn{
+      background: linear-gradient(180deg, rgba(255,210,26,1), rgba(245,178,0,1));
+      color:#120c00;
+    }
+    .gold .plan-price .val{ color: rgba(255,210,26,1); }
+
+    .black{
+      --border: linear-gradient(90deg, rgba(168,85,247,.78), rgba(168,85,247,.14));
+      --glow: rgba(168,85,247,.18);
+      background: rgba(10,6,18,.34);
+    }
+    .black .plan-name{ color: rgba(210,170,255,1); }
+    .black .plan-btn{
+      background: linear-gradient(180deg, rgba(168,85,247,1), rgba(124,58,237,1));
+      color:#0c0014;
+    }
+    .black .plan-price .val{ color: rgba(190,140,255,1); }
+
+    .price-bar{
+      margin: 18px auto 0;
+      width:min(980px, 96vw);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 2px solid rgba(255,58,58,.26);
+      background: linear-gradient(90deg, rgba(255,58,58,.12), rgba(0,0,0,.10));
+      font-weight: 1000;
+      color: rgba(255,255,255,.92);
+      box-shadow: 0 18px 55px rgba(0,0,0,.28);
+      text-align:center;
+    }
+    .price-bar small{
+      display:block;
+      margin-top:4px;
+      color: rgba(255,255,255,.62);
+      font-weight:800;
+    }
+
+    .disclaimer{
+      margin: 18px auto 70px;
+      width:min(980px, 96vw);
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.70);
+      font-weight: 800;
+      font-size: 12px;
+      text-align:center;
+      box-shadow: 0 18px 55px rgba(0,0,0,.25);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid-bg"></div>
+  <div class="vignette"></div>
+
+  <!-- TOPBAR com logo2 + CTA -->
+  <div class="topbar">
+    <div class="container">
+      <div class="inner">
+        <div class="brand">
+          <img
+  src="assets/logo2.png"
+  alt="TRX PRO"
+  onerror="
+    if (!this.dataset.fallback1) { this.dataset.fallback1='1'; this.src='./logo2.png'; return; }
+    this.style.display='none';
+    this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;font-weight:1000;letter-spacing:.6px;color:rgba(255,255,255,.9)&quot;>TRX PRO</span>');
+  "
+>
+
+        </div>
+
+        <div class="topbar-actions">
+          <div class="mini-pill">
+            <span class="dot"></span>
+            <span id="miniRobots">375 robôs operando</span>
+          </div>
+          <a class="btn ghost" href="#bonus">Bônus</a>
+          <a class="btn green" href="#planos">Ativar agora</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="top-pill">
+      <span class="dot"></span>
+      <span id="topCountdown">14:04 para o preço subir</span>
+    </div>
+  </div>
+
+  <header class="hero" id="topo">
+    <div class="container">
+
+      <div class="logo-wrap">
+        <div class="logo-box">
+          <img src="assets/logo.jpeg" alt="TRX PRO" onerror="this.style.opacity=.4; this.alt='Coloque assets/logo.jpeg';">
+        </div>
+
+        <div class="live-pill">
+          <span class="live-dot"></span>
+          <span id="liveRobots">375 ROBÔS OPERANDO AGORA</span>
+        </div>
+      </div>
+
+      <div class="headline">
+        <div class="big"><span class="r">PARE</span></div>
+        <div class="big"><span class="w">DE</span> <span class="r">PERDER</span></div>
+        <div class="big"><span class="g">COMECE A</span></div>
+        <div class="big"><span class="g">LUCRAR</span></div>
+      </div>
+
+      <div class="sub">
+        Robô <b>100% AUTOMÁTICO</b> opera no Mini Índice<br/>
+        enquanto você dorme 💤
+      </div>
+
+      <div class="cta">
+        <a class="btn green" href="#planos">🚀 ATIVAR ROBÔ AGORA</a>
+        <a class="btn white" href="#bonus">VER BÔNUS →</a>
+      </div>
+
+      <!-- Curva -->
+      <div class="chart">
+        <div class="chart-head">📊 CURVA DE CAPITAL 2025 - RESULTADOS REAIS</div>
+        <img src="assets/curva.png" alt="Curva de capital" onerror="this.style.opacity=.45; this.alt='Coloque assets/curva.png';">
+        <div class="metrics">
+          <div class="metric">
+            <div class="v green">R$ 75.38k</div>
+            <div class="l">Capital Atual</div>
+          </div>
+          <div class="metric">
+            <div class="v yellow">71%</div>
+            <div class="l">Win Rate</div>
+          </div>
+          <div class="metric">
+            <div class="v blue">2.4k+</div>
+            <div class="l">Usuários</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="row4">
+        <div class="feat">
+          <strong>⚡ Execução em milissegundos</strong>
+          <span>Entrada e saída rápidas</span>
+        </div>
+        <div class="feat">
+          <strong>🛡️ Gestão de risco automática</strong>
+          <span>Stops e controle</span>
+        </div>
+        <div class="feat">
+          <strong>🕒 Opera 24/5 sem parar</strong>
+          <span>Rotina automática</span>
+        </div>
+        <div class="feat">
+          <strong>📈 71% de taxa de acerto</strong>
+          <span>Base em resultados</span>
+        </div>
+      </div>
+
+      <div class="sp"></div>
+
+      <a class="btn white" href="#planos" style="padding:14px 20px; display:inline-flex;">
+        VER PLANOS AGORA →
+      </a>
+
+    </div>
+  </header>
+
+  <!-- BONUS -->
+  <section class="bonus" id="bonus">
+    <div class="container">
+      <div class="pill">✨ BÔNUS EXCLUSIVO</div>
+
+      <h2 class="title">
+        Ganhe <span class="accent-orange">GRÁTIS</span><br> o Módulo de Automação
+      </h2>
+
+      <div class="subtitle">
+        Abra sua conta na nossa corretora parceira e receba benefícios exclusivos
+      </div>
+
+      <div class="bonus-grid">
+        <div class="panel elliot">
+          <div class="box">
+            <img src="assets/elliot.png" alt="Elliot" onerror="this.style.opacity=.45; this.alt='Coloque assets/elliot.png';">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="bonus-list">
+            <div class="bitem">
+              <div class="bicon">✓</div>
+              <div class="btext">
+                <h4>Módulo de Automação GRÁTIS</h4>
+                <p>Configure e ative o TRX PRO sem custo adicional ao abrir sua conta</p>
+              </div>
+            </div>
+
+            <div class="bitem">
+              <div class="bicon" style="background: rgba(74,163,255,.12); border-color: rgba(74,163,255,.22); color: rgba(74,163,255,1);">✓</div>
+              <div class="btext">
+                <h4>Suporte Humanizado</h4>
+                <p>Atendimento personalizado quando você precisar, sem robôs ou espera</p>
+              </div>
+            </div>
+
+            <div class="bitem">
+              <div class="bicon" style="background: rgba(168,85,247,.12); border-color: rgba(168,85,247,.22); color: rgba(168,85,247,1);">✓</div>
+              <div class="btext">
+                <h4>Assessor de Investimentos</h4>
+                <p>Acesso direto a profissionais para orientar suas estratégias</p>
+              </div>
+            </div>
+
+            <div class="bitem">
+              <div class="bicon" style="background: rgba(255,138,31,.12); border-color: rgba(255,138,31,.22); color: rgba(255,170,100,1);">✓</div>
+              <div class="btext">
+                <h4>Profit Pro GRÁTIS</h4>
+                <p>Plataforma profissional de análise e execução sem mensalidade</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="important">
+        <b>Importante:</b> Não é obrigatório usar nossa corretora parceira. Você pode operar o TRX PRO em qualquer corretora de sua preferência.
+        Os benefícios acima são exclusivos para quem optar pela parceria.
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANOS -->
+  <section class="plans" id="planos">
+    <div class="container">
+      <h2 class="title">
+        Escolha Seu <span class="accent-green">PODER DE FOGO</span>
+      </h2>
+
+      <div class="plan-grid">
+
+        <!-- GRÁTIS -->
+        <article class="plan-card free">
+          <div class="plan-badge">⚡ TESTE GRÁTIS - TEMPO LIMITADO ⚡</div>
+          <div class="plan-body">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v5l3 2" stroke="#ffd21a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="#ffd21a" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="plan-name">GRÁTIS</div>
+            <div class="plan-desc">Teste Limitado</div>
+
+            <div class="plan-price only">
+              <span class="val">GRÁTIS</span>
+            </div>
+
+            <button class="plan-btn" onclick="goCheckout('gratis')">
+              <span style="font-size:18px">🎁</span> GRÁTIS
+            </button>
+          </div>
+        </article>
+
+        <!-- BRONZE -->
+        <article class="plan-card bronze">
+          <div class="plan-body">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 2l1.5 5.2L18 9l-4.5 1.8L12 16l-1.5-5.2L6 9l4.5-1.8L12 2Z"
+                      stroke="#ff8a1f" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="plan-name">BRONZE</div>
+            <div class="plan-desc">1 Contrato</div>
+
+            <div class="plan-price">
+              <span class="rs">R$</span>
+              <span class="val">197</span>
+              <span class="per">/mês</span>
+            </div>
+
+            <button class="plan-btn" onclick="goCheckout('bronze')">
+              <img class="rocket" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 14c1-4 4-7 8-8l6-2-2 6c-1 4-4 7-8 8l-4 1 1-5Z' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M9 15l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M14 10l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+              BRONZE
+            </button>
+          </div>
+        </article>
+
+        <!-- PRATA -->
+        <article class="plan-card prata">
+          <div class="plan-body">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M20 6 9 17l-5-5" stroke="#cfd6df" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="#cfd6df" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="plan-name">PRATA</div>
+            <div class="plan-desc">2-5 Contratos</div>
+
+            <div class="plan-price">
+              <span class="rs">R$</span>
+              <span class="val">247</span>
+              <span class="per">/mês</span>
+            </div>
+
+            <button class="plan-btn" onclick="goCheckout('prata')">
+              <img class="rocket" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 14c1-4 4-7 8-8l6-2-2 6c-1 4-4 7-8 8l-4 1 1-5Z' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M9 15l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M14 10l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+              PRATA
+            </button>
+          </div>
+        </article>
+
+        <!-- GOLD -->
+        <article class="plan-card gold">
+          <div class="plan-body">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 7l4 4 4-6 4 6 4-4v12H4V7Z" stroke="#ffd21a" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M4 19h16" stroke="#ffd21a" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="plan-name">GOLD</div>
+            <div class="plan-desc">6-20 Contratos</div>
+
+            <div class="plan-price">
+              <span class="rs">R$</span>
+              <span class="val">497</span>
+              <span class="per">/mês</span>
+            </div>
+
+            <button class="plan-btn" onclick="goCheckout('gold')">
+              <img class="rocket" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 14c1-4 4-7 8-8l6-2-2 6c-1 4-4 7-8 8l-4 1 1-5Z' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M9 15l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M14 10l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+              GOLD
+            </button>
+          </div>
+        </article>
+
+        <!-- BLACK -->
+        <article class="plan-card black">
+          <div class="plan-body">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M14 4c3 1 6 4 6 7-3 0-6-3-7-6l1-1Z" stroke="#d8b4fe" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M5 19c1-4 4-7 8-8l6-2-2 6c-1 4-4 7-8 8l-4 1 1-5Z" stroke="#d8b4fe" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="plan-name">BLACK</div>
+            <div class="plan-desc">21-300 Contratos</div>
+
+            <div class="plan-price">
+              <span class="rs">R$</span>
+              <span class="val">697</span>
+              <span class="per">/mês</span>
+            </div>
+
+            <button class="plan-btn" onclick="goCheckout('black')">
+              <img class="rocket" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5 14c1-4 4-7 8-8l6-2-2 6c-1 4-4 7-8 8l-4 1 1-5Z' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M9 15l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M14 10l-2 2' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+              BLACK
+            </button>
+          </div>
+        </article>
+
+      </div>
+
+      <div class="price-bar">
+        ⚠️ Preço sobe em <span id="priceCountdown">13min 13s</span>
+        <small>Não deixe para depois. Outro(a) já está lendo isso AGORA.</small>
+      </div>
+
+      <div class="disclaimer">
+        ⚠️ AVISO IMPORTANTE: Trading envolve riscos. Resultados passados não garantem resultados futuros.
+        Esta página não oferece aconselhamento financeiro.
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // LINKS (seus links oficiais)
+    const CHECKOUT = {
+      gratis: "https://webhook-infinitypay.onrender.com/checkout/trx-gratis",
+      bronze: "https://webhook-infinitypay.onrender.com/checkout/trx-bronze",
+      prata:  "https://webhook-infinitypay.onrender.com/checkout/trx-prata",
+      gold:   "https://webhook-infinitypay.onrender.com/checkout/trx-gold",
+      black:  "https://webhook-infinitypay.onrender.com/checkout/trx-black"
+    };
+
+    function goCheckout(plan){
+      const url = CHECKOUT[plan] || CHECKOUT.gold;
+      window.location.href = url;
+    }
+
+    // Contagem regressiva
+    let seconds = 14 * 60 + 4; // 14:04
+    const topEl = document.getElementById("topCountdown");
+    const barEl = document.getElementById("priceCountdown");
+
+    function fmt(s){
+      const m = Math.floor(s/60);
+      const ss = s % 60;
+      return { m, ss, txt: `${m}:${String(ss).padStart(2,'0')}` };
+    }
+
+    setInterval(() => {
+      seconds = Math.max(0, seconds - 1);
+      const f = fmt(seconds);
+      if (topEl) topEl.textContent = `${f.txt} para o preço subir`;
+      if (barEl) barEl.textContent = `${f.m}min ${String(f.ss).padStart(2,'0')}s`;
+    }, 1000);
+
+    // "Robôs operando agora"
+    const liveEl = document.getElementById("liveRobots");
+    const miniEl = document.getElementById("miniRobots");
+    let base = 375;
+
+    setInterval(() => {
+      const delta = Math.floor(Math.random() * 3) - 1;
+      base = Math.max(320, Math.min(520, base + delta));
+      if (liveEl) liveEl.textContent = `${base} ROBÔS OPERANDO AGORA`;
+      if (miniEl) miniEl.textContent = `${base} robôs operando`;
+    }, 2500);
+  </script>
+  <!-- Botão flutuante WhatsApp -->
+<a
+  href="https://wa.me/5511940431906?text=Oi!%20Quero%20tirar%20d%C3%BAvidas%20sobre%20o%20TRX%20PRO."
+  class="whatsapp-float"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Falar no WhatsApp"
+  title="Falar no WhatsApp"
+>
+  <!-- Ícone WhatsApp (SVG) -->
+  <svg viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M19.11 17.53c-.28-.14-1.64-.81-1.9-.9-.25-.09-.44-.14-.62.14-.18.28-.71.9-.87 1.09-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.38-.83-.74-1.4-1.65-1.56-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.43-.48.14-.16.18-.28.28-.46.09-.18.05-.35-.02-.48-.07-.14-.62-1.49-.85-2.04-.23-.55-.46-.48-.62-.49-.16 0-.35-.02-.53-.02-.18 0-.48.07-.73.35-.25.28-.96.94-.96 2.29s.98 2.66 1.11 2.85c.14.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.66.21 1.26.18 1.73.11.53-.08 1.64-.67 1.87-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/>
+    <path d="M26.66 5.33C24.02 2.69 20.51 1.24 16.77 1.24 9.12 1.24 2.9 7.47 2.9 15.11c0 2.44.64 4.82 1.86 6.92L2.78 30.76l8.93-1.95c2.03 1.11 4.33 1.7 6.69 1.7h.01c7.65 0 13.87-6.22 13.87-13.87 0-3.74-1.46-7.25-4.1-9.89zm-9.89 22.82h-.01c-2.07 0-4.1-.56-5.88-1.62l-.42-.25-5.3 1.16 1.13-5.16-.27-.44c-1.14-1.81-1.75-3.9-1.75-6.06 0-6.32 5.14-11.46 11.46-11.46 3.06 0 5.94 1.19 8.1 3.36 2.16 2.16 3.35 5.04 3.35 8.1 0 6.32-5.14 11.46-11.46 11.46z"/>
+  </svg>
+</a>
+
+<style>
+  .whatsapp-float{
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width: 58px;
+    height: 58px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(180deg, #25D366, #1aa952);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.14);
+    z-index: 9999;
+    transition: transform .18s ease, filter .18s ease;
+    text-decoration: none;
+  }
+  .whatsapp-float:hover{ transform: translateY(-2px); filter: brightness(1.06); }
+  .whatsapp-float:active{ transform: translateY(0px) scale(.99); }
+  .whatsapp-float svg{
+    width: 30px;
+    height: 30px;
+    fill: #07140d;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
+  }
+</style>
+
+</body>
+</html>

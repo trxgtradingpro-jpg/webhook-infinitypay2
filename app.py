@@ -553,7 +553,7 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
 
 @app.route("/")
 def home():
-    return redirect("/checkout/trx-bronze")
+    return render_template("index.html")
 
 
 @app.route("/checkout/<plano>")
