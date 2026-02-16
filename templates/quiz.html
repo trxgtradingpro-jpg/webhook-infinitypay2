@@ -263,17 +263,71 @@
       font-weight:900;
     }
     .result-plan{
-      margin:8px 0 0;
+      margin:0;
       font-size: clamp(36px, 5vw, 52px);
       line-height:1;
       font-weight:1000;
       letter-spacing:-1px;
-      color:#43edbf;
+      color:#eaf3ff;
     }
     .result-desc{
       margin:8px 0 0;
       color:var(--muted);
       font-weight:700;
+    }
+    .result-plan-box{
+      margin-top:10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.16);
+      padding:14px;
+      box-shadow: 0 14px 38px rgba(0,0,0,.28);
+      background: rgba(0,0,0,.18);
+    }
+    .result-plan-box .result-contracts{
+      margin:10px 0 0;
+      color:rgba(233,241,251,.88);
+      font-weight:800;
+      font-size:14px;
+    }
+    .result-plan-box .result-price{
+      margin:10px 0 0;
+      font-size:36px;
+      line-height:1;
+      font-weight:1000;
+      letter-spacing:-.8px;
+    }
+    .result-plan-box.plan-gratis{
+      background: linear-gradient(180deg, #2a1300 0%, #1c0d00 58%, #120900 100%);
+      border-color: rgba(255,210,26,.45);
+    }
+    .result-plan-box.plan-gratis .result-plan,
+    .result-plan-box.plan-gratis .result-price{ color:#ffd93d; }
+    .result-plan-box.plan-bronze{
+      background: linear-gradient(180deg, #251001 0%, #1c0d02 60%, #140902 100%);
+      border-color: rgba(255,138,31,.44);
+    }
+    .result-plan-box.plan-bronze .result-plan,
+    .result-plan-box.plan-bronze .result-price{ color:#ffae36; }
+    .result-plan-box.plan-prata{
+      background: linear-gradient(180deg, #141922 0%, #10151e 58%, #0c111a 100%);
+      border-color: rgba(205,220,240,.40);
+    }
+    .result-plan-box.plan-prata .result-plan,
+    .result-plan-box.plan-prata .result-price{ color:#d7dde8; }
+    .result-plan-box.plan-gold{
+      background: linear-gradient(180deg, #231802 0%, #1c1302 60%, #120d01 100%);
+      border-color: rgba(255,210,26,.44);
+    }
+    .result-plan-box.plan-gold .result-plan,
+    .result-plan-box.plan-gold .result-price{ color:#ffdf46; }
+    .result-plan-box.plan-black{
+      background: linear-gradient(180deg, #14022a 0%, #110022 58%, #0b0018 100%);
+      border-color: rgba(185,120,255,.46);
+    }
+    .result-plan-box.plan-black .result-plan,
+    .result-plan-box.plan-black .result-price{ color:#cfa4ff; }
+    .result-free-cta{
+      margin-top:12px;
     }
     .next-level{
       margin-top:10px;
@@ -301,9 +355,8 @@
 
     .result-actions{
       margin-top:16px;
-      display:flex;
+      display:grid;
       gap:10px;
-      flex-wrap:wrap;
     }
     .cta-primary{
       border:0;
@@ -315,6 +368,7 @@
       background: linear-gradient(180deg, rgba(35,176,11,1), rgba(29,143,9,1));
       color:#04271a;
       box-shadow: 0 14px 36px rgba(35,176,11,.26);
+      width:100%;
     }
     .cta-secondary{
       border:1px solid rgba(255,255,255,.20);
@@ -324,6 +378,7 @@
       cursor:pointer;
       color:#f0f6ff;
       background: rgba(255,255,255,.05);
+      width:100%;
     }
     .result-footer{
       margin-top:12px;
@@ -453,11 +508,11 @@
       approxTime: "~1min",
       storageKey: "trx_quiz_state_v1",
       plans: {
-        gratis: { name: "GRATIS", checkout: "https://www.trxpro.com.br/checkout/trx-gratis", contracts: "Teste limitado" },
-        bronze: { name: "BRONZE", checkout: "https://www.trxpro.com.br/checkout/trx-bronze", contracts: "1 contrato" },
-        prata: { name: "PRATA", checkout: "https://www.trxpro.com.br/checkout/trx-prata", contracts: "1-5 contratos" },
-        gold: { name: "GOLD", checkout: "https://www.trxpro.com.br/checkout/trx-gold", contracts: "1-20 contratos" },
-        black: { name: "BLACK", checkout: "https://www.trxpro.com.br/checkout/trx-black", contracts: "1-300 contratos" }
+        gratis: { name: "GRATIS", checkout: "https://www.trxpro.com.br/checkout/trx-gratis", contracts: "Teste limitado", price: "GRATIS", theme: "plan-gratis" },
+        bronze: { name: "BRONZE", checkout: "https://www.trxpro.com.br/checkout/trx-bronze", contracts: "1 contrato", price: "R$ 197/mes", theme: "plan-bronze" },
+        prata: { name: "PRATA", checkout: "https://www.trxpro.com.br/checkout/trx-prata", contracts: "1-5 contratos", price: "R$ 247/mes", theme: "plan-prata" },
+        gold: { name: "GOLD", checkout: "https://www.trxpro.com.br/checkout/trx-gold", contracts: "1-20 contratos", price: "R$ 497/mes", theme: "plan-gold" },
+        black: { name: "BLACK", checkout: "https://www.trxpro.com.br/checkout/trx-black", contracts: "1-300 contratos", price: "R$ 697/mes", theme: "plan-black" }
       },
       planOrder: ["gratis", "bronze", "prata", "gold", "black"],
       contractAnchors: {
@@ -743,6 +798,15 @@
         reasons.push(`Para evitar arrependimento no inicio, recomendamos ${planName(recommended)} agora e ${planName(nextLevel)} como proximo nivel.`);
       }
 
+      const basePlanBeforeStartMode = recommended;
+      if (answers.start_mode === "free_first") {
+        if (basePlanBeforeStartMode !== "gratis") {
+          nextLevel = basePlanBeforeStartMode;
+        }
+        recommended = "gratis";
+        reasons.unshift("Como voce escolheu 'Teste grátis primeiro', o plano recomendado para comecar agora e o GRATIS.");
+      }
+
       if (reasons.length < 2) {
         if (answers.goal === "scale") {
           reasons.push("Seu objetivo de escala pede uma estrutura com mais forca e folga operacional.");
@@ -755,7 +819,7 @@
         }
       }
 
-      const showFreeSecondary = answers.start_mode === "free_first" && recommended !== "gratis";
+      const showFreeSecondary = recommended !== "gratis";
 
       return {
         recommended,
@@ -807,7 +871,6 @@
       const result = getRecommendation(state.answers);
       submitQuizResult(result);
       const plan = QUIZ_CONFIG.plans[result.recommended];
-      const freePlan = QUIZ_CONFIG.plans.gratis;
 
       const wrap = document.createElement("div");
 
@@ -815,9 +878,13 @@
       card.className = "result-card";
       card.innerHTML = `
         <p class="result-label">Plano recomendado</p>
-        <h2 class="result-plan">${plan.name}</h2>
-        <p class="result-desc">${plan.contracts}</p>
+        <div class="result-plan-box ${plan.theme || ""}">
+          <h2 class="result-plan">${plan.name}</h2>
+          <p class="result-contracts">${plan.contracts}</p>
+          <p class="result-price">${plan.price || ""}</p>
+        </div>
         ${result.nextLevel ? `<p class="next-level">Proximo nivel sugerido: ${planName(result.nextLevel)}</p>` : ""}
+        ${result.showFreeSecondary ? `<button class="cta-secondary result-free-cta" type="button" id="freeFirstResultBtn">Quero testar antes (grátis)</button>` : ""}
       `;
       wrap.appendChild(card);
 
@@ -841,17 +908,6 @@
       });
       actions.appendChild(primary);
 
-      if (result.showFreeSecondary) {
-        const secondary = document.createElement("button");
-        secondary.type = "button";
-        secondary.className = "cta-secondary";
-        secondary.textContent = "Quero testar antes (grátis)";
-        secondary.addEventListener("click", () => {
-          window.location.href = freePlan.checkout;
-        });
-        actions.appendChild(secondary);
-      }
-
       wrap.appendChild(actions);
 
       const footer = document.createElement("div");
@@ -864,6 +920,17 @@
 
       quizScreen.innerHTML = "";
       quizScreen.appendChild(wrap);
+
+      const freeFirstResultBtn = document.getElementById("freeFirstResultBtn");
+      if (freeFirstResultBtn) {
+        freeFirstResultBtn.addEventListener("click", () => {
+          state.answers.start_mode = "free_first";
+          state.submitted = false;
+          state.submissionId = null;
+          saveState();
+          animateSwap(renderResultView);
+        });
+      }
 
       const restart = document.getElementById("restartQuizBtn");
       if (restart) {

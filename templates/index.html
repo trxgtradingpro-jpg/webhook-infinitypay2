@@ -181,12 +181,13 @@
     }
     .logo-box{
       width:min(560px, 92vw);
-      aspect-ratio: 16/10;
+      aspect-ratio: 16/9;
       border-radius: 16px;
       background: rgba(0,0,0,.30);
       border: 1px solid rgba(255,255,255,.06);
       box-shadow: 0 24px 80px rgba(0,0,0,.55);
       display:grid; place-items:center;
+      padding: 8px;
       overflow:hidden;
       position:relative;
     }
@@ -197,11 +198,13 @@
       pointer-events:none;
     }
     .logo-box img{
-      max-width: 108%;
-      height:auto;
+      width:100%;
+      height:100%;
+      max-width:100%;
       display:block;
-      transform: scale(1.18);
-      transform-origin: center;
+      object-fit: contain;
+      object-position: center center;
+      transform: none;
       filter: drop-shadow(0 14px 32px rgba(0,0,0,.7));
       position:relative; z-index:1;
     }
@@ -210,8 +213,12 @@
         width:min(520px, 94vw);
       }
       .logo-box img{
-        max-width: 102%;
-        transform: scale(1.08);
+        width:100%;
+        height:100%;
+        max-width:100%;
+        object-fit: contain;
+        object-position: center center;
+        transform: none;
       }
     }
 
@@ -1611,7 +1618,7 @@
 
       <div class="logo-wrap">
         <div class="logo-box">
-          <img src="assets/logo.jpeg" alt="TRX PRO" onerror="this.style.opacity=.4; this.alt='Coloque assets/logo.jpeg';">
+          <img src="/assets/logo-hero.png" alt="TRX PRO" onerror="this.style.opacity=.4; this.alt='Coloque /assets/logo-hero.png';">
         </div>
 
         <div class="live-pill">
