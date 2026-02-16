@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -27,8 +27,8 @@
       --shadow: 0 26px 90px rgba(0,0,0,.60);
       --radius:22px;
 
-      --green:#19e39a;
-      --green2:#0bbf7f;
+      --green:#bcff00;
+      --green2:#88bf00;
       --red:#ff3a3a;
 
       --orange:#ff8a1f;
@@ -48,7 +48,7 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--text);
       background:
-        radial-gradient(1100px 650px at 20% 8%, rgba(25,227,154,.18), transparent 58%),
+        radial-gradient(1100px 650px at 20% 8%, rgba(188,255,0,.18), transparent 58%),
         radial-gradient(900px 600px at 80% 18%, rgba(255,138,31,.12), transparent 62%),
         radial-gradient(900px 700px at 60% 86%, rgba(168,85,247,.10), transparent 60%),
         linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
@@ -120,9 +120,9 @@
     .btn:hover{transform: translateY(-1px); filter: brightness(1.06);}
     .btn:active{transform: translateY(0px) scale(.99);}
     .btn.green{
-      background: linear-gradient(180deg, rgba(25,227,154,1), rgba(11,191,127,1));
+      background: linear-gradient(180deg, rgba(188,255,0,1), rgba(136,191,0,1));
       color:#03100b;
-      box-shadow: 0 18px 46px rgba(25,227,154,.18);
+      box-shadow: 0 18px 46px rgba(188,255,0,.18);
     }
     .btn.green:before{
       content:"";
@@ -157,7 +157,7 @@
       gap:14px;
     }
     .logo-box{
-      width:min(460px, 88vw);
+      width:min(560px, 92vw);
       aspect-ratio: 16/10;
       border-radius: 16px;
       background: rgba(0,0,0,.30);
@@ -170,33 +170,44 @@
     .logo-box:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(520px 220px at 50% 25%, rgba(25,227,154,.18), transparent 62%);
+      background: radial-gradient(520px 220px at 50% 25%, rgba(188,255,0,.18), transparent 62%);
       pointer-events:none;
     }
     .logo-box img{
-      max-width: 78%;
+      max-width: 108%;
       height:auto;
       display:block;
+      transform: scale(1.18);
+      transform-origin: center;
       filter: drop-shadow(0 14px 32px rgba(0,0,0,.7));
       position:relative; z-index:1;
+    }
+    @media (max-width: 700px){
+      .logo-box{
+        width:min(520px, 94vw);
+      }
+      .logo-box img{
+        max-width: 102%;
+        transform: scale(1.08);
+      }
     }
 
     .live-pill{
       width: fit-content;
       padding: 12px 18px;
       border-radius: 14px;
-      border: 2px solid rgba(25,227,154,.55);
-      color: rgba(25,227,154,1);
-      background: rgba(25,227,154,.08);
+      border: 2px solid rgba(188,255,0,.55);
+      color: rgba(188,255,0,1);
+      background: rgba(188,255,0,.08);
       font-weight: 900;
       display:flex;
       align-items:center;
       gap:10px;
-      box-shadow: 0 18px 55px rgba(25,227,154,.10);
+      box-shadow: 0 18px 55px rgba(188,255,0,.10);
     }
     .live-pill .live-dot{
-      width:10px;height:10px;border-radius:999px;background:rgba(25,227,154,1);
-      box-shadow: 0 0 18px rgba(25,227,154,.60);
+      width:10px;height:10px;border-radius:999px;background:rgba(188,255,0,1);
+      box-shadow: 0 0 18px rgba(188,255,0,.60);
     }
 
     .headline{
@@ -208,7 +219,7 @@
       text-transform: uppercase;
     }
     .headline .r{color: var(--red)}
-    .headline .g{color: rgba(25,227,154,.85)}
+    .headline .g{color: rgba(188,255,0,.85)}
     .headline .w{color:#fff}
     .headline .big{font-size: clamp(56px, 10.8vw, 164px)}
     .sub{
@@ -230,7 +241,7 @@
       background: linear-gradient(120deg, #ffffff 0%, #defee7 30%, #ffffff 60%, #dff6ff 100%);
       color: #041a12;
       border: 1px solid rgba(255,255,255,.94);
-      box-shadow: 0 18px 50px rgba(25,227,154,.24), 0 10px 30px rgba(0,0,0,.26);
+      box-shadow: 0 18px 50px rgba(188,255,0,.24), 0 10px 30px rgba(0,0,0,.26);
       overflow: hidden;
       position: relative;
       animation: quizBtnFloat 2.8s ease-in-out infinite, quizBtnGlow 2.8s ease-in-out infinite;
@@ -255,10 +266,10 @@
     }
     @keyframes quizBtnGlow{
       0%,100%{
-        box-shadow: 0 14px 44px rgba(25,227,154,.17), 0 10px 24px rgba(0,0,0,.24);
+        box-shadow: 0 14px 44px rgba(188,255,0,.17), 0 10px 24px rgba(0,0,0,.24);
       }
       50%{
-        box-shadow: 0 22px 62px rgba(25,227,154,.36), 0 14px 38px rgba(0,0,0,.28);
+        box-shadow: 0 22px 62px rgba(188,255,0,.36), 0 14px 38px rgba(0,0,0,.28);
       }
     }
     @keyframes quizBtnFloat{
@@ -280,8 +291,8 @@
       flex-wrap:wrap;
       padding: 14px 14px;
       border-radius: 14px;
-      border: 1px solid rgba(25,227,154,.26);
-      background: linear-gradient(90deg, rgba(25,227,154,.10), rgba(74,163,255,.06));
+      border: 1px solid rgba(188,255,0,.26);
+      background: linear-gradient(90deg, rgba(188,255,0,.10), rgba(74,163,255,.06));
       box-shadow: 0 18px 54px rgba(0,0,0,.24);
     }
     .quiz-strip .label{
@@ -316,7 +327,7 @@
       margin: 18px auto 0;
       width:min(980px, 96vw);
       border-radius: 18px;
-      border: 2px solid rgba(25,227,154,.32);
+      border: 2px solid rgba(188,255,0,.32);
       background: rgba(8,14,12,.55);
       box-shadow: 0 20px 95px rgba(0,0,0,.55);
       overflow:hidden;
@@ -325,7 +336,7 @@
     .chart:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(700px 250px at 50% 0%, rgba(25,227,154,.12), transparent 60%);
+      background: radial-gradient(700px 250px at 50% 0%, rgba(188,255,0,.12), transparent 60%);
       pointer-events:none;
     }
     .chart-head{
@@ -401,7 +412,7 @@
     .feat:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(360px 120px at 10% 0%, rgba(25,227,154,.12), transparent 60%);
+      background: radial-gradient(360px 120px at 10% 0%, rgba(188,255,0,.12), transparent 60%);
       opacity:.9;
       pointer-events:none;
     }
@@ -427,13 +438,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(760px 220px at 20% 0%, rgba(25,227,154,.14), transparent 62%);
+      background: radial-gradient(760px 220px at 20% 0%, rgba(188,255,0,.14), transparent 62%);
       pointer-events:none;
     }
     .proof-pill{
       margin: 0 auto 10px;
-      border: 2px solid rgba(25,227,154,.40);
-      background: rgba(25,227,154,.10);
+      border: 2px solid rgba(188,255,0,.40);
+      background: rgba(188,255,0,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -645,7 +656,7 @@
       margin-top: 14px;
       display:grid;
       grid-auto-flow: column;
-      grid-auto-columns: min(76vw, 780px);
+      grid-auto-columns: min(82vw, 920px);
       gap: 12px;
       overflow-x: auto;
       overscroll-behavior-x: contain;
@@ -655,7 +666,7 @@
       position: relative;
       z-index: 1;
     }
-    @media (max-width: 900px){ .report-track{ grid-auto-columns: 88vw; } }
+    @media (max-width: 900px){ .report-track{ grid-auto-columns: 92vw; } }
     .report-track::-webkit-scrollbar{
       height: 10px;
     }
@@ -665,7 +676,7 @@
     }
     .report-track::-webkit-scrollbar-thumb{
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(25,227,154,.75), rgba(74,163,255,.85));
+      background: linear-gradient(90deg, rgba(188,255,0,.75), rgba(74,163,255,.85));
     }
     .report-card{
       scroll-snap-align: start;
@@ -676,24 +687,25 @@
       overflow: hidden;
       transition: .2s transform, .2s filter, .2s border-color;
     }
-    .report-card.pos{ border-color: rgba(61,238,176,.58); }
+    .report-card.pos{ border-color: rgba(188,255,0,.58); }
     .report-card.neg{ border-color: rgba(255,106,106,.58); }
     .report-card.neutral{ border-color: rgba(200,214,236,.46); }
     .report-card:hover{
       transform: translateY(-3px);
       filter: brightness(1.03);
-      border-color: rgba(25,227,154,.55);
+      border-color: rgba(188,255,0,.55);
     }
     .report-image{
       position: relative;
-      height: clamp(210px, 24vw, 300px);
+      height: clamp(320px, 34vw, 460px);
       background: #0a0f17;
       border: 2px solid rgba(195,211,234,.32);
       overflow: hidden;
+      cursor: zoom-in;
     }
     .report-card.pos .report-image{
-      border-color: rgba(61,238,176,.82);
-      box-shadow: inset 0 0 0 1px rgba(61,238,176,.32), 0 0 24px rgba(61,238,176,.20);
+      border-color: rgba(188,255,0,.82);
+      box-shadow: inset 0 0 0 1px rgba(188,255,0,.32), 0 0 24px rgba(188,255,0,.20);
     }
     .report-card.neg .report-image{
       border-color: rgba(255,106,106,.86);
@@ -705,7 +717,7 @@
     .report-image img{
       width:100%;
       height:100%;
-      object-fit: cover;
+      object-fit: contain;
       display:block;
     }
     .report-image:after{
@@ -742,7 +754,7 @@
     }
     .report-gain.pos{
       color: #032016;
-      background: linear-gradient(180deg, #3df0b3, #20ce90);
+      background: linear-gradient(180deg, #d4ff4d, #9dca00);
     }
     .report-gain.neg{
       color: #fff;
@@ -752,6 +764,19 @@
       color: #0b1322;
       background: linear-gradient(180deg, #dce4ef, #b7c3d6);
     }
+    .report-cumulative{
+      margin-top: 9px;
+      font-size: 13px;
+      font-weight: 900;
+      color: rgba(228,239,250,.86);
+      letter-spacing: .2px;
+    }
+    .report-cumulative strong{
+      font-size: 16px;
+    }
+    .report-cumulative.pos strong{ color: #d4ff4d; }
+    .report-cumulative.neg strong{ color: #ff7c7c; }
+    .report-cumulative.neutral strong{ color: #dce4ef; }
     .monthly-note{
       margin: 10px 4px 0;
       color: rgba(228,239,250,.58);
@@ -759,6 +784,66 @@
       font-size: 12px;
       position: relative;
       z-index: 1;
+    }
+    .report-modal{
+      position: fixed;
+      inset: 0;
+      background: rgba(2,7,1,.86);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20000;
+      padding: 22px;
+    }
+    .report-modal.is-open{
+      display: flex;
+    }
+    .report-modal-card{
+      width: min(1220px, 96vw);
+      max-height: 92vh;
+      border-radius: 18px;
+      border: 1px solid rgba(188,255,0,.36);
+      background: linear-gradient(180deg, rgba(8,12,16,.95), rgba(4,8,10,.96));
+      box-shadow: 0 28px 90px rgba(0,0,0,.62);
+      overflow: hidden;
+    }
+    .report-modal-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      color: rgba(235,246,255,.95);
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+    .report-modal-close{
+      border: 1px solid rgba(255,255,255,.20);
+      background: rgba(255,255,255,.06);
+      color: #eef6ff;
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .report-modal-close:hover{
+      filter: brightness(1.08);
+    }
+    .report-modal-img-wrap{
+      background: #090f12;
+      display:grid;
+      place-items:center;
+      padding: 10px;
+    }
+    .report-modal-img{
+      width: 100%;
+      max-height: 74vh;
+      object-fit: contain;
+      display: block;
     }
 
     .reveal-up{
@@ -794,13 +879,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(740px 220px at 80% 0%, rgba(25,227,154,.12), transparent 62%);
+      background: radial-gradient(740px 220px at 80% 0%, rgba(188,255,0,.12), transparent 62%);
       pointer-events:none;
     }
     .how-pill{
       margin: 0 auto 10px;
-      border: 2px solid rgba(25,227,154,.34);
-      background: rgba(25,227,154,.10);
+      border: 2px solid rgba(188,255,0,.34);
+      background: rgba(188,255,0,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -829,8 +914,8 @@
       place-items:center;
       font-weight: 1000;
       color: #03150f;
-      background: linear-gradient(180deg, #3df0b3, #1bcf90);
-      box-shadow: 0 8px 20px rgba(25,227,154,.22);
+      background: linear-gradient(180deg, #d4ff4d, #9dca00);
+      box-shadow: 0 8px 20px rgba(188,255,0,.22);
     }
     .how-step h3{
       margin: 10px 0 0;
@@ -863,13 +948,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(600px 220px at 20% 0%, rgba(25,227,154,.15), transparent 62%);
+      background: radial-gradient(600px 220px at 20% 0%, rgba(188,255,0,.15), transparent 62%);
       pointer-events:none;
     }
     .free-pill{
       margin: 0 auto 8px;
-      border: 2px solid rgba(25,227,154,.40);
-      background: rgba(25,227,154,.10);
+      border: 2px solid rgba(188,255,0,.40);
+      background: rgba(188,255,0,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -1015,7 +1100,7 @@
       font-size: clamp(28px, 3.8vw, 56px);
     }
     .title .accent-orange{color: var(--orange);}
-    .title .accent-green{color: rgba(25,227,154,.85);}
+    .title .accent-green{color: rgba(188,255,0,.85);}
     .subtitle{
       text-align:center;
       margin: 10px auto 0;
@@ -1094,7 +1179,7 @@
     .bitem:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(460px 140px at 10% 0%, rgba(25,227,154,.10), transparent 62%);
+      background: radial-gradient(460px 140px at 10% 0%, rgba(188,255,0,.10), transparent 62%);
       opacity:.8;
       pointer-events:none;
     }
@@ -1102,13 +1187,13 @@
       width: 40px; height:40px;
       border-radius: 12px;
       display:grid; place-items:center;
-      background: rgba(25,227,154,.12);
-      border: 1px solid rgba(25,227,154,.22);
+      background: rgba(188,255,0,.12);
+      border: 1px solid rgba(188,255,0,.22);
       flex: 0 0 auto;
       margin-top:2px;
       font-weight:1000;
-      color: rgba(25,227,154,1);
-      box-shadow: 0 12px 30px rgba(25,227,154,.10);
+      color: rgba(188,255,0,1);
+      box-shadow: 0 12px 30px rgba(188,255,0,.10);
       position:relative;
       z-index:1;
     }
@@ -1145,7 +1230,7 @@
       width:min(1040px, 95vw);
       height:340px;
       border-radius:999px;
-      background: radial-gradient(circle, rgba(25,227,154,.26) 0%, rgba(25,227,154,.10) 45%, rgba(25,227,154,0) 76%);
+      background: radial-gradient(circle, rgba(188,255,0,.26) 0%, rgba(188,255,0,.10) 45%, rgba(188,255,0,0) 76%);
       filter: blur(6px);
       pointer-events:none;
       z-index:0;
@@ -1574,8 +1659,8 @@
       <div class="sp"></div>
 
       <div class="cta">
-        <a class="btn white" href="#planos" style="padding:14px 20px; display:inline-flex;">
-          ATIVAR TRX AGORA
+        <a class="btn green" href="#planos">
+          🚀 Ativar TRX agora
         </a>
         <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (1min)</a>
       </div>
@@ -1662,14 +1747,14 @@
           <article class="proof-card">
             <h3>Leitura direta do relat&oacute;rio anual</h3>
             <ul class="proof-list">
-              <li>Drawdown m&aacute;ximo (topo-fundo): 12,90% (R$ -9.790,00)</li>
-              <li>Drawdown m&aacute;x. trade a trade: 9,48% (R$ -7.200,00)</li>
+              <li>Drawdown m&aacute;ximo (topo-fundo): 12,90%</li>
+              <li>Drawdown m&aacute;x. trade a trade: 9,48%</li>
               <li>Maior ganho por opera&ccedil;&atilde;o: R$ 1.200,00</li>
               <li>Maior perda por opera&ccedil;&atilde;o: R$ -600,00</li>
-              <li>Janela operacional principal: das 09h &agrave;s 12h.</li>
+              <li>Janela operacional: das 09h &agrave;s 12h.</li>
             </ul>
             <div class="proof-actions">
-              <a class="btn white" href="#planos">ATIVAR TRX AGORA</a>
+              <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
               <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (1min)</a>
             </div>
             <p class="proof-disclaimer">Resultados passados n&atilde;o garantem resultados futuros. Operar envolve risco.</p>
@@ -1686,7 +1771,7 @@
           <div>
             <div class="pill monthly-pill">RELAT&Oacute;RIOS MENSAIS</div>
             <h2 class="monthly-title">Evolu&ccedil;&atilde;o m&ecirc;s a m&ecirc;s para valida&ccedil;&atilde;o real</h2>
-            <p class="monthly-sub">No TRX gr&aacute;tis, voc&ecirc; acompanha curva anual, relat&oacute;rios mensais e confere as opera&ccedil;&otilde;es no replay.</p>
+            <p class="monthly-sub">A contagem acumulada inicia em fevereiro e fecha em janeiro com o total do ciclo.</p>
           </div>
           <div class="monthly-nav">
             <button id="reportPrev" class="report-nav" type="button" aria-label="M&ecirc;s anterior">&#10094;</button>
@@ -1694,7 +1779,7 @@
           </div>
         </div>
         <div id="reportTrack" class="report-track" aria-label="Relat&oacute;rios mensais"></div>
-        <p class="monthly-note">Use os bot&otilde;es ou arraste para navegar. O autoplay inicia quando esta se&ccedil;&atilde;o entra na tela.</p>
+        <p class="monthly-note">Clique em qualquer imagem para ampliar. O acumulado &eacute; atualizado m&ecirc;s a m&ecirc;s (fev &rarr; jan).</p>
       </div>
     </div>
   </section>
@@ -1713,7 +1798,7 @@
         </ul>
 
         <div class="free-cta">
-          <a class="btn green" href="#planos">ATIVAR TRX AGORA</a>
+          <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
           <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (1min)</a>
         </div>
         <p class="cta-note">Voc&ecirc; n&atilde;o precisa adivinhar: confira o comportamento do rob&ocirc; com seu pr&oacute;prio olhar.</p>
@@ -1732,6 +1817,9 @@
 
       <div class="subtitle">
         Abra sua conta na nossa corretora parceira e receba benefícios exclusivos
+      </div>
+      <div class="important">
+        <b>Importante:</b> Você pode operar o TRX PRO em qualquer corretora. Os benefícios acima são exclusivos da parceria.
       </div>
 
       <div class="bonus-grid">
@@ -1778,10 +1866,6 @@
         </div>
       </div>
 
-      <div class="important">
-        <b>Importante:</b> Não é obrigatório usar nossa corretora parceira. Você pode operar o TRX PRO em qualquer corretora de sua preferência.
-        Os benefícios acima são exclusivos para quem optar pela parceria.
-      </div>
     </div>
   </section>
 
@@ -1969,6 +2053,18 @@
     </div>
   </section>
 
+  <div class="report-modal" id="reportModal" aria-hidden="true">
+    <div class="report-modal-card" role="dialog" aria-modal="true" aria-label="Visualização ampliada do relatório mensal">
+      <div class="report-modal-head">
+        <span id="reportModalTitle">Relatório mensal</span>
+        <button class="report-modal-close" id="reportModalClose" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="report-modal-img-wrap">
+        <img id="reportModalImg" class="report-modal-img" alt="Relatório mensal ampliado" />
+      </div>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <div class="site-seals">
       <span>SSL Seguro</span>
@@ -1999,6 +2095,50 @@
     let autoReportTimer = null;
     let activeReportIndex = 0;
 
+    function setupReportModal(track){
+      const modal = document.getElementById("reportModal");
+      const modalImg = document.getElementById("reportModalImg");
+      const modalTitle = document.getElementById("reportModalTitle");
+      const closeBtn = document.getElementById("reportModalClose");
+      if (!modal || !modalImg || !modalTitle || !closeBtn || !track) return;
+
+      const closeModal = () => {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      };
+
+      const openModal = (imgEl) => {
+        const month = imgEl.getAttribute("data-month") || "";
+        const period = imgEl.getAttribute("data-period") || "";
+        const gain = imgEl.getAttribute("data-gain") || "";
+        const cumulative = imgEl.getAttribute("data-cumulative") || "";
+        modalImg.src = imgEl.currentSrc || imgEl.src || "";
+        modalImg.alt = `Relatório mensal ampliado ${month}`.trim();
+        modalTitle.textContent = `${month} • ${period} • ${gain} • Acumulado ${cumulative}`.trim();
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      };
+
+      if (modal.dataset.bound !== "1"){
+        closeBtn.addEventListener("click", closeModal);
+        modal.addEventListener("click", (event) => {
+          if (event.target === modal) closeModal();
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && modal.classList.contains("is-open")){
+            closeModal();
+          }
+        });
+        modal.dataset.bound = "1";
+      }
+
+      track.querySelectorAll(".report-image img").forEach((imgEl) => {
+        imgEl.onclick = () => openModal(imgEl);
+      });
+    }
+
     function renderMonthlyReports(items){
       const track = document.getElementById("reportTrack");
       if (!track) return;
@@ -2024,6 +2164,10 @@
               src="${item.image_url}"
               alt="Relatório mensal ${item.month}"
               loading="lazy"
+              data-month="${item.month}"
+              data-period="Início: dia ${item.start_day} | Fim: dia ${item.end_day}"
+              data-gain="${item.gain}"
+              data-cumulative="${item.cumulative_gain || "R$ 0,00"}"
               onerror="this.style.opacity=.28; this.alt='Imagem indisponível';"
             >
           </div>
@@ -2031,6 +2175,7 @@
             <h3 class="report-month">${item.month}</h3>
             <p class="report-period">Início: dia ${item.start_day} | Fim: dia ${item.end_day}</p>
             <span class="report-gain ${item.status || "neutral"}">${item.gain}</span>
+            <div class="report-cumulative ${item.cumulative_status || "neutral"}">Acumulado: <strong>${item.cumulative_gain || "R$ 0,00"}</strong></div>
           </div>
         </article>
       `).join("");
@@ -2040,6 +2185,7 @@
       const cards = Array.from(track.querySelectorAll(".report-card"));
       const monthlySection = document.getElementById("relatorios");
       let sectionVisible = false;
+      setupReportModal(track);
 
       function scrollToIndex(index, smooth = true){
         if (!cards.length) return;
@@ -2243,3 +2389,4 @@
 
 </body>
 </html>
+

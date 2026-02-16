@@ -171,26 +171,37 @@ MESES_ROTULO = {
     "dez": "DEZ"
 }
 
-# Ordem configurada para exibir ciclo iniciando em janeiro.
+# Ordem configurada para exibir ciclo iniciando em fevereiro e encerrando em janeiro.
 MESES_ORDEM_CARROSSEL = {
-    "jan": 1,
-    "fev": 2,
-    "mar": 3,
-    "abr": 4,
-    "mai": 5,
-    "jun": 6,
-    "jul": 7,
-    "ago": 8,
-    "set": 9,
-    "out": 10,
-    "nov": 11,
-    "dez": 12
+    "fev": 1,
+    "mar": 2,
+    "abr": 3,
+    "mai": 4,
+    "jun": 5,
+    "jul": 6,
+    "ago": 7,
+    "set": 8,
+    "out": 9,
+    "nov": 10,
+    "dez": 11,
+    "jan": 12
 }
 
 REGEX_RELATORIO_MENSAL = re.compile(
     r"^(?P<mes>jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)_(?P<inicio>\d{2})_(?P<fim>\d{2})_(?P<valor>[+-]?\d[\d.,]*)\.png$",
     flags=re.IGNORECASE
 )
+
+
+def formatar_valor_brl_com_sinal(valor):
+    valor_abs = abs(float(valor))
+    valor_fmt = f"{valor_abs:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    if valor > 0:
+        return f"R$ +{valor_fmt}", "pos"
+    if valor < 0:
+        return f"R$ -{valor_fmt}", "neg"
+    return f"R$ {valor_fmt}", "neutral"
 
 backfill_analytics_from_orders({
     plano_id: int(info.get("preco") or 0)
@@ -523,18 +534,7 @@ def parse_relatorio_mensal_nome(arquivo):
     except ValueError:
         return None
 
-    valor_abs = abs(valor_float)
-    valor_fmt = f"{valor_abs:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-    if valor_float > 0:
-        ganho_fmt = f"R$ +{valor_fmt}"
-        status = "pos"
-    elif valor_float < 0:
-        ganho_fmt = f"R$ -{valor_fmt}"
-        status = "neg"
-    else:
-        ganho_fmt = f"R$ {valor_fmt}"
-        status = "neutral"
+    ganho_fmt, status = formatar_valor_brl_com_sinal(valor_float)
 
     return {
         "month": MESES_ROTULO.get(mes, mes.upper()),
@@ -543,6 +543,7 @@ def parse_relatorio_mensal_nome(arquivo):
         "gain": ganho_fmt,
         "status": status,
         "image_url": f"/assets/meses/{arquivo}",
+        "_value": valor_float,
         "_sort": (
             MESES_ORDEM_CARROSSEL.get(mes, 99),
             int(dia_inicio),
@@ -703,7 +704,14 @@ def api_reports_monthly():
             reports.append(parsed)
 
     reports.sort(key=lambda item: item.get("_sort", (99, 99, 99, "")))
+
+    acumulado = 0.0
     for item in reports:
+        acumulado += float(item.get("_value") or 0.0)
+        acumulado_fmt, acumulado_status = formatar_valor_brl_com_sinal(acumulado)
+        item["cumulative_gain"] = acumulado_fmt
+        item["cumulative_status"] = acumulado_status
+        item.pop("_value", None)
         item.pop("_sort", None)
 
     return jsonify({
