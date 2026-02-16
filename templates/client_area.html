@@ -174,6 +174,36 @@
       font-weight:800;
       letter-spacing:-.3px;
     }
+    .section-anchor{
+      scroll-margin-top:100px;
+    }
+    .account-menu{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      border:1px solid rgba(165,198,242,.20);
+      border-radius:14px;
+      padding:10px;
+      background:linear-gradient(180deg, rgba(8,14,24,.88), rgba(5,9,16,.92));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 12px 30px rgba(0,0,0,.24);
+    }
+    .account-menu a{
+      border:1px solid rgba(104,170,255,.44);
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:900;
+      color:#dcebff;
+      text-decoration:none;
+      letter-spacing:.15px;
+      background:linear-gradient(180deg, rgba(17,33,56,.90), rgba(10,20,34,.92));
+      transition:.16s transform, .16s filter, .16s border-color;
+    }
+    .account-menu a:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.08);
+      border-color:rgba(35,176,11,.58);
+    }
     .top-actions{
       display:flex;
       align-items:center;
@@ -369,6 +399,14 @@
     }
     .logout:hover{ transform:translateY(-1px); filter:brightness(1.1); }
     @media (max-width: 620px){
+      .account-menu{
+        gap:8px;
+        padding:8px;
+      }
+      .account-menu a{
+        font-size:12px;
+        padding:7px 10px;
+      }
       .top-actions{
         width:100%;
         justify-content:space-between;
@@ -473,6 +511,40 @@
       padding:10px;
       background:linear-gradient(180deg, rgba(7,12,20,.88), rgba(4,8,14,.92));
       box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .install-sub{
+      margin:0;
+      color:rgba(220,233,249,.74);
+      font-size:14px;
+      font-weight:700;
+      line-height:1.45;
+    }
+    .install-video-wrap{
+      margin-top:12px;
+      border:1px solid rgba(177,205,244,.18);
+      border-radius:16px;
+      padding:8px;
+      background:linear-gradient(180deg, rgba(7,12,20,.90), rgba(4,8,14,.94));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 14px 36px rgba(0,0,0,.28);
+    }
+    .install-video{
+      position:relative;
+      width:100%;
+      aspect-ratio:16/9;
+      border-radius:12px;
+      overflow:hidden;
+      background:#000;
+    }
+    .install-video iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+      opacity:0;
+      transition:opacity .24s ease;
+    }
+    .install-video.is-ready iframe{
+      opacity:1;
     }
     .chart-hint{
       margin-top:12px;
@@ -1029,7 +1101,17 @@
       </div>
     {% endif %}
 
-    <section class="grid">
+    <nav class="account-menu">
+      <a href="#resumo">Resumo</a>
+      <a href="#manual-instalacao">Manual de instalacao</a>
+      <a href="#capital">Curva de capital</a>
+      {% if upsell_plans %}
+      <a href="#upgrade">Upgrade</a>
+      {% endif %}
+      <a href="#historico">Historico</a>
+    </nav>
+
+    <section class="grid section-anchor" id="resumo">
       <article class="card">
         <h2>Dados do cliente</h2>
         <p class="line"><span>Nome:</span> {{ conta_nome or '-' }}</p>
@@ -1054,24 +1136,29 @@
       </article>
     </section>
 
-    <section class="card">
+    <section class="card section-anchor" id="manual-instalacao">
+      <h2>Manual de instalacao</h2>
+      <p class="install-sub">
+        Siga o passo a passo no video oficial para instalar e configurar o TRX PRO corretamente.
+      </p>
+      <div class="install-video-wrap">
+        <div class="install-video" id="installVideo" data-video-id="{{ install_video_id }}" data-loaded="0">
+          <iframe
+            id="installVideoFrame"
+            title="Manual de instalacao TRX PRO"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section-anchor" id="capital">
       <h2>Crescimento do capital</h2>
       {% if capital_chart and capital_chart.available %}
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
-        <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
-        <p class="line"><span>Periodo do CSV:</span> {{ capital_chart.start_date }} ate {{ capital_chart.csv_end_date }}</p>
-        {% if capital_chart.csv_value_mode == "points" %}
-        <p class="line"><span>Conversao:</span> 1 ponto = R$ {{ "{:,.2f}".format(capital_chart.csv_brl_per_point).replace(",", "X").replace(".", ",").replace("X", ".") }} (1 contrato)</p>
-        {% endif %}
-        <p class="line"><span>Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
-        <div class="kpi" style="margin-top:8px;">
-          <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
-          <span class="pill">Dias no CSV: {{ capital_chart.csv_last_day }}</span>
-          <span class="pill ok">Dia atualizado: {{ capital_chart.current_day }}</span>
-          <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
-          <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
-          <span class="pill total-emphasis">Saldo total no CSV: <strong id="csvTotalValueText" data-current-value="{{ capital_chart.csv_total_value }}">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
-        </div>
         <p class="chart-editable-note">Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
         <div class="chart-config-row">
           {% if capital_chart.window_modes %}
@@ -1110,12 +1197,12 @@
         <p class="chart-hint" id="chartHintText">Passe o mouse sobre a linha para ver a data e o valor do dia.</p>
       {% else %}
         <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
-        <p class="empty">CSV esperado: <code>dia,pontos</code> (ex.: <code>1,600</code>, <code>2,-300</code>). Marcador opcional do ultimo dia atualizado: <code>13,11260g</code>. Conversao padrao: <code>600 pontos = R$ 120,00</code> por contrato.</p>
+        <p class="empty">CSV esperado: <code>dia,pontos</code> (ex.: <code>1,600</code>, <code>2,-300</code>). Marcador opcional: <code>13,11260g</code>.</p>
       {% endif %}
     </section>
 
     {% if upsell_plans %}
-    <section class="card">
+    <section class="card section-anchor" id="upgrade">
       <h2>Evolua para um plano pago</h2>
       <p class="upsell-intro">
         Seu acesso gratuito esta ativo. Para liberar mais recursos e suporte completo, escolha um plano abaixo.
@@ -1140,7 +1227,7 @@
     </section>
     {% endif %}
 
-    <section class="card">
+    <section class="card section-anchor" id="historico">
       <h2>Historico de acessos liberados</h2>
       {% if pedidos %}
         <div class="table-wrap">
@@ -1498,7 +1585,7 @@
                 },
                 title: {
                   display: true,
-                  text: "Dias do plano",
+                  text: "Dias",
                   color: "#9db0d4"
                 }
               },
@@ -1651,6 +1738,45 @@
       })();
     </script>
   {% endif %}
+  <script>
+    (function setupInstallVideo(){
+      const videoWrap = document.getElementById("installVideo");
+      const frame = document.getElementById("installVideoFrame");
+      if (!videoWrap || !frame) return;
+
+      const videoId = (videoWrap.dataset.videoId || "").trim();
+      if (!videoId) return;
+
+      const loadVideo = function(){
+        if (videoWrap.dataset.loaded === "1") return;
+        const params = new URLSearchParams({
+          autoplay: "0",
+          playsinline: "1",
+          rel: "0",
+          modestbranding: "1",
+          controls: "1"
+        });
+        frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+        videoWrap.dataset.loaded = "1";
+      };
+
+      frame.addEventListener("load", () => {
+        videoWrap.classList.add("is-ready");
+      }, { once: true });
+
+      if ("IntersectionObserver" in window){
+        const observer = new IntersectionObserver((entries, obs) => {
+          const visible = entries.some((entry) => entry.isIntersecting);
+          if (!visible) return;
+          loadVideo();
+          obs.disconnect();
+        }, { threshold: 0.2 });
+        observer.observe(videoWrap);
+      } else {
+        loadVideo();
+      }
+    })();
+  </script>
   <script>
     (function(){
       const wrap = document.getElementById("notifWrap");
