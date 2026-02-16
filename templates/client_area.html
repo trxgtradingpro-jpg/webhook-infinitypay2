@@ -127,7 +127,8 @@
     }
     .top{
       position:relative;
-      overflow:hidden;
+      overflow:visible;
+      z-index:40;
       display:flex;
       justify-content:space-between;
       align-items:center;
@@ -143,6 +144,7 @@
       content:"";
       position:absolute;
       inset:-2px;
+      border-radius:inherit;
       background:radial-gradient(820px 220px at 10% 0%, rgba(74,163,255,.18), transparent 62%);
       pointer-events:none;
     }
@@ -212,6 +214,7 @@
     }
     .notif-wrap{
       position:relative;
+      z-index:80;
     }
     .notif-btn{
       position:relative;
@@ -271,7 +274,7 @@
       border:1px solid rgba(255,255,255,.16);
       background:linear-gradient(180deg, rgba(8,14,24,.98), rgba(5,10,18,.98));
       box-shadow:0 28px 82px rgba(0,0,0,.56);
-      z-index:30;
+      z-index:120;
       opacity:0;
       pointer-events:none;
       transform:translateY(6px) scale(.98);
