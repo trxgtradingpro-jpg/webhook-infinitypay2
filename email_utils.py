@@ -1,5 +1,6 @@
 import base64
 import os
+import unicodedata
 
 import requests
 
@@ -52,17 +53,58 @@ def enviar_email_simples(destinatario, assunto, mensagem, html=None):
     }
     if html:
         payload["html"] = html
-    _enviar_payload_email(payload)
+    try:
+        _enviar_payload_email(payload)
+    except RuntimeError as exc:
+        erro = str(exc)
+        # Fallback para scripts do Google Apps Script que exigem sempre arquivo.
+        if "newBlob" not in erro:
+            raise
+
+        fallback_payload = dict(payload)
+        fallback_payload["filename"] = "mensagem.txt"
+        conteudo = (mensagem or "Mensagem TRX PRO").encode("utf-8")
+        fallback_payload["file_base64"] = base64.b64encode(conteudo).decode("utf-8")
+        _enviar_payload_email(fallback_payload)
 
 
-def enviar_email(destinatario, nome_plano, arquivo, senha):
-    mensagem = f"""Ola
+def _corrigir_texto_quebrado(texto):
+    valor = (texto or "").strip()
+    if not valor:
+        return ""
+
+    for _ in range(2):
+        if "Ã" not in valor and "Â" not in valor:
+            break
+        try:
+            valor = valor.encode("latin1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+
+    return valor
+
+
+def _normalizar_nome_plano(nome_plano):
+    nome = _corrigir_texto_quebrado(nome_plano)
+    if not nome:
+        return "TRX PRO"
+
+    sem_acento = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode("ascii")
+    return sem_acento.strip() or "TRX PRO"
+
+
+def enviar_email(destinatario, nome_plano, arquivo, senha, nome_cliente=None):
+    nome_plano_fmt = _normalizar_nome_plano(nome_plano)
+    nome_cliente_fmt = (nome_cliente or "").strip()
+    saudacao = f"Ola, {nome_cliente_fmt}" if nome_cliente_fmt else "Ola"
+
+    mensagem = f"""{saudacao}
 
 Obrigado pela sua compra!
 
 Pagamento confirmado com sucesso.
 
-Plano adquirido: {nome_plano}
+Plano adquirido: {nome_plano_fmt}
 Senha do arquivo: {senha}
 
 (ASSISTA AGORA)
@@ -86,7 +128,7 @@ WhatsApp 2: +55 11 98175-9207
 
 Bom uso
 """
-    assunto = f"Seu plano {nome_plano} - Acesso Liberado"
+    assunto = f"Seu plano {nome_plano_fmt} - Acesso Liberado"
     enviar_email_com_anexo(
         destinatario=destinatario,
         assunto=assunto,

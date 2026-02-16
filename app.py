@@ -240,7 +240,7 @@ PLANOS = {
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     },
     "trx-gratis": {
-        "nome": "TRX GRÃƒÂTIS",
+        "nome": "TRX GRATIS",
         "pasta": "Licencas/TRX GRATIS",
         "preco": 0,
         "gratis": True,
@@ -1620,7 +1620,8 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
                 destinatario=order["email"],
                 nome_plano=plano_info["nome"],
                 arquivo=arquivo,
-                senha=senha
+                senha=senha,
+                nome_cliente=order.get("nome")
             )
             return True
         except Exception as e:
@@ -2236,6 +2237,7 @@ def comprar():
                 nome_plano=plano_info["nome"],
                 arquivo=arquivo,
                 senha=senha,
+                nome_cliente=nome,
             )
 
             marcar_order_processada(order_id)
