@@ -105,7 +105,6 @@ def init_db():
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_created_at ON quiz_submissions(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_user_key ON quiz_submissions(user_key)")
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_account_email ON quiz_submissions(account_email)")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS client_upgrade_leads (
