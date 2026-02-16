@@ -269,8 +269,6 @@
       0%{ left:-55%; }
       100%{ left:140%; }
     }
-      50%{ transform: translate(var(--float-x), -3px); }
-    }
 
     .quiz-strip{
       margin: 18px auto 0;
@@ -311,7 +309,6 @@
       color: rgba(238,246,255,.84);
       font-weight: 900;
       text-align:center;
-    }
     }
 
     /* Chart */
@@ -564,6 +561,16 @@
       color: rgba(228,239,250,.56);
       font-weight: 800;
     }
+    .proof-micro{
+      margin: 12px auto 0;
+      width:min(940px, 98vw);
+      text-align:center;
+      color: rgba(228,239,250,.72);
+      font-size: 13px;
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
 
     /* Relatórios mensais */
     section.monthly{
@@ -766,6 +773,219 @@
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    /* Como funciona */
+    section.how{
+      padding: 8px 0 12px;
+    }
+    .how-shell{
+      width:min(1040px, 96vw);
+      margin: 0 auto;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(7,12,17,.88), rgba(5,8,13,.92));
+      box-shadow: 0 24px 82px rgba(0,0,0,.42);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .how-shell:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(740px 220px at 80% 0%, rgba(25,227,154,.12), transparent 62%);
+      pointer-events:none;
+    }
+    .how-pill{
+      margin: 0 auto 10px;
+      border: 2px solid rgba(25,227,154,.34);
+      background: rgba(25,227,154,.10);
+      color: #9ff9d5;
+      position: relative;
+      z-index: 1;
+    }
+    .how-steps{
+      margin-top: 16px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 900px){ .how-steps{ grid-template-columns: 1fr; } }
+    .how-step{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      padding: 14px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.24);
+    }
+    .how-step .idx{
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display:grid;
+      place-items:center;
+      font-weight: 1000;
+      color: #03150f;
+      background: linear-gradient(180deg, #3df0b3, #1bcf90);
+      box-shadow: 0 8px 20px rgba(25,227,154,.22);
+    }
+    .how-step h3{
+      margin: 10px 0 0;
+      font-size: 18px;
+      letter-spacing: -.2px;
+    }
+    .how-step p{
+      margin: 8px 0 0;
+      color: rgba(228,239,250,.74);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    /* Oferta gratis */
+    section.free-offer{
+      padding: 6px 0 16px;
+    }
+    .free-shell{
+      width:min(980px, 96vw);
+      margin: 0 auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(5,12,10,.88), rgba(4,8,10,.92));
+      box-shadow: 0 22px 70px rgba(0,0,0,.40);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .free-shell:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(600px 220px at 20% 0%, rgba(25,227,154,.15), transparent 62%);
+      pointer-events:none;
+    }
+    .free-pill{
+      margin: 0 auto 8px;
+      border: 2px solid rgba(25,227,154,.40);
+      background: rgba(25,227,154,.10);
+      color: #9ff9d5;
+      position: relative;
+      z-index: 1;
+    }
+    .free-title{
+      margin: 0;
+      text-align:center;
+      font-size: clamp(24px, 4vw, 40px);
+      line-height: 1.06;
+      letter-spacing: -.7px;
+      font-weight: 1000;
+      position: relative;
+      z-index: 1;
+    }
+    .free-sub{
+      margin: 8px auto 0;
+      width:min(760px, 96vw);
+      text-align:center;
+      color: var(--muted2);
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
+    .free-points{
+      margin: 14px 0 0;
+      padding-left: 18px;
+      display:grid;
+      gap: 8px;
+      color: rgba(228,239,250,.82);
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
+    .free-cta{
+      margin-top: 14px;
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-note{
+      margin: 8px auto 0;
+      width:min(860px, 96vw);
+      color: rgba(228,239,250,.68);
+      font-size: 12px;
+      font-weight: 800;
+      text-align:center;
+    }
+    .metric-note{
+      margin: 10px auto 0;
+      width:min(900px, 96vw);
+      color: rgba(228,239,250,.70);
+      font-size: 12px;
+      font-weight: 800;
+      text-align:center;
+    }
+
+    /* FAQ */
+    section.faq{
+      padding: 0 0 14px;
+    }
+    .faq-shell{
+      width:min(980px, 96vw);
+      margin: 0 auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(8,12,16,.88), rgba(5,8,11,.94));
+      box-shadow: 0 24px 80px rgba(0,0,0,.45);
+      padding: 18px;
+    }
+    .faq-title{
+      margin: 0;
+      text-align:center;
+      font-size: clamp(24px, 4vw, 38px);
+      line-height: 1.06;
+      letter-spacing: -.7px;
+      font-weight: 1000;
+    }
+    .faq-list{
+      margin-top: 12px;
+      display:grid;
+      gap: 8px;
+    }
+    .faq-item{
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      overflow: hidden;
+    }
+    .faq-item summary{
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      font-weight: 900;
+      color: rgba(236,245,255,.92);
+      position: relative;
+    }
+    .faq-item summary::-webkit-details-marker{
+      display:none;
+    }
+    .faq-item p{
+      margin: 0;
+      padding: 0 14px 12px;
+      color: rgba(228,239,250,.74);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+    .faq-item a{
+      color: #8edfff;
+      font-weight: 900;
+      text-decoration: none;
+    }
+    .faq-item a:hover{
+      text-decoration: underline;
     }
 
     /* Bonus */
@@ -1274,7 +1494,7 @@
   <div class="container">
     <div class="top-pill">
       <span class="dot"></span>
-      <span id="topCountdown">14:04 para o preço subir</span>
+      <span id="topCountdown">14:04 para atualização de condição comercial</span>
     </div>
   </div>
 
@@ -1293,122 +1513,154 @@
       </div>
 
       <div class="headline">
-        <div class="big"><span class="r">PARE</span></div>
-        <div class="big"><span class="w">DE</span> <span class="r">PERDER</span></div>
-        <div class="big"><span class="g">COMECE A</span></div>
-        <div class="big"><span class="g">LUCRAR</span></div>
+        <div class="big"><span class="w">TRX PRO</span></div>
+        <div class="big"><span class="r">RISCO 300</span></div>
+        <div class="big"><span class="g">ALVO 600</span></div>
+        <div class="big"><span class="g">TRAVA NO 0x0</span></div>
       </div>
 
       <div class="sub">
-        Robô <b>100% AUTOMÁTICO</b> opera no Mini Índice<br/>
-        enquanto você dorme 💤
+        Risco definido em <b>300 pontos</b>, alvo em <b>600 pontos</b> e proteção no <b>0x0</b><br/>
+        quando a operação atinge +190 pontos e o candle fecha a favor.
       </div>
 
       <div class="cta">
-        <a class="btn green" href="#planos">🚀 ATIVAR ROBÔ AGORA</a>
-        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+        <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (2 min)</a>
       </div>
+      <p class="cta-note">Teste grátis disponível para validar no replay, operação por operação.</p>
 
       <!-- Curva -->
       <div class="chart">
-        <div class="chart-head">📊 CURVA DE CAPITAL 2025 - RESULTADOS REAIS</div>
+        <div class="chart-head">📊 Curva de capital anual + validação no replay</div>
         <img src="assets/curva.png" alt="Curva de capital" onerror="this.style.opacity=.45; this.alt='Coloque assets/curva.png';">
         <div class="metrics">
           <div class="metric">
             <div class="v green">R$ 75,91k</div>
-            <div class="l">Lucro Líquido (12m)</div>
+            <div class="l">Resultado líquido (12m)</div>
           </div>
           <div class="metric">
             <div class="v yellow">45,03%</div>
-            <div class="l">Taxa de Acerto</div>
+            <div class="l">Taxa de acerto (no relatório)</div>
           </div>
           <div class="metric">
             <div class="v blue">10x</div>
-            <div class="l">Contratos Testados</div>
+            <div class="l">Máx. contratos testados</div>
           </div>
         </div>
+        <p class="metric-note">O diferencial não é acertar sempre: é ganhar mais quando acerta e proteger capital quando o trade anda a favor.</p>
       </div>
 
       <!-- Features -->
       <div class="row4">
         <div class="feat">
-          <strong>⚡ Execução em milissegundos</strong>
-          <span>Entrada e saída rápidas</span>
+          <strong>🛡 Stop Loss de 300 pontos</strong>
+          <span>Risco definido por operação</span>
         </div>
         <div class="feat">
-          <strong>🛡 Gestão de risco automática</strong>
-          <span>Stops e controle</span>
+          <strong>🎯 Stop Gain de 600 pontos</strong>
+          <span>Assimetria 2:1 entre alvo e risco</span>
         </div>
         <div class="feat">
-          <strong>🕒 Opera 24/5 sem parar</strong>
-          <span>Rotina automática</span>
+          <strong>🔒 Trava no 0x0 em +190</strong>
+          <span>Ativa com candle fechado, sem antecipação</span>
         </div>
         <div class="feat">
-          <strong>📈 71% de taxa de acerto</strong>
-          <span>Base em resultados</span>
+          <strong>🔎 Prova validável</strong>
+          <span>Curva anual, mês a mês e replay</span>
         </div>
       </div>
 
       <div class="sp"></div>
 
       <div class="cta">
-        <a class="btn white" href="#planos" style="padding:14px 20px; display:inline-flex;">
-          VER PLANOS AGORA →
+        <a class="btn white" href="https://webhook-infinitypay.onrender.com/checkout/trx-gratis" style="padding:14px 20px; display:inline-flex;">
+          TESTAR GRÁTIS E VALIDAR NO REPLAY (2 MIN)
         </a>
-        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (2 min)</a>
       </div>
+      <p class="cta-note">Sem promessa de lucro: você testa com dados e decide com clareza.</p>
 
     </div>
   </header>
 
+  <section class="how reveal-up" id="como-funciona">
+    <div class="container">
+      <div class="how-shell">
+        <div class="pill how-pill">COMO FUNCIONA</div>
+        <h2 class="proof-title">Método objetivo em 3 passos para operar com regra</h2>
+        <p class="proof-sub">Sem adivinhação: entradas e saídas seguem parâmetros fixos e validáveis.</p>
+
+        <div class="how-steps">
+          <article class="how-step">
+            <div class="idx">1</div>
+            <h3>Risco e alvo já definidos</h3>
+            <p>Cada operação nasce com stop de 300 pontos e alvo de 600 pontos, mantendo assimetria 2:1.</p>
+          </article>
+          <article class="how-step">
+            <div class="idx">2</div>
+            <h3>Proteção automática no 0x0</h3>
+            <p>Quando o trade atinge +190 pontos e o candle fecha a favor, a operação é protegida no zero a zero.</p>
+          </article>
+          <article class="how-step">
+            <div class="idx">3</div>
+            <h3>Validação antes de escalar</h3>
+            <p>Você pode testar grátis, ver curva anual, relatórios mensais e confirmar no replay operação por operação.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="proof reveal-up" id="prova">
     <div class="container">
       <div class="proof-shell">
-        <div class="pill proof-pill">RESULTADO AUDIT&Aacute;VEL | 10 CONTRATOS</div>
-        <h2 class="proof-title">Performance real para decis&atilde;o com confian&ccedil;a</h2>
+        <div class="pill proof-pill">PROVA E TRANSPAR&Ecirc;NCIA | 10 CONTRATOS</div>
+        <h2 class="proof-title">Dados reais para decidir com seguran&ccedil;a e sem promessa vazia</h2>
         <p class="proof-sub">TRX_GOLD | M5 | Per&iacute;odo: 08/02/2025 a 16/02/2026 | Slippage: 0 | Ajustes: Todos</p>
 
         <div class="proof-kpis">
           <article class="proof-kpi">
-            <div class="k-label">Lucro L&iacute;quido</div>
+            <div class="k-label">Resultado l&iacute;quido (12m)</div>
             <div class="k-value pos">R$ 75.910,00</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Retorno 12m</div>
+            <div class="k-label">Retorno em 12m</div>
             <div class="k-value pos">19,99%</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Fator de Lucro</div>
+            <div class="k-label">Fator de lucro (PF)</div>
             <div class="k-value neutral">1,18</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">M&aacute;x. Contratos</div>
+            <div class="k-label">M&aacute;x. contratos testados</div>
             <div class="k-value neutral">10</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Win Rate</div>
+            <div class="k-label">Taxa de acerto (no relat&oacute;rio)</div>
             <div class="k-value neutral">45,03%</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Drawdown M&aacute;x.</div>
+            <div class="k-label">Drawdown m&aacute;ximo</div>
             <div class="k-value warn">12,90%</div>
           </article>
         </div>
+        <p class="proof-micro">O diferencial n&atilde;o &eacute; acertar sempre: &eacute; manter assimetria 2:1 e proteger capital quando o trade confirma.</p>
 
         <div class="proof-grid">
           <article class="proof-card">
-            <h3>Resultados que fortalecem a decis&atilde;o</h3>
-            <p>Lucro l&iacute;quido de R$ 75.910,00 no per&iacute;odo, retorno de 19,99% e fator de lucro 1,18.</p>
-            <p>Foram 1.317 opera&ccedil;&otilde;es executadas com consist&ecirc;ncia operacional em 10 contratos.</p>
+            <h3>Por que isso funciona mesmo sem acertar toda hora</h3>
+            <p>Com stop em 300 e alvo em 600, cada acerto vale mais do que cada erro. Isso cria assimetria favor&aacute;vel.</p>
+            <p>A trava no 0x0 em +190 (com candle fechado) ajuda a reduzir devolu&ccedil;&atilde;o de opera&ccedil;&otilde;es que j&aacute; andaram a favor.</p>
             <div class="proof-tags">
-              <span>Retorno validado</span>
-              <span>Execu&ccedil;&atilde;o consistente</span>
-              <span>10 contratos</span>
+              <span>M&eacute;todo objetivo</span>
+              <span>Risco controlado</span>
+              <span>Valida&ccedil;&atilde;o no replay</span>
             </div>
           </article>
 
           <article class="proof-card">
-            <h3>Risco sob controle</h3>
+            <h3>Leitura direta do relat&oacute;rio anual</h3>
             <ul class="proof-list">
               <li>Drawdown m&aacute;ximo (topo-fundo): 12,90% (R$ -9.790,00)</li>
               <li>Drawdown m&aacute;x. trade a trade: 9,48% (R$ -7.200,00)</li>
@@ -1417,8 +1669,10 @@
               <li>Patrim&ocirc;nio necess&aacute;rio (10 contratos): R$ 379.650,00</li>
             </ul>
             <div class="proof-actions">
-              <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+              <a class="btn white" href="https://webhook-infinitypay.onrender.com/checkout/trx-gratis">Testar gr&aacute;tis e validar no replay (2 min)</a>
+              <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (2 min)</a>
             </div>
+            <p class="proof-disclaimer">Resultados passados n&atilde;o garantem resultados futuros. Operar envolve risco.</p>
           </article>
         </div>
       </div>
@@ -1431,8 +1685,8 @@
         <div class="monthly-head">
           <div>
             <div class="pill monthly-pill">RELAT&Oacute;RIOS MENSAIS</div>
-            <h2 class="monthly-title">Resultados mensais do rob&ocirc;</h2>
-            <p class="monthly-sub">Operando com 10 contratos, do primeiro ao &uacute;ltimo m&ecirc;s.</p>
+            <h2 class="monthly-title">Evolu&ccedil;&atilde;o m&ecirc;s a m&ecirc;s para valida&ccedil;&atilde;o real</h2>
+            <p class="monthly-sub">No TRX gr&aacute;tis, voc&ecirc; acompanha curva anual, relat&oacute;rios mensais e confere as opera&ccedil;&otilde;es no replay.</p>
           </div>
           <div class="monthly-nav">
             <button id="reportPrev" class="report-nav" type="button" aria-label="M&ecirc;s anterior">&#10094;</button>
@@ -1440,6 +1694,29 @@
           </div>
         </div>
         <div id="reportTrack" class="report-track" aria-label="Relat&oacute;rios mensais"></div>
+        <p class="monthly-note">Use os bot&otilde;es ou arraste para navegar. O autoplay inicia quando esta se&ccedil;&atilde;o entra na tela.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="free-offer reveal-up" id="teste-gratis">
+    <div class="container">
+      <div class="free-shell">
+        <div class="pill free-pill">TRX GR&Aacute;TIS</div>
+        <h2 class="free-title">Teste gr&aacute;tis para validar antes de escolher seu plano pago</h2>
+        <p class="free-sub">Primeiro passo simples: ver resultado, validar no replay e decidir com base em dados.</p>
+
+        <ul class="free-points">
+          <li>Acesso &agrave; curva de capital anual e evolu&ccedil;&atilde;o mensal</li>
+          <li>Relat&oacute;rios mensais completos para leitura de risco e consist&ecirc;ncia</li>
+          <li>Replay para validar as entradas conforme o backtest</li>
+        </ul>
+
+        <div class="free-cta">
+          <a class="btn green" href="https://webhook-infinitypay.onrender.com/checkout/trx-gratis">TESTAR GR&Aacute;TIS E VALIDAR NO REPLAY</a>
+          <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (2 min)</a>
+        </div>
+        <p class="cta-note">Voc&ecirc; n&atilde;o precisa adivinhar: confira o comportamento do rob&ocirc; com seu pr&oacute;prio olhar.</p>
       </div>
     </div>
   </section>
@@ -1518,8 +1795,8 @@
       </h2>
 
       <div class="quiz-nudge">
-        <span>Quer recomendação automática antes de decidir?</span>
-        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+        <span>Escolha pelo número de contratos. Quer ajuda? Faça o quiz de 2 min.</span>
+        <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal</a>
       </div>
 
       <div class="plan-stage">
@@ -1652,12 +1929,42 @@
       </div>
 
       <div class="price-bar">
-        ⚠ Preço sobe em <span id="priceCountdown">13min 13s</span>
-        <small>Não deixe para depois. Outro(a) já está lendo isso AGORA.</small>
+        ⏱ Condições atuais por tempo limitado: <span id="priceCountdown">13min 13s</span>
+        <small>Comece validando no TRX Grátis e evolua de plano quando fizer sentido para você.</small>
       </div>
 <div class="disclaimer">
-        ⚠ AVISO IMPORTANTE: Trading envolve riscos. Resultados passados não garantem resultados futuros.
-        Esta página não oferece aconselhamento financeiro.
+        Resultados passados não garantem resultados futuros. Operar envolve risco.
+        Conteúdo com finalidade educacional, sem recomendação individual de investimento.
+      </div>
+    </div>
+  </section>
+
+  <section class="faq reveal-up" id="faq">
+    <div class="container">
+      <div class="faq-shell">
+        <h2 class="faq-title">FAQ R&aacute;pida</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>O TRX garante lucro?</summary>
+            <p>N&atilde;o. Nenhuma estrat&eacute;gia garante lucro. O TRX trabalha com regras objetivas de risco (stop/gain/trava no 0x0), mas operar mercado envolve risco.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Como eu confirmo que funciona?</summary>
+            <p>Voc&ecirc; valida no TRX Gr&aacute;tis: curva anual, relat&oacute;rios m&ecirc;s a m&ecirc;s e replay para conferir as opera&ccedil;&otilde;es conforme o backtest.</p>
+          </details>
+          <details class="faq-item">
+            <summary>O que significa trava no 0x0?</summary>
+            <p>Quando a opera&ccedil;&atilde;o fica +190 pontos a favor e o candle fecha confirmando, o sistema protege a posi&ccedil;&atilde;o no zero a zero (break-even).</p>
+          </details>
+          <details class="faq-item">
+            <summary>Qual plano escolher?</summary>
+            <p>Escolha pelo n&uacute;mero de contratos. Se quiser uma recomenda&ccedil;&atilde;o autom&aacute;tica, acesse o quiz em <a href="/quiz">/quiz</a>.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Posso trocar de plano depois?</summary>
+            <p>Sim, voc&ecirc; pode evoluir conforme sua necessidade e conforme a pol&iacute;tica comercial vigente do projeto.</p>
+          </details>
+        </div>
       </div>
     </div>
   </section>
@@ -1876,7 +2183,7 @@
     setInterval(() => {
       seconds = Math.max(0, seconds - 1);
       const f = fmt(seconds);
-      if (topEl) topEl.textContent = `${f.txt} para o preço subir`;
+      if (topEl) topEl.textContent = `${f.txt} para atualização de condição comercial`;
       if (barEl) barEl.textContent = `${f.m}min ${String(f.ss).padStart(2,'0')}s`;
     }, 1000);
 
