@@ -1066,6 +1066,47 @@ def _cspr_headers():
         "connect-src 'self' https: wss:",
     ])
 
+
+THEME_HEAD_INJECTION = (
+    '\n<link rel="stylesheet" href="/assets/theme-toggle.css?v=20260216">'
+    '\n<script>(function(){try{var t=localStorage.getItem("trx_theme");'
+    'if(t!=="light"&&t!=="dark"){t=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";}'
+    'document.documentElement.setAttribute("data-theme",t);'
+    'document.documentElement.style.colorScheme=t;'
+    '}catch(_){document.documentElement.setAttribute("data-theme","dark");document.documentElement.style.colorScheme="dark";}})();</script>\n'
+)
+
+THEME_BODY_INJECTION = '\n<script src="/assets/theme-toggle.js?v=20260216"></script>\n'
+
+
+def _injetar_theme_global(response):
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" not in content_type or response.direct_passthrough:
+        return response
+
+    html = response.get_data(as_text=True)
+    if not html:
+        return response
+
+    inicio = html.lstrip()[:200].lower()
+    if not (inicio.startswith("<!doctype html") or inicio.startswith("<html")):
+        return response
+
+    alterado = False
+    if "/assets/theme-toggle.css" not in html and "</head>" in html:
+        html = html.replace("</head>", f"{THEME_HEAD_INJECTION}</head>", 1)
+        alterado = True
+
+    if "/assets/theme-toggle.js" not in html and "</body>" in html:
+        html = html.replace("</body>", f"{THEME_BODY_INJECTION}</body>", 1)
+        alterado = True
+
+    if alterado:
+        response.set_data(html)
+        response.headers.pop("Content-Length", None)
+
+    return response
+
 def formatar_telefone_infinitepay(telefone):
     numeros = re.sub(r"\D", "", telefone)
 
@@ -2022,6 +2063,11 @@ def aplicar_headers_seguranca(response):
             secure=SESSION_COOKIE_SECURE,
             samesite=_remember_cookie_samesite()
         )
+
+    try:
+        response = _injetar_theme_global(response)
+    except Exception:
+        pass
 
     return response
 
