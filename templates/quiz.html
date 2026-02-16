@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz TRX | Plano Ideal</title>
+  <title>Diagnóstico de Perfil TRX | Plano Ideal</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
   <link rel="icon" href="/assets/favicon-32.png?v=2" type="image/png" sizes="32x32" />
   <link rel="apple-touch-icon" href="/assets/favicon-32.png?v=2" />
@@ -283,6 +283,19 @@
       box-shadow: 0 14px 38px rgba(0,0,0,.28);
       background: rgba(0,0,0,.18);
     }
+    .result-plan-box.clickable{
+      cursor:pointer;
+      transition: transform .14s ease, filter .14s ease, border-color .14s ease;
+    }
+    .result-plan-box.clickable:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      border-color: rgba(255,255,255,.34);
+    }
+    .result-plan-box.clickable:focus-visible{
+      outline: 2px solid rgba(255,255,255,.65);
+      outline-offset: 2px;
+    }
     .result-plan-box .result-contracts{
       margin:10px 0 0;
       color:rgba(233,241,251,.88);
@@ -464,13 +477,13 @@
       <a class="back-link" href="/">← Voltar para os planos</a>
       <div class="brand">
         <img src="/assets/logo2.png" alt="TRX" />
-        <span>TRX PRO | Quiz de recomendacao</span>
+        <span>TRX PRO | Diagnostico de Perfil TRX</span>
       </div>
     </div>
 
     <section class="quiz-card">
-      <p class="quiz-eyebrow">TRX QUIZ</p>
-      <h1 class="quiz-title">Descubra automaticamente o plano TRX ideal para voce</h1>
+      <p class="quiz-eyebrow">DIAGNOSTICO TRX</p>
+      <h1 class="quiz-title">Diagnóstico de Perfil TRX (1 min): descubra automaticamente seu plano ideal</h1>
       <p class="quiz-sub">Fluxo rapido de 6 perguntas com recomendacao objetiva no final.</p>
 
       <div class="progress-wrap">
@@ -878,7 +891,7 @@
       card.className = "result-card";
       card.innerHTML = `
         <p class="result-label">Plano recomendado</p>
-        <div class="result-plan-box ${plan.theme || ""}">
+        <div class="result-plan-box clickable ${plan.theme || ""}" id="recommendedPlanBox" role="button" tabindex="0" aria-label="Ir para checkout do plano ${plan.name}">
           <h2 class="result-plan">${plan.name}</h2>
           <p class="result-contracts">${plan.contracts}</p>
           <p class="result-price">${plan.price || ""}</p>
@@ -913,13 +926,28 @@
       const footer = document.createElement("div");
       footer.className = "result-footer";
       footer.innerHTML = `
-        <button class="ghost-btn" type="button" id="restartQuizBtn">Refazer quiz</button>
+        <button class="ghost-btn" type="button" id="restartQuizBtn">Refazer diagnostico</button>
         <a class="result-link" href="/">Voltar para os planos</a>
       `;
       wrap.appendChild(footer);
 
       quizScreen.innerHTML = "";
       quizScreen.appendChild(wrap);
+
+      const recommendedPlanBox = document.getElementById("recommendedPlanBox");
+      if (recommendedPlanBox) {
+        const goCheckoutFromCard = () => {
+          window.location.href = plan.checkout;
+        };
+
+        recommendedPlanBox.addEventListener("click", goCheckoutFromCard);
+        recommendedPlanBox.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            goCheckoutFromCard();
+          }
+        });
+      }
 
       const freeFirstResultBtn = document.getElementById("freeFirstResultBtn");
       if (freeFirstResultBtn) {

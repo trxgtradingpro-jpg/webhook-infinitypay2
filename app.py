@@ -673,10 +673,15 @@ def home():
     return render_template("index.html")
 
 
-@app.route("/quiz")
-def quiz():
+@app.route("/diagnostico-de-perfil-trx")
+def diagnostico_perfil_trx():
     obter_quiz_user_key()
     return render_template("quiz.html")
+
+
+@app.route("/quiz")
+def quiz():
+    return redirect("/diagnostico-de-perfil-trx", code=302)
 
 
 @app.route("/termos")
