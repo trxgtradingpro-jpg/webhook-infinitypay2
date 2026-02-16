@@ -2214,9 +2214,14 @@
       }
 
       if (track){
-        track.querySelectorAll(".report-image img").forEach((imgEl) => {
-          bindZoomTarget(imgEl);
-        });
+        if (track.dataset.zoomDelegated !== "1"){
+          track.addEventListener("click", (event) => {
+            const zoomTarget = event.target.closest(".report-image img");
+            if (!zoomTarget || !track.contains(zoomTarget)) return;
+            openModal(zoomTarget);
+          });
+          track.dataset.zoomDelegated = "1";
+        }
       }
 
       bindZoomTarget(document.getElementById("capitalCurveImg"));
