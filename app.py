@@ -134,22 +134,36 @@ app.config.update(
 # WHATSAPP FOLLOW-UP (PLANO GRÃƒÂTIS)
 # ======================================================
 
-WHATSAPP_MENSAGEM = os.environ.get(
+def corrigir_texto_quebrado(texto):
+    valor = (texto or "").strip()
+    if not valor:
+        return ""
+    for _ in range(3):
+        if "Ã" not in valor and "Â" not in valor and "â" not in valor:
+            break
+        try:
+            valor = valor.encode("latin1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+    return valor
+
+
+WHATSAPP_MENSAGEM = corrigir_texto_quebrado(os.environ.get(
     "WHATSAPP_MENSAGEM",
     (
-        "OlÃƒÂ¡ {nome}\n\n"
-        "Seu {plano} foi liberado com sucesso Ã¢Å“â€¦\n\n"
+        "Ola {nome}\n\n"
+        "Seu {plano} foi liberado com sucesso.\n\n"
         "Quero confirmar se conseguiu instalar corretamente.\n"
-        "Caso tenha qualquer dÃƒÂºvida ou dificuldade, ÃƒÂ© sÃƒÂ³ me chamar que te dou suporte imediato Ã°Å¸Â¤Â\n\n"
-        "Lembre-se de entrar na nossa comunidade para receber atualizaÃƒÂ§ÃƒÂµes do nosso robÃƒÂ´:\n"
+        "Se tiver qualquer duvida ou dificuldade, me chame e eu te dou suporte imediato.\n\n"
+        "Lembre-se de entrar na nossa comunidade para receber atualizacoes do robo:\n"
         "https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE\n\n"
-        "Estou ÃƒÂ  disposiÃƒÂ§ÃƒÂ£o."
+        "Estou a disposicao."
     )
-)
-WHATSAPP_TEMPLATE = os.environ.get(
+))
+WHATSAPP_TEMPLATE = corrigir_texto_quebrado(os.environ.get(
     "WHATSAPP_TEMPLATE",
-    "Ã¢Å“â€¦ {nome}, seu pagamento do {plano} foi confirmado. Qualquer dÃƒÂºvida pode me chamar!"
-)
+    "{nome}, seu pagamento do {plano} foi confirmado. Qualquer duvida pode me chamar!"
+))
 WA_SENDER_URL = os.environ.get("WA_SENDER_URL", "").strip()
 WA_SENDER_TOKEN = os.environ.get("WA_SENDER_TOKEN", "").strip()
 WHATSAPP_DELAY_MINUTES = int(os.environ.get("WHATSAPP_DELAY_MINUTES", "5"))
