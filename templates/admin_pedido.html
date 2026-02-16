@@ -1,59 +1,118 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Pedido {{ pedido.order_id }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f8;margin:0;padding:clamp(12px,3vw,30px)}
-        .box{background:#fff;padding:25px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.06);max-width:780px}
-        h2{margin-top:0}
-        ul{list-style:none;padding:0;margin:0}
-        li{margin-bottom:10px;font-size:15px;word-break:break-word}
-        strong{display:inline-block;min-width:170px}
-        .muted{color:#64748b}
-        .erro{margin-top:20px;padding:15px;background:#fff4f4;border-radius:8px;color:#c0392b}
-        a{display:inline-block;margin-top:20px;color:#3498db;text-decoration:none;font-weight:500}
-        @media (max-width: 720px){
-            .box{padding:16px}
-            strong{min-width:115px}
-            li{font-size:14px}
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Pedido {{ pedido.order_id[:8] }} • Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/admin-theme.css?v=20260216">
 </head>
 <body>
-
-    <div class="box">
-        <h2>📦 Pedido</h2>
-
-        <ul>
-            <li><strong>ID:</strong> {{ pedido.order_id }}</li>
-            <li><strong>Nome:</strong> {{ pedido.nome_masked }}</li>
-            <li><strong>E-mail:</strong> {{ pedido.email_masked }}</li>
-            <li><strong>Telefone:</strong> {{ pedido.telefone_masked }}</li>
-            <li><strong>Plano base:</strong> {{ pedido.plano }}</li>
-            <li><strong>Checkout ref:</strong> {{ pedido.checkout_slug or pedido.plano }}</li>
-            <li><strong>Status:</strong> {{ pedido.status }}</li>
-            <li><strong>Criado em:</strong> {{ pedido.created_at.strftime("%d/%m/%Y %H:%M") if pedido.created_at else '-' }}</li>
-            <li><strong>Afiliado (slug):</strong> {{ pedido.affiliate_slug or '-' }}</li>
-            <li><strong>Afiliado (nome):</strong> {{ pedido.affiliate_nome or '-' }}</li>
-            <li><strong>Afiliado (e-mail):</strong> {{ pedido.affiliate_email_masked or '-' }}</li>
-            <li><strong>Afiliado (telefone):</strong> {{ pedido.affiliate_telefone_masked or '-' }}</li>
-        </ul>
-
-        {% if pedido.affiliate_slug %}
-            <p class="muted">Origem registrada via afiliado no momento da compra.</p>
+  <main class="admin-shell order-shell">
+    <header class="panel order-hero">
+      <h1 class="order-title">
+        <span class="dot" aria-hidden="true"></span>
+        Pedido
+      </h1>
+      <p class="order-meta">Visualizacao detalhada da compra, origem e status de processamento.</p>
+      <div class="actions" style="margin-top:10px;">
+        {% if pedido.status == 'PAGO' %}
+          <span class="order-status paid">Pago</span>
+        {% else %}
+          <span class="order-status pending">Pendente</span>
         {% endif %}
 
-        {% if pedido.ultimo_erro %}
-        <div class="erro">
-            <strong>Último erro de envio:</strong><br>
-            {{ pedido.ultimo_erro }}
+        {% if pedido.plano == 'trx-bronze' %}
+          <span class="plan bronze">TRX BRONZE</span>
+        {% elif pedido.plano == 'trx-prata' %}
+          <span class="plan prata">TRX PRATA</span>
+        {% elif pedido.plano == 'trx-gold' %}
+          <span class="plan gold">TRX GOLD</span>
+        {% elif pedido.plano == 'trx-black' %}
+          <span class="plan black">TRX BLACK</span>
+        {% elif pedido.plano == 'trx-gratis' %}
+          <span class="plan gratis">TRX GRATIS</span>
+        {% elif pedido.plano == 'trx-teste' %}
+          <span class="plan teste">TRX TESTE</span>
+        {% else %}
+          <span class="pill">{{ pedido.plano }}</span>
+        {% endif %}
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="order-grid">
+        <article class="order-item full">
+          <label>ID do pedido</label>
+          <div class="value mono">{{ pedido.order_id }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Nome</label>
+          <div class="value">{{ pedido.nome_masked }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>E-mail</label>
+          <div class="value">{{ pedido.email_masked }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Telefone</label>
+          <div class="value">{{ pedido.telefone_masked }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Criado em</label>
+          <div class="value">{{ pedido.created_at.strftime("%d/%m/%Y %H:%M") if pedido.created_at else '-' }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Plano base</label>
+          <div class="value mono">{{ pedido.plano }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Checkout ref</label>
+          <div class="value mono">{{ pedido.checkout_slug or pedido.plano }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Afiliado (slug)</label>
+          <div class="value">{{ pedido.affiliate_slug or '-' }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Afiliado (nome)</label>
+          <div class="value">{{ pedido.affiliate_nome or '-' }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Afiliado (e-mail)</label>
+          <div class="value">{{ pedido.affiliate_email_masked or '-' }}</div>
+        </article>
+
+        <article class="order-item">
+          <label>Afiliado (telefone)</label>
+          <div class="value">{{ pedido.affiliate_telefone_masked or '-' }}</div>
+        </article>
+      </div>
+
+      {% if pedido.affiliate_slug %}
+        <p class="panel-subtitle">Origem registrada via afiliado no momento da compra.</p>
+      {% endif %}
+
+      {% if pedido.ultimo_erro %}
+        <div class="order-alert">
+          <strong>Ultimo erro de envio:</strong>
+          {{ pedido.ultimo_erro }}
         </div>
-        {% endif %}
+      {% endif %}
 
-        <a href="/admin/dashboard">← Voltar ao dashboard</a>
-    </div>
-
+      <a class="back-link" href="/admin/dashboard">← Voltar ao dashboard</a>
+    </section>
+  </main>
 </body>
 </html>

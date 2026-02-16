@@ -1,229 +1,190 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Resumo • Admin</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg:#050816; --panel:#0b132b; --border:#1d2a52; --txt:#e5ecff; --muted:#94a3b8; --cyan:#38bdf8; --green:#22c55e; --amber:#f59e0b; --red:#f87171; }
-        *{box-sizing:border-box}
-        body{margin:0;font-family:'Inter',sans-serif;color:var(--txt);background:radial-gradient(circle at 10% 10%,#12244f 0%,transparent 40%),radial-gradient(circle at 90% 0%,#1f1155 0%,transparent 35%),var(--bg);padding:clamp(12px,2.5vw,24px)}
-        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
-        .title{font-size:28px;font-weight:800}
-        .menu{display:flex;gap:10px;flex-wrap:wrap}
-        .menu a,.menu button{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s;cursor:pointer;font:inherit}
-        .menu a.active,.menu a:hover,.menu button:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
-        .menu form{margin:0}
-        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
-        .card{background:linear-gradient(180deg,rgba(15,24,52,.95),rgba(10,16,35,.95));border:1px solid var(--border);border-radius:14px;padding:16px}
-        .card .label{color:var(--muted);font-size:12px}
-        .card .value{font-size:24px;font-weight:800;margin-top:4px}
-        .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-        .filters input,.filters select{background:#08112a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px}
-        .filters input[type="text"]{flex:1 1 360px;min-width:240px}
-        .filters button,.filters a{background:#0a1734;border:1px solid var(--border);color:var(--cyan);border-radius:10px;padding:10px 14px;text-decoration:none}
-        .table-wrap{width:100%;overflow:auto;border:1px solid var(--border);border-radius:14px;background:rgba(10,18,40,.92)}
-        table{width:max-content;min-width:100%;border-collapse:collapse;background:transparent}
-        th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left;font-size:13px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
-        th{background:#071126;color:var(--muted);position:sticky;top:0;z-index:1}
-        tr:hover{background:rgba(56,189,248,.06)}
-        .plan{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;transition:all .2s ease}
-        .bronze{color:#f59e0b;background:rgba(245,158,11,.12)}
-        .prata{color:#cbd5e1;background:rgba(148,163,184,.14)}
-        .gold{color:#facc15;background:rgba(250,204,21,.12)}
-        .black{color:#e2e8f0;background:rgba(30,41,59,.75)}
-        .gratis{color:#38bdf8;background:rgba(56,189,248,.12)}
-        .teste{color:#a78bfa;background:rgba(167,139,250,.12)}
-        .plan.bronze:hover{background:rgba(245,158,11,.28);box-shadow:0 0 14px rgba(245,158,11,.35)}
-        .plan.prata:hover{background:rgba(203,213,225,.25);box-shadow:0 0 14px rgba(203,213,225,.35)}
-        .plan.gold:hover{background:rgba(250,204,21,.28);box-shadow:0 0 14px rgba(250,204,21,.35)}
-        .plan.black:hover{background:rgba(71,85,105,.5);box-shadow:0 0 14px rgba(100,116,139,.35)}
-        .ok{color:var(--green);font-weight:700}
-        .okfree{color:var(--cyan);font-weight:700}
-        .pend{color:var(--amber);font-weight:700}
-        .alert{color:var(--amber);font-weight:700}
-        .expired{color:var(--red);font-weight:700}
-        .muted{color:var(--muted)}
-        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-        .no-wrap{white-space:nowrap;overflow-wrap:normal;word-break:normal}
-        .actions-cell{min-width:240px}
-        .aff-name{font-weight:700}
-        .actions-inline{display:inline}
-        .btn-link{background:none;border:none;color:#f59e0b;cursor:pointer;padding:0}
-        .btn-link-danger{background:none;border:none;color:#f87171;cursor:pointer;padding:0}
-        a{color:var(--cyan);text-decoration:none}
-        @media (max-width: 900px){
-            .title{font-size:22px}
-            .topbar{align-items:flex-start}
-            th,td{font-size:12px;padding:10px}
-            .actions-cell{min-width:210px}
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Resumo • Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/admin-theme.css?v=20260216">
 </head>
 <body>
+  <main class="admin-shell">
     <div class="topbar">
-        <div class="title">✨ Painel Admin — Resumo</div>
-        <nav class="menu">
-            <a class="active" href="/admin/dashboard">Resumo</a>
-            <a href="/admin/relatorios">Relatórios</a>
-            <a href="/dashboard">Gráficos</a>
-            <a href="/admin/analytics">Analytics</a>
-            <a href="/admin/afiliados">Afiliados</a>
-            <button type="button" id="backupNowBtn">Backup agora</button>
-            <form method="POST" action="/admin/logout">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit">Sair</button>
-            </form>
-        </nav>
+      <div>
+        <div class="title">Painel Admin | Resumo</div>
+        <p class="title-sub">Visao geral de pedidos, status e operacao comercial.</p>
+      </div>
+      <nav class="menu">
+        <a class="active" href="/admin/dashboard">Resumo</a>
+        <a href="/admin/relatorios">Relatorios</a>
+        <a href="/dashboard">Graficos</a>
+        <a href="/admin/analytics">Analytics</a>
+        <a href="/admin/afiliados">Afiliados</a>
+        <button type="button" id="backupNowBtn">Backup agora</button>
+        <form method="POST" action="/admin/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="danger" type="submit">Sair</button>
+        </form>
+      </nav>
     </div>
 
     <div class="stats">
-        <div class="card"><div class="label">Total pedidos</div><div class="value">{{ stats.total_pedidos }}</div></div>
-        <div class="card"><div class="label">Processados (pagos reais)</div><div class="value">{{ stats.processados }}</div></div>
-        <div class="card"><div class="label">Pendentes</div><div class="value">{{ stats.pendentes }}</div></div>
-        <div class="card"><div class="label">Total pagos</div><div class="value">{{ stats.pagos }}</div></div>
-        <div class="card"><div class="label">Total grátis</div><div class="value">{{ stats.total_gratis }}</div></div>
-        <div class="card"><div class="label">Faturamento total</div><div class="value">{{ stats.total_faturado }}</div></div>
-        <div class="card"><div class="label">Online agora</div><div class="value" id="online-count">{{ stats.online }}</div></div>
+      <div class="card"><div class="label">Total pedidos</div><div class="value">{{ stats.total_pedidos }}</div></div>
+      <div class="card"><div class="label">Processados (pagos reais)</div><div class="value">{{ stats.processados }}</div></div>
+      <div class="card"><div class="label">Pendentes</div><div class="value">{{ stats.pendentes }}</div></div>
+      <div class="card"><div class="label">Total pagos</div><div class="value">{{ stats.pagos }}</div></div>
+      <div class="card"><div class="label">Total gratis</div><div class="value">{{ stats.total_gratis }}</div></div>
+      <div class="card"><div class="label">Faturamento total</div><div class="value">{{ stats.total_faturado }}</div></div>
+      <div class="card"><div class="label">Online agora</div><div class="value" id="online-count">{{ stats.online }}</div></div>
     </div>
 
-    <form class="filters" method="GET" action="/admin/dashboard">
-        <input type="text" name="q" value="{{ busca or '' }}" placeholder="Buscar por nome, email, telefone, plano, afiliado, checkout...">
-        <select name="plano">
+    <section class="panel">
+      <form class="filters" method="GET" action="/admin/dashboard">
+        <div>
+          <label for="filtro-busca">Busca geral</label>
+          <input id="filtro-busca" type="text" name="q" value="{{ busca or '' }}" placeholder="Buscar por nome, email, telefone, plano, afiliado, checkout...">
+        </div>
+        <div>
+          <label for="filtro-plano">Filtro de plano</label>
+          <select id="filtro-plano" name="plano">
             <option value="todos" {% if filtro_plano == 'todos' %}selected{% endif %}>Todos</option>
             <option value="pagos" {% if filtro_plano == 'pagos' %}selected{% endif %}>Somente pagos</option>
-            <option value="gratis" {% if filtro_plano == 'gratis' %}selected{% endif %}>Somente grátis</option>
+            <option value="gratis" {% if filtro_plano == 'gratis' %}selected{% endif %}>Somente gratis</option>
             <option value="pendentes" {% if filtro_plano == 'pendentes' %}selected{% endif %}>Somente pendentes</option>
             {% for plano in planos %}
-                <option value="{{ plano }}" {% if filtro_plano == plano %}selected{% endif %}>{{ plano }}</option>
+              <option value="{{ plano }}" {% if filtro_plano == plano %}selected{% endif %}>{{ plano }}</option>
             {% endfor %}
-        </select>
-        <button type="submit">Filtrar</button>
-        {% if busca or filtro_plano != 'todos' %}<a href="/admin/dashboard">Limpar</a>{% endif %}
-    </form>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="submit">Filtrar</button>
+          {% if busca or filtro_plano != 'todos' %}<a class="btn-chip" href="/admin/dashboard">Limpar</a>{% endif %}
+        </div>
+      </form>
+    </section>
 
     <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Pedido</th>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Telefone</th>
-                    <th>Plano</th>
-                    <th>Afiliado</th>
-                    <th>Checkout ref</th>
-                    <th>Status</th>
-                    <th>Data</th>
-                    <th>Dias p/30</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in pedidos %}
-                <tr>
-                    <td><span class="mono no-wrap">{{ p.order_id[:8] }}...</span></td>
-                    <td>{{ p.nome_masked or '-' }}</td>
-                    <td>{{ p.email_masked or '-' }}</td>
-                    <td>{{ p.telefone_masked or '-' }}</td>
-                    <td>
-                        {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
-                        {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
-                        {% elif p.plano == 'trx-gold' %}<span class="plan gold">TRX GOLD</span>
-                        {% elif p.plano == 'trx-black' %}<span class="plan black">TRX BLACK</span>
-                        {% elif p.plano == 'trx-gratis' %}<span class="plan gratis">TRX GRÁTIS</span>
-                        {% elif p.plano == 'trx-teste' %}<span class="plan teste">TRX TESTE</span>
-                        {% else %}<span class="plan">{{ p.plano }}</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if p.affiliate_slug %}
-                            <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
-                            <div class="muted mono">/{{ p.affiliate_slug }}</div>
-                            {% if p.affiliate_email_masked %}<div class="muted">{{ p.affiliate_email_masked }}</div>{% endif %}
-                        {% else %}
-                            <span class="muted">Direto</span>
-                        {% endif %}
-                    </td>
-                    <td><span class="mono">{{ p.checkout_slug or p.plano }}</span></td>
-                    <td>
-                        {% if p.status == 'PAGO' and p.plano == 'trx-gratis' %}
-                            <span class="okfree">✔ Pago (grátis)</span>
-                        {% elif p.status == 'PAGO' %}
-                            <span class="ok">✔ Pago</span>
-                        {% else %}
-                            <span class="pend">⏳ Pendente</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ p.created_at_local }}</td>
-                    <td>
-                        {% if p.dias_restantes_30 is none %}
-                            -
-                        {% elif p.dias_restantes_30 <= 0 %}
-                            <span class="expired">encerrado</span>
-                        {% elif p.dias_restantes_30 in [5,3] %}
-                            <span class="alert">⚠ faltam {{ p.dias_restantes_30 }} dias</span>
-                        {% else %}
-                            {{ p.dias_restantes_30 }} dias
-                        {% endif %}
-                    </td>
-                    <td class="actions-cell">
-                        <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
-                        {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
-                        {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}
-                        {% if p.tem_duplicados %}
-                            <br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>
-                            <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" class="actions-inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                <input type="hidden" name="nome" value="{{ p.nome or '' }}">
-                                <input type="hidden" name="email" value="{{ p.email or '' }}">
-                                <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
-                                <button type="submit" class="btn-link">Excluir duplicados</button>
-                            </form>
-                        {% endif %}
-                        | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-link-danger">Excluir</button></form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      <table>
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Plano</th>
+            <th>Afiliado</th>
+            <th>Checkout ref</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Dias p/30</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+            <tr>
+              <td><span class="mono no-wrap">{{ p.order_id[:8] }}...</span></td>
+              <td>{{ p.nome_masked or '-' }}</td>
+              <td>{{ p.email_masked or '-' }}</td>
+              <td>{{ p.telefone_masked or '-' }}</td>
+              <td>
+                {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
+                {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
+                {% elif p.plano == 'trx-gold' %}<span class="plan gold">TRX GOLD</span>
+                {% elif p.plano == 'trx-black' %}<span class="plan black">TRX BLACK</span>
+                {% elif p.plano == 'trx-gratis' %}<span class="plan gratis">TRX GRATIS</span>
+                {% elif p.plano == 'trx-teste' %}<span class="plan teste">TRX TESTE</span>
+                {% else %}<span class="plan">{{ p.plano }}</span>{% endif %}
+              </td>
+              <td>
+                {% if p.affiliate_slug %}
+                  <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
+                  <div class="muted mono">/{{ p.affiliate_slug }}</div>
+                  {% if p.affiliate_email_masked %}<div class="muted">{{ p.affiliate_email_masked }}</div>{% endif %}
+                {% else %}
+                  <span class="muted">Direto</span>
+                {% endif %}
+              </td>
+              <td><span class="mono">{{ p.checkout_slug or p.plano }}</span></td>
+              <td>
+                {% if p.status == 'PAGO' and p.plano == 'trx-gratis' %}
+                  <span class="okfree">Pago (gratis)</span>
+                {% elif p.status == 'PAGO' %}
+                  <span class="ok">Pago</span>
+                {% else %}
+                  <span class="pend">Pendente</span>
+                {% endif %}
+              </td>
+              <td>{{ p.created_at_local }}</td>
+              <td>
+                {% if p.dias_restantes_30 is none %}
+                  -
+                {% elif p.dias_restantes_30 <= 0 %}
+                  <span class="expired">encerrado</span>
+                {% elif p.dias_restantes_30 in [5,3] %}
+                  <span class="alert">faltam {{ p.dias_restantes_30 }} dias</span>
+                {% else %}
+                  {{ p.dias_restantes_30 }} dias
+                {% endif %}
+              </td>
+              <td class="actions-cell">
+                <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
+                {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
+                {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}
+                {% if p.tem_duplicados %}
+                  <br><span class="alert">{{ p.duplicados_total }} duplicado(s)</span>
+                  <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" class="actions-inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="nome" value="{{ p.nome or '' }}">
+                    <input type="hidden" name="email" value="{{ p.email or '' }}">
+                    <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
+                    <button type="submit" class="btn-link">Excluir duplicados</button>
+                  </form>
+                {% endif %}
+                | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-link-danger">Excluir</button></form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </main>
 
-    <script>
-        async function atualizarOnline() {
-            try {
-                const r = await fetch('/admin/online-count');
-                if (!r.ok) return;
-                const d = await r.json();
-                const el = document.getElementById('online-count');
-                if (el) el.textContent = d.online;
-            } catch (e) {}
-        }
-        atualizarOnline();
-        setInterval(atualizarOnline, 10000);
+  <script>
+    async function atualizarOnline() {
+      try {
+        const r = await fetch('/admin/online-count');
+        if (!r.ok) return;
+        const d = await r.json();
+        const el = document.getElementById('online-count');
+        if (el) el.textContent = d.online;
+      } catch (e) {}
+    }
+    atualizarOnline();
+    setInterval(atualizarOnline, 10000);
 
-        const backupBtn = document.getElementById('backupNowBtn');
-        if (backupBtn) {
-            backupBtn.addEventListener('click', async () => {
-                backupBtn.disabled = true;
-                backupBtn.textContent = 'Gerando backup...';
-                try {
-                    const r = await fetch('/admin/backup/agora', {
-                        method: 'POST',
-                        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
-                    });
-                    const d = await r.json();
-                    alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
-                } catch (e) {
-                    alert('Falha ao acionar backup.');
-                } finally {
-                    backupBtn.disabled = false;
-                    backupBtn.textContent = 'Backup agora';
-                }
-            });
+    const backupBtn = document.getElementById('backupNowBtn');
+    if (backupBtn) {
+      backupBtn.addEventListener('click', async () => {
+        backupBtn.disabled = true;
+        backupBtn.textContent = 'Gerando backup...';
+        try {
+          const r = await fetch('/admin/backup/agora', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+          });
+          const d = await r.json();
+          alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+        } catch (e) {
+          alert('Falha ao acionar backup.');
+        } finally {
+          backupBtn.disabled = false;
+          backupBtn.textContent = 'Backup agora';
         }
-    </script>
+      });
+    }
+  </script>
 </body>
 </html>
