@@ -1,6 +1,6 @@
 from flask import (
     Flask, request, jsonify, render_template,
-    redirect, session
+    redirect, session, send_from_directory
 )
 import os
 import json
@@ -550,6 +550,11 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
 # ======================================================
 # ROTAS PÚBLICAS
 # ======================================================
+
+@app.route("/assets/<path:filename>")
+def serve_assets(filename):
+    return send_from_directory("assets", filename)
+
 
 @app.route("/")
 def home():
