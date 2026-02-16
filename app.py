@@ -556,6 +556,11 @@ def serve_assets(filename):
     return send_from_directory("assets", filename)
 
 
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory("assets", "favicon-32.ico")
+
+
 @app.route("/")
 def home():
     return render_template("index.html")

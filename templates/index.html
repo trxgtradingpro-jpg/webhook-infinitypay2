@@ -4,10 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TRX PRO — Página Oficial</title>
-  <link rel="icon" href="assets/favicon-32.ico" sizes="any">
-  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
-  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="192x192">
-  <link rel="apple-touch-icon" href="assets/favicon-32.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <link rel="icon" href="/assets/favicon-32.png?v=2" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/assets/favicon-32.png?v=2">
 
   <meta name="description" content="TRX PRO — Robô 100% automático para Mini Índice.">
 
@@ -75,61 +74,6 @@
 
     .container{width:min(1120px, 92vw); margin:0 auto;}
     .sp{height:18px}
-
-    /* Barra superior com logo2 */
-    .topbar{
-      position:sticky;
-      top:0;
-      z-index:50;
-      backdrop-filter: blur(14px);
-      background: rgba(5,7,10,.55);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .topbar .inner{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding: 10px 0;
-      gap: 12px;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      min-width: 170px;
-    }
-    .brand img{
-      height: 26px;
-      width:auto;
-      display:block;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.45));
-      opacity:.98;
-    }
-    .mini-pill{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(25,227,154,.28);
-      background: rgba(25,227,154,.08);
-      color: rgba(25,227,154,1);
-      font-weight: 900;
-      font-size: 13px;
-      box-shadow: 0 18px 55px rgba(25,227,154,.08);
-      white-space:nowrap;
-    }
-    .mini-pill .dot{
-      width:9px;height:9px;border-radius:999px;background:rgba(25,227,154,1);
-      box-shadow: 0 0 16px rgba(25,227,154,.55);
-    }
-    .topbar-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
 
     /* Pílula topo (timer) */
     .top-pill{
@@ -828,35 +772,6 @@
   <div class="grid-bg"></div>
   <div class="vignette"></div>
 
-  <!-- TOPBAR com logo2 + CTA -->
-  <div class="topbar">
-    <div class="container">
-      <div class="inner">
-        <div class="brand">
-          <img
-  src="assets/logo2.png"
-  alt="TRX PRO"
-  onerror="
-    if (!this.dataset.fallback1) { this.dataset.fallback1='1'; this.src='./logo2.png'; return; }
-    this.style.display='none';
-    this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;font-weight:1000;letter-spacing:.6px;color:rgba(255,255,255,.9)&quot;>TRX PRO</span>');
-  "
->
-
-        </div>
-
-        <div class="topbar-actions">
-          <div class="mini-pill">
-            <span class="dot"></span>
-            <span id="miniRobots">375 robôs operando</span>
-          </div>
-          <a class="btn ghost" href="#bonus">Bônus</a>
-          <a class="btn green" href="#planos">Ativar agora</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="container">
     <div class="top-pill">
       <span class="dot"></span>
@@ -1192,14 +1107,12 @@
 
     // "Robôs operando agora"
     const liveEl = document.getElementById("liveRobots");
-    const miniEl = document.getElementById("miniRobots");
     let base = 375;
 
     setInterval(() => {
       const delta = Math.floor(Math.random() * 3) - 1;
       base = Math.max(320, Math.min(520, base + delta));
       if (liveEl) liveEl.textContent = `${base} ROBÔS OPERANDO AGORA`;
-      if (miniEl) miniEl.textContent = `${base} robôs operando`;
     }, 2500);
   </script>
   <!-- Botão flutuante WhatsApp -->
@@ -1228,7 +1141,7 @@
     border-radius: 999px;
     display: grid;
     place-items: center;
-    background: linear-gradient(180deg, #25D366, #1aa952);
+    background: linear-gradient(180deg, #25d366, #22c45e);
     box-shadow: 0 18px 60px rgba(0,0,0,.45);
     border: 1px solid rgba(255,255,255,.14);
     z-index: 9999;
@@ -1240,7 +1153,7 @@
   .whatsapp-float svg{
     width: 30px;
     height: 30px;
-    fill: #07140d;
+    fill: #ffffff;
     filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
   }
 </style>
