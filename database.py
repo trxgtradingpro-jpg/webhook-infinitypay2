@@ -1563,8 +1563,8 @@ def listar_pedidos_pagos_por_email(email, limite=20):
         SELECT order_id, plano, nome, email, telefone, status, created_at,
                checkout_slug, affiliate_slug
         FROM orders
-        WHERE LOWER(COALESCE(email, '')) = %s
-          AND status = 'PAGO'
+        WHERE LOWER(BTRIM(COALESCE(email, ''))) = %s
+          AND UPPER(BTRIM(COALESCE(status, ''))) = 'PAGO'
         ORDER BY created_at DESC
         LIMIT %s
     """, (email_norm, int(max(1, limite))))

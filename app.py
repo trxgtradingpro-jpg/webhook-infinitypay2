@@ -119,6 +119,9 @@ try:
 except (TypeError, ValueError):
     CAPITAL_CURVE_BRL_PER_POINT = 0.2
 CAPITAL_CURVE_BRL_PER_POINT = max(0.0, CAPITAL_CURVE_BRL_PER_POINT)
+CLIENT_INSTALL_VIDEO_ID = (os.environ.get("CLIENT_INSTALL_VIDEO_ID") or "19bR-OLADRU").strip()
+if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", CLIENT_INSTALL_VIDEO_ID):
+    CLIENT_INSTALL_VIDEO_ID = "19bR-OLADRU"
 
 # ======================================================
 # INFINITEPAY CONFIG
@@ -2668,6 +2671,7 @@ def cliente_area():
         diagnostico_concluido=diagnostico_concluido,
         client_notifications=client_notifications,
         notification_count=notification_count,
+        install_video_id=CLIENT_INSTALL_VIDEO_ID,
         capital_chart=capital_chart,
         pedidos=pedidos_view,
         ativos=ativos,
