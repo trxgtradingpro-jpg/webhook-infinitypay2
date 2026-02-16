@@ -245,6 +245,34 @@
       line-height:1.4;
       font-weight:700;
     }
+    .chart-window-controls{
+      margin-top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .chart-mode-btn{
+      border:1px solid var(--line2);
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      color:#e9f3ff;
+      padding:7px 11px;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.2px;
+      cursor:pointer;
+      transition:.16s transform, .16s filter, .16s border-color;
+    }
+    .chart-mode-btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.06);
+      border-color:rgba(74,163,255,.62);
+    }
+    .chart-mode-btn.is-active{
+      border-color:rgba(35,176,11,.58);
+      background:rgba(35,176,11,.18);
+      color:#b9ffd3;
+    }
     .pill{
       border:1px solid var(--line2);
       border-radius:999px;
@@ -474,20 +502,29 @@
       {% if capital_chart and capital_chart.available %}
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
         <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
-        <p class="line"><span>Janela exibida:</span> {{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</p>
+        <p class="line"><span>Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
         <div class="kpi" style="margin-top:8px;">
           <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
           <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
           <span class="pill">Valor atual: R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
         </div>
+        {% if capital_chart.window_modes %}
+        <div class="chart-window-controls">
+          {% for mode_id, mode in capital_chart.window_modes.items() %}
+            <button
+              type="button"
+              class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'back15_forward15') else '' }}"
+              data-chart-mode="{{ mode_id }}"
+            >
+              {{ mode.title }}
+            </button>
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="chart-wrap">
           <canvas id="capitalChart"></canvas>
         </div>
-        <p class="chart-hint">
-          Passe o mouse sobre a linha para ver a data e o valor do dia.
-          Eixo X: janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva.
-          Eixo Y: capital acumulado com margem de R$ 100 acima/abaixo.
-        </p>
+        <p class="chart-hint" id="chartHintText">Passe o mouse sobre a linha para ver a data e o valor do dia.</p>
       {% else %}
         <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
         <p class="empty">CSV esperado: <code>dia,valor</code> (ex.: <code>1,10000</code> ... <code>30,12800</code>).</p>
@@ -583,6 +620,42 @@
           style: "currency",
           currency: "BRL"
         });
+        const windowModes = payload.window_modes || {};
+        const fallbackModeData = {
+          id: "fallback",
+          title: "Janela atual",
+          description: "",
+          window_start_date: payload.window_start_date,
+          window_end_date: payload.window_end_date,
+          labels: payload.labels || [],
+          date_labels: payload.date_labels || [],
+          values: payload.values || [],
+          y_min: payload.y_min,
+          y_max: payload.y_max
+        };
+        const modeIds = Object.keys(windowModes);
+        let activeMode = payload.default_window_mode;
+        if (!activeMode || !windowModes[activeMode]) {
+          activeMode = modeIds.length ? modeIds[0] : "fallback";
+        }
+
+        const modeButtons = Array.from(document.querySelectorAll(".chart-mode-btn[data-chart-mode]"));
+        const windowRangeText = document.getElementById("windowRangeText");
+        const chartHintText = document.getElementById("chartHintText");
+
+        function getModeData(modeId) {
+          return windowModes[modeId] || fallbackModeData;
+        }
+
+        function getHintText(modeData) {
+          if (!modeData) {
+            return "Passe o mouse sobre a linha para ver a data e o valor do dia.";
+          }
+          if (modeData.id === "back30") {
+            return "Janela de 30 dias anteriores. O dia atual fica no fim do grafico.";
+          }
+          return "Janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva.";
+        }
 
         const crosshairPlugin = {
           id: "crosshairPlugin",
@@ -616,13 +689,13 @@
           }
         };
 
-        new Chart(canvas, {
+        const chart = new Chart(canvas, {
           type: "line",
           data: {
-            labels: payload.labels,
+            labels: getModeData(activeMode).labels || [],
             datasets: [{
               label: "Capital",
-              data: payload.values,
+              data: getModeData(activeMode).values || [],
               borderColor: "#74ffd6",
               backgroundColor: "rgba(57, 201, 145, 0.28)",
               fill: true,
@@ -651,7 +724,10 @@
                   title(items) {
                     if (!items || !items.length) return "";
                     const idx = items[0].dataIndex;
-                    return payload.date_labels[idx] + " (Dia " + payload.labels[idx] + ")";
+                    const modeData = getModeData(activeMode);
+                    const dateLabel = (modeData.date_labels || [])[idx] || "";
+                    const dayLabel = (modeData.labels || [])[idx] || "";
+                    return dateLabel + " (Dia " + dayLabel + ")";
                   },
                   label(context) {
                     return "Capital: " + fmtBRL.format(context.parsed.y || 0);
@@ -675,8 +751,8 @@
                 }
               },
               y: {
-                min: payload.y_min,
-                max: payload.y_max,
+                min: getModeData(activeMode).y_min ?? payload.y_min,
+                max: getModeData(activeMode).y_max ?? payload.y_max,
                 grid: {
                   color: "rgba(120, 142, 184, 0.18)"
                 },
@@ -688,7 +764,7 @@
                 },
                 title: {
                   display: true,
-                  text: "Capital diario (R$)",
+                  text: "Capital acumulado (R$)",
                   color: "#9db0d4"
                 }
               }
@@ -696,6 +772,40 @@
           },
           plugins: [crosshairPlugin]
         });
+
+        function applyMode(modeId) {
+          const modeData = getModeData(modeId);
+          activeMode = modeId;
+
+          chart.data.labels = modeData.labels || [];
+          chart.data.datasets[0].data = modeData.values || [];
+          chart.options.scales.y.min = modeData.y_min ?? payload.y_min;
+          chart.options.scales.y.max = modeData.y_max ?? payload.y_max;
+          chart.update();
+
+          if (windowRangeText) {
+            const startDate = modeData.window_start_date || payload.window_start_date || payload.start_date || "";
+            const endDate = modeData.window_end_date || payload.window_end_date || payload.end_date || "";
+            windowRangeText.textContent = startDate + " ate " + endDate;
+          }
+          if (chartHintText) {
+            chartHintText.textContent = getHintText(modeData);
+          }
+
+          modeButtons.forEach((btn) => {
+            btn.classList.toggle("is-active", (btn.getAttribute("data-chart-mode") || "") === modeId);
+          });
+        }
+
+        modeButtons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const modeId = (btn.getAttribute("data-chart-mode") || "").trim();
+            if (!modeId) return;
+            applyMode(modeId);
+          });
+        });
+
+        applyMode(activeMode);
       })();
     </script>
   {% endif %}

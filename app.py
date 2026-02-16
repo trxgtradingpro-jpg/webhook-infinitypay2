@@ -1595,41 +1595,84 @@ def montar_curva_capital_plano(order):
         valores_acumulados.append(round(saldo, 2))
 
     valor_atual = valores_acumulados[dia_atual_idx - 1]
-    janela_inicio = max(1, dia_atual_idx - 15)
-    janela_fim = min(dias_plano, dia_atual_idx + 15)
-
-    labels = []
-    date_labels = []
-    valores = []
-    valores_visiveis = []
-
-    for dia in range(janela_inicio, janela_fim + 1):
-        data_ref = dia_inicio + timedelta(days=dia - 1)
-        labels.append(str(dia))
-        date_labels.append(data_ref.strftime("%d/%m/%Y"))
-        if dia <= dia_atual_idx:
-            valor_dia = valores_acumulados[dia - 1]
-            valores.append(valor_dia)
-            valores_visiveis.append(valor_dia)
-        else:
-            valores.append(None)
-
-    if not valores_visiveis:
-        return {"available": False, "message": "Nao foi possivel gerar a curva com o CSV informado."}
-
-    minimo = min(valores_visiveis)
-    maximo = max(valores_visiveis)
-    padding = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
-    y_min = minimo - padding
-    y_max = maximo + padding
-    if math.isclose(y_min, y_max):
-        y_min -= 100.0
-        y_max += 100.0
 
     plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
     dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
-    janela_inicio_data = dia_inicio + timedelta(days=janela_inicio - 1)
-    janela_fim_data = dia_inicio + timedelta(days=janela_fim - 1)
+
+    def construir_janela(inicio_dia, fim_dia, ocultar_futuro=False):
+        inicio_dia = int(max(1, min(dias_plano, inicio_dia)))
+        fim_dia = int(max(inicio_dia, min(dias_plano, fim_dia)))
+
+        labels = []
+        date_labels = []
+        valores = []
+        valores_visiveis = []
+
+        for dia in range(inicio_dia, fim_dia + 1):
+            data_ref = dia_inicio + timedelta(days=dia - 1)
+            labels.append(str(dia))
+            date_labels.append(data_ref.strftime("%d/%m/%Y"))
+
+            if ocultar_futuro and dia > dia_atual_idx:
+                valores.append(None)
+                continue
+
+            valor_dia = float(valores_acumulados[dia - 1])
+            valor_dia_round = round(valor_dia, 2)
+            valores.append(valor_dia_round)
+            valores_visiveis.append(valor_dia_round)
+
+        if not valores_visiveis:
+            valores_visiveis = [round(valor_atual, 2)]
+
+        minimo = min(valores_visiveis)
+        maximo = max(valores_visiveis)
+        padding = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
+        y_min = minimo - padding
+        y_max = maximo + padding
+        if math.isclose(y_min, y_max):
+            y_min -= 100.0
+            y_max += 100.0
+
+        janela_inicio_data = dia_inicio + timedelta(days=inicio_dia - 1)
+        janela_fim_data = dia_inicio + timedelta(days=fim_dia - 1)
+
+        return {
+            "window_start_day": inicio_dia,
+            "window_end_day": fim_dia,
+            "window_start_date": janela_inicio_data.strftime("%d/%m/%Y"),
+            "window_end_date": janela_fim_data.strftime("%d/%m/%Y"),
+            "labels": labels,
+            "date_labels": date_labels,
+            "values": valores,
+            "y_min": round(y_min, 2),
+            "y_max": round(y_max, 2),
+        }
+
+    janela_padrao = construir_janela(
+        inicio_dia=max(1, dia_atual_idx - 15),
+        fim_dia=min(dias_plano, dia_atual_idx + 15),
+        ocultar_futuro=True
+    )
+    janela_30_anteriores = construir_janela(
+        inicio_dia=max(1, dia_atual_idx - 30),
+        fim_dia=dia_atual_idx,
+        ocultar_futuro=False
+    )
+    modos_janela = {
+        "back15_forward15": {
+            "id": "back15_forward15",
+            "title": "15 dias para tras + 15 para frente",
+            "description": "Mostra ate hoje e deixa os dias futuros sem curva.",
+            **janela_padrao
+        },
+        "back30": {
+            "id": "back30",
+            "title": "30 dias anteriores",
+            "description": "Mostra os ultimos 30 dias e posiciona o dia atual no fim.",
+            **janela_30_anteriores
+        }
+    }
 
     return {
         "available": True,
@@ -1637,15 +1680,17 @@ def montar_curva_capital_plano(order):
         "plan_days": dias_plano,
         "start_date": dia_inicio.strftime("%d/%m/%Y"),
         "end_date": dia_fim.strftime("%d/%m/%Y"),
-        "window_start_day": janela_inicio,
-        "window_end_day": janela_fim,
-        "window_start_date": janela_inicio_data.strftime("%d/%m/%Y"),
-        "window_end_date": janela_fim_data.strftime("%d/%m/%Y"),
-        "labels": labels,
-        "date_labels": date_labels,
-        "values": valores,
-        "y_min": round(y_min, 2),
-        "y_max": round(y_max, 2),
+        "default_window_mode": "back15_forward15",
+        "window_modes": modos_janela,
+        "window_start_day": janela_padrao["window_start_day"],
+        "window_end_day": janela_padrao["window_end_day"],
+        "window_start_date": janela_padrao["window_start_date"],
+        "window_end_date": janela_padrao["window_end_date"],
+        "labels": janela_padrao["labels"],
+        "date_labels": janela_padrao["date_labels"],
+        "values": janela_padrao["values"],
+        "y_min": janela_padrao["y_min"],
+        "y_max": janela_padrao["y_max"],
         "current_day": dia_atual_idx,
         "current_value": round(valor_atual, 2),
         "source_file": os.path.basename(curva_csv.get("path") or ""),
