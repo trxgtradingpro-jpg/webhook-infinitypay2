@@ -580,6 +580,54 @@ def mascarar_telefone(telefone):
     return "*" * len(nums)
 
 
+def mascarar_nome_compacto(nome):
+    nome = normalizar_nome(nome)
+    if not nome:
+        return "-"
+    partes = [p for p in nome.split(" ") if p]
+    if not partes:
+        return "-"
+
+    def token_curto(token):
+        if len(token) <= 2:
+            return token[0] + "*"
+        return token[0] + "*" + token[-1]
+
+    curtos = [token_curto(p) for p in partes[:2]]
+    saida = " ".join(curtos)
+    if len(partes) > 2:
+        saida += " +"
+    return saida
+
+
+def mascarar_email_compacto(email):
+    email = normalizar_email(email)
+    if not email or "@" not in email:
+        return "-"
+    user, domain = email.split("@", 1)
+    base, _, tld = domain.partition(".")
+
+    if len(user) <= 2:
+        user_hint = user[0] + "*"
+    elif len(user) == 3:
+        user_hint = user[:2] + "*"
+    else:
+        user_hint = user[:2] + "*" + user[-1]
+
+    base_hint = (base[:2] + "*") if base else "**"
+    tld_hint = ("." + tld[:2]) if tld else ""
+    return f"{user_hint}@{base_hint}{tld_hint}"
+
+
+def mascarar_telefone_compacto(telefone):
+    nums = re.sub(r"\D", "", telefone or "")
+    if not nums:
+        return "-"
+    if len(nums) <= 4:
+        return "*" * len(nums)
+    return "***" + nums[-4:]
+
+
 def validar_cadastro_cliente(nome, email, telefone):
     nome = normalizar_nome(nome)
     email = normalizar_email(email)
@@ -2493,10 +2541,10 @@ def admin_dashboard():
 
         data_local = converter_data_para_timezone_admin(pedido.get("created_at"))
         pedido["created_at_local"] = data_local.strftime("%d/%m/%Y %H:%M") if data_local else "-"
-        pedido["nome_masked"] = mascarar_nome(pedido.get("nome"))
-        pedido["email_masked"] = mascarar_email(pedido.get("email"))
-        pedido["telefone_masked"] = mascarar_telefone(pedido.get("telefone"))
-        pedido["affiliate_email_masked"] = mascarar_email(pedido.get("affiliate_email"))
+        pedido["nome_masked"] = mascarar_nome_compacto(pedido.get("nome"))
+        pedido["email_masked"] = mascarar_email_compacto(pedido.get("email"))
+        pedido["telefone_masked"] = mascarar_telefone_compacto(pedido.get("telefone"))
+        pedido["affiliate_email_masked"] = mascarar_email_compacto(pedido.get("affiliate_email"))
 
         info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
         pedido.update(info_30_dias)
