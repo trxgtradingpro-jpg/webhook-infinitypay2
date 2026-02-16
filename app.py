@@ -1572,37 +1572,53 @@ def montar_curva_capital_plano(order):
             "message": f"CSV da curva nao encontrado ou sem dados ({caminho}).",
         }
 
+    dia_inicio = created_at_local.date()
+    hoje_local = converter_data_para_timezone_admin(agora_utc()).date()
+    dia_atual_idx = (hoje_local - dia_inicio).days + 1
+    dia_atual_idx = max(1, min(dias_plano, dia_atual_idx))
+
     by_day = curva_csv.get("by_day") or {}
     sequence = curva_csv.get("sequence") or []
-    primeiro_dia_disponivel = by_day[min(by_day.keys())] if by_day else None
-    valor_base = sequence[0] if sequence else (primeiro_dia_disponivel if primeiro_dia_disponivel is not None else 0.0)
+    deltas = []
+    for dia in range(1, dias_plano + 1):
+        delta = by_day.get(dia)
+        if delta is None and (dia - 1) < len(sequence):
+            delta = sequence[dia - 1]
+        if delta is None:
+            delta = 0.0
+        deltas.append(float(delta))
+
+    valores_acumulados = []
+    saldo = 0.0
+    for delta in deltas:
+        saldo += float(delta)
+        valores_acumulados.append(round(saldo, 2))
+
+    valor_atual = valores_acumulados[dia_atual_idx - 1]
+    janela_inicio = max(1, dia_atual_idx - 15)
+    janela_fim = min(dias_plano, dia_atual_idx + 15)
 
     labels = []
     date_labels = []
     valores = []
-    ultimo_valor = float(valor_base)
-    dia_inicio = created_at_local.date()
+    valores_visiveis = []
 
-    for dia in range(1, dias_plano + 1):
-        valor = by_day.get(dia)
-        if valor is None and (dia - 1) < len(sequence):
-            valor = sequence[dia - 1]
-        if valor is None:
-            valor = ultimo_valor
-
-        valor_float = float(valor)
-        ultimo_valor = valor_float
+    for dia in range(janela_inicio, janela_fim + 1):
         data_ref = dia_inicio + timedelta(days=dia - 1)
-
         labels.append(str(dia))
         date_labels.append(data_ref.strftime("%d/%m/%Y"))
-        valores.append(round(valor_float, 2))
+        if dia <= dia_atual_idx:
+            valor_dia = valores_acumulados[dia - 1]
+            valores.append(valor_dia)
+            valores_visiveis.append(valor_dia)
+        else:
+            valores.append(None)
 
-    if not valores:
+    if not valores_visiveis:
         return {"available": False, "message": "Nao foi possivel gerar a curva com o CSV informado."}
 
-    minimo = min(valores)
-    maximo = max(valores)
+    minimo = min(valores_visiveis)
+    maximo = max(valores_visiveis)
     padding = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
     y_min = minimo - padding
     y_max = maximo + padding
@@ -1610,13 +1626,10 @@ def montar_curva_capital_plano(order):
         y_min -= 100.0
         y_max += 100.0
 
-    hoje_local = converter_data_para_timezone_admin(agora_utc()).date()
-    dia_atual_idx = (hoje_local - dia_inicio).days + 1
-    dia_atual_idx = max(1, min(dias_plano, dia_atual_idx))
-    valor_atual = valores[dia_atual_idx - 1]
-
     plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
     dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
+    janela_inicio_data = dia_inicio + timedelta(days=janela_inicio - 1)
+    janela_fim_data = dia_inicio + timedelta(days=janela_fim - 1)
 
     return {
         "available": True,
@@ -1624,6 +1637,10 @@ def montar_curva_capital_plano(order):
         "plan_days": dias_plano,
         "start_date": dia_inicio.strftime("%d/%m/%Y"),
         "end_date": dia_fim.strftime("%d/%m/%Y"),
+        "window_start_day": janela_inicio,
+        "window_end_day": janela_fim,
+        "window_start_date": janela_inicio_data.strftime("%d/%m/%Y"),
+        "window_end_date": janela_fim_data.strftime("%d/%m/%Y"),
         "labels": labels,
         "date_labels": date_labels,
         "values": valores,

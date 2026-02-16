@@ -473,7 +473,8 @@
       <h2>Crescimento do capital</h2>
       {% if capital_chart and capital_chart.available %}
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
-        <p class="line"><span>Periodo:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <p class="line"><span>Janela exibida:</span> {{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</p>
         <div class="kpi" style="margin-top:8px;">
           <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
           <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
@@ -484,7 +485,8 @@
         </div>
         <p class="chart-hint">
           Passe o mouse sobre a linha para ver a data e o valor do dia.
-          Eixo X: dias do plano. Eixo Y: capital diario com margem de R$ 100 acima/abaixo.
+          Eixo X: janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva.
+          Eixo Y: capital acumulado com margem de R$ 100 acima/abaixo.
         </p>
       {% else %}
         <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
