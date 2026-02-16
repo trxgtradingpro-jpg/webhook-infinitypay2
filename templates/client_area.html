@@ -1323,7 +1323,7 @@
           data: {
             labels: initialModeData.labels || [],
             datasets: [{
-              label: "Capital (1 contrato)",
+              label: "Capital total (1 contrato)",
               data: initialModeData.values || [],
               borderColor: curveLineColor,
               backgroundColor: curveFillColor,
@@ -1383,7 +1383,7 @@
                       }
                     }
 
-                    lines.push("Capital (" + activeContracts + " contrato" + sufixo + "): " + fmtBRL.format(valor));
+                    lines.push("Capital total (" + activeContracts + " contrato" + sufixo + "): " + fmtBRL.format(valor));
                     return lines;
                   }
                 }
@@ -1433,7 +1433,7 @@
           renderedModeData = modeData;
 
           chart.data.labels = modeData.labels || [];
-          chart.data.datasets[0].label = "Capital (" + activeContracts + " contrato" + (activeContracts > 1 ? "s" : "") + ")";
+          chart.data.datasets[0].label = "Capital total (" + activeContracts + " contrato" + (activeContracts > 1 ? "s" : "") + ")";
           chart.data.datasets[0].data = modeData.values || [];
           const pointRadius = getPointRadius(modeData.values);
           chart.data.datasets[0].pointRadius = pointRadius;

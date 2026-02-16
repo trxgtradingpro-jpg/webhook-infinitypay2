@@ -1770,15 +1770,14 @@ def montar_curva_capital_plano(order):
             "title": "30 dias posteriores",
             "description": "Mostra do inicio do plano ate o ultimo dia atualizado (marcado com g no CSV).",
             **janela_30_posteriores
-        }
-    }
-    if inicio_back30 > 1:
-        modos_janela["back30"] = {
+        },
+        "back30": {
             "id": "back30",
             "title": "30 dias anteriores",
-            "description": "Mostra os ultimos 30 dias e posiciona o ultimo dia atualizado no fim.",
+            "description": "Mostra os ultimos 30 dias e posiciona o ultimo dia atualizado no fim (se houver menos de 30 dias, inicia no dia 1).",
             **janela_30_anteriores
         }
+    }
 
     return {
         "available": True,
