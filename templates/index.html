@@ -201,16 +201,16 @@
 
     .headline{
       margin: 22px auto 0;
-      width:min(960px, 96vw);
-      line-height: .92;
-      letter-spacing: -1.2px;
+      width:min(1120px, 98vw);
+      line-height: .88;
+      letter-spacing: -1.8px;
       font-weight: 1000;
       text-transform: uppercase;
     }
     .headline .r{color: var(--red)}
     .headline .g{color: rgba(25,227,154,.85)}
     .headline .w{color:#fff}
-    .headline .big{font-size: clamp(44px, 6.5vw, 98px)}
+    .headline .big{font-size: clamp(56px, 10.8vw, 164px)}
     .sub{
       margin: 14px auto 0;
       width:min(760px, 92vw);
@@ -220,6 +220,12 @@
     }
     .sub b{color: var(--green)}
     .cta{margin-top:18px; display:flex; justify-content:center; gap: 10px; flex-wrap:wrap;}
+    .cta .quiz-btn{
+      white-space: normal;
+      text-align: center;
+      line-height: 1.12;
+      max-width: min(92vw, 420px);
+    }
 
     /* Chart */
     .chart{
@@ -807,7 +813,7 @@
 
       <div class="cta">
         <a class="btn green" href="#planos">🚀 ATIVAR ROBÔ AGORA</a>
-        <a class="btn white" href="#bonus">VER BÔNUS →</a>
+        <a class="btn white quiz-btn" href="#bonus">Ver se o TRX é ideal pra mim (2 min)</a>
       </div>
 
       <!-- Curva -->
@@ -992,7 +998,7 @@
               </svg>
             </div>
             <div class="plan-name">PRATA</div>
-            <div class="plan-desc">2-5 Contratos</div>
+            <div class="plan-desc">1-5 Contratos</div>
 
             <div class="plan-price">
               <span class="rs">R$</span>
@@ -1017,7 +1023,7 @@
               </svg>
             </div>
             <div class="plan-name">GOLD</div>
-            <div class="plan-desc">6-20 Contratos</div>
+            <div class="plan-desc">1-20 Contratos</div>
 
             <div class="plan-price">
               <span class="rs">R$</span>
@@ -1042,7 +1048,7 @@
               </svg>
             </div>
             <div class="plan-name">BLACK</div>
-            <div class="plan-desc">21-300 Contratos</div>
+            <div class="plan-desc">1-300 Contratos</div>
 
             <div class="plan-price">
               <span class="rs">R$</span>
