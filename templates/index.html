@@ -703,6 +703,9 @@
       overflow: hidden;
       transition: .2s transform, .2s filter, .2s border-color;
     }
+    .report-card.pos{ border-color: rgba(61,238,176,.58); }
+    .report-card.neg{ border-color: rgba(255,106,106,.58); }
+    .report-card.neutral{ border-color: rgba(200,214,236,.46); }
     .report-card:hover{
       transform: translateY(-3px);
       filter: brightness(1.03);
@@ -712,7 +715,19 @@
       position: relative;
       height: 182px;
       background: #0a0f17;
+      border: 2px solid rgba(195,211,234,.32);
       overflow: hidden;
+    }
+    .report-card.pos .report-image{
+      border-color: rgba(61,238,176,.82);
+      box-shadow: inset 0 0 0 1px rgba(61,238,176,.32), 0 0 24px rgba(61,238,176,.20);
+    }
+    .report-card.neg .report-image{
+      border-color: rgba(255,106,106,.86);
+      box-shadow: inset 0 0 0 1px rgba(255,106,106,.34), 0 0 24px rgba(255,106,106,.22);
+    }
+    .report-card.neutral .report-image{
+      border-color: rgba(195,211,234,.55);
     }
     .report-image img{
       width:100%;
@@ -1452,7 +1467,7 @@
           <div>
             <div class="pill monthly-pill">RELATORIOS MENSAIS</div>
             <h2 class="monthly-title">Evolucao mensal do robo: role e veja mes a mes</h2>
-            <p class="monthly-sub">12 imagens em barra de rolagem horizontal. Atualize apenas os arquivos de imagem e valores para refletir seus numeros reais.</p>
+            <p class="monthly-sub">Coloque as imagens em /assets/meses no formato: mes_inicio_fim_valor.png (ex.: fev_02_04_-3570,57.png).</p>
           </div>
           <div class="monthly-nav">
             <button id="reportPrev" class="report-nav" type="button" aria-label="Mes anterior">&#10094;</button>
@@ -1719,44 +1734,33 @@
       black:  "https://webhook-infinitypay.onrender.com/checkout/trx-black"
     };
 
-    const MONTHLY_REPORTS = [
-      { month: "FEV/2025", periodStart: "16/02/2025", periodEnd: "15/03/2025", gain: "R$ +0,00", image: "/assets/relatorios/01-fev-2025.jpg" },
-      { month: "MAR/2025", periodStart: "16/03/2025", periodEnd: "15/04/2025", gain: "R$ +0,00", image: "/assets/relatorios/02-mar-2025.jpg" },
-      { month: "ABR/2025", periodStart: "16/04/2025", periodEnd: "15/05/2025", gain: "R$ +0,00", image: "/assets/relatorios/03-abr-2025.jpg" },
-      { month: "MAI/2025", periodStart: "16/05/2025", periodEnd: "15/06/2025", gain: "R$ +0,00", image: "/assets/relatorios/04-mai-2025.jpg" },
-      { month: "JUN/2025", periodStart: "16/06/2025", periodEnd: "15/07/2025", gain: "R$ +0,00", image: "/assets/relatorios/05-jun-2025.jpg" },
-      { month: "JUL/2025", periodStart: "16/07/2025", periodEnd: "15/08/2025", gain: "R$ +0,00", image: "/assets/relatorios/06-jul-2025.jpg" },
-      { month: "AGO/2025", periodStart: "16/08/2025", periodEnd: "15/09/2025", gain: "R$ +0,00", image: "/assets/relatorios/07-ago-2025.jpg" },
-      { month: "SET/2025", periodStart: "16/09/2025", periodEnd: "15/10/2025", gain: "R$ +0,00", image: "/assets/relatorios/08-set-2025.jpg" },
-      { month: "OUT/2025", periodStart: "16/10/2025", periodEnd: "15/11/2025", gain: "R$ +0,00", image: "/assets/relatorios/09-out-2025.jpg" },
-      { month: "NOV/2025", periodStart: "16/11/2025", periodEnd: "15/12/2025", gain: "R$ +0,00", image: "/assets/relatorios/10-nov-2025.jpg" },
-      { month: "DEZ/2025", periodStart: "16/12/2025", periodEnd: "15/01/2026", gain: "R$ +0,00", image: "/assets/relatorios/11-dez-2025.jpg" },
-      { month: "JAN/FEV 2026", periodStart: "16/01/2026", periodEnd: "16/02/2026", gain: "R$ +0,00", image: "/assets/relatorios/12-fev-2026.jpg" }
-    ];
+    const REPORT_AUTO_INTERVAL_MS = 9000;
+    let autoReportTimer = null;
+    let activeReportIndex = 0;
 
-    function gainClass(value){
-      const normalized = (value || "")
-        .replace(/\s/g, "")
-        .replace("R$", "")
-        .replace(/\./g, "")
-        .replace(",", ".");
-      const parsed = Number(normalized);
-
-      if (!Number.isFinite(parsed)) return "neutral";
-      if (parsed > 0) return "pos";
-      if (parsed < 0) return "neg";
-      return "neutral";
-    }
-
-    function renderMonthlyReports(){
+    function renderMonthlyReports(items){
       const track = document.getElementById("reportTrack");
       if (!track) return;
 
-      track.innerHTML = MONTHLY_REPORTS.map((item) => `
-        <article class="report-card">
+      if (!items.length){
+        track.innerHTML = `
+          <article class="report-card neutral">
+            <div class="report-image"></div>
+            <div class="report-body">
+              <h3 class="report-month">Aguardando relatorios</h3>
+              <p class="report-period">Adicione 12 imagens em /assets/meses usando o padrao: fev_02_04_-3570,57.png</p>
+              <span class="report-gain neutral">R$ 0,00</span>
+            </div>
+          </article>
+        `;
+        return;
+      }
+
+      track.innerHTML = items.map((item) => `
+        <article class="report-card ${item.status || "neutral"}">
           <div class="report-image">
             <img
-              src="${item.image}"
+              src="${item.image_url}"
               alt="Relatorio mensal ${item.month}"
               loading="lazy"
               onerror="this.style.opacity=.28; this.alt='Adicione a imagem do relatorio mensal em ' + this.src;"
@@ -1764,8 +1768,8 @@
           </div>
           <div class="report-body">
             <h3 class="report-month">${item.month}</h3>
-            <p class="report-period">${item.periodStart} ate ${item.periodEnd}</p>
-            <span class="report-gain ${gainClass(item.gain)}">${item.gain}</span>
+            <p class="report-period">Inicio: dia ${item.start_day} | Fim: dia ${item.end_day}</p>
+            <span class="report-gain ${item.status || "neutral"}">${item.gain}</span>
           </div>
         </article>
       `).join("");
@@ -1773,19 +1777,89 @@
       const scrollStep = () => Math.max(280, Math.round(track.clientWidth * 0.75));
       const prev = document.getElementById("reportPrev");
       const next = document.getElementById("reportNext");
+      const cards = Array.from(track.querySelectorAll(".report-card"));
 
-      if (prev) prev.addEventListener("click", () => {
-        track.scrollBy({ left: -scrollStep(), behavior: "smooth" });
-      });
-      if (next) next.addEventListener("click", () => {
-        track.scrollBy({ left: scrollStep(), behavior: "smooth" });
-      });
+      function scrollToIndex(index, smooth = true){
+        if (!cards.length) return;
+        const normalized = (index + cards.length) % cards.length;
+        activeReportIndex = normalized;
+        const card = cards[normalized];
+        track.scrollTo({
+          left: Math.max(0, card.offsetLeft - 2),
+          behavior: smooth ? "smooth" : "auto"
+        });
+      }
+
+      function stopAuto(){
+        if (!autoReportTimer) return;
+        clearInterval(autoReportTimer);
+        autoReportTimer = null;
+      }
+
+      function startAuto(){
+        stopAuto();
+        if (cards.length <= 1) return;
+        autoReportTimer = setInterval(() => {
+          scrollToIndex(activeReportIndex + 1, true);
+        }, REPORT_AUTO_INTERVAL_MS);
+      }
+
+      function syncActiveIndexByScroll(){
+        if (!cards.length) return;
+        const viewportLeft = track.scrollLeft;
+        let closestIndex = 0;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        cards.forEach((card, index) => {
+          const distance = Math.abs(card.offsetLeft - viewportLeft);
+          if (distance < closestDistance){
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+
+        activeReportIndex = closestIndex;
+      }
+
+      if (prev){
+        prev.onclick = () => {
+          scrollToIndex(activeReportIndex - 1, true);
+          startAuto();
+        };
+      }
+      if (next){
+        next.onclick = () => {
+          scrollToIndex(activeReportIndex + 1, true);
+          startAuto();
+        };
+      }
 
       track.addEventListener("wheel", (event) => {
         if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
         event.preventDefault();
         track.scrollBy({ left: event.deltaY, behavior: "auto" });
       }, { passive: false });
+
+      track.addEventListener("scroll", syncActiveIndexByScroll);
+      track.addEventListener("mouseenter", stopAuto);
+      track.addEventListener("mouseleave", startAuto);
+      track.addEventListener("touchstart", stopAuto, { passive: true });
+      track.addEventListener("touchend", startAuto, { passive: true });
+
+      scrollToIndex(0, false);
+      startAuto();
+    }
+
+    async function loadMonthlyReports(){
+      try {
+        const response = await fetch("/api/reports/monthly", { cache: "no-store" });
+        if (!response.ok) throw new Error("Erro ao carregar relatorios");
+        const data = await response.json();
+        const reports = Array.isArray(data.reports) ? data.reports : [];
+        renderMonthlyReports(reports);
+      } catch (error){
+        renderMonthlyReports([]);
+      }
     }
 
     function setupReveal(){
@@ -1803,7 +1877,7 @@
       targets.forEach((target) => observer.observe(target));
     }
 
-    renderMonthlyReports();
+    loadMonthlyReports();
     setupReveal();
 
     function goCheckout(plan){

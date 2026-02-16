@@ -155,6 +155,42 @@ PLANOS = {
     }
 }
 
+MESES_ROTULO = {
+    "jan": "JAN",
+    "fev": "FEV",
+    "mar": "MAR",
+    "abr": "ABR",
+    "mai": "MAI",
+    "jun": "JUN",
+    "jul": "JUL",
+    "ago": "AGO",
+    "set": "SET",
+    "out": "OUT",
+    "nov": "NOV",
+    "dez": "DEZ"
+}
+
+# Ordem configurada para exibir ciclo iniciando em fevereiro.
+MESES_ORDEM_CARROSSEL = {
+    "fev": 1,
+    "mar": 2,
+    "abr": 3,
+    "mai": 4,
+    "jun": 5,
+    "jul": 6,
+    "ago": 7,
+    "set": 8,
+    "out": 9,
+    "nov": 10,
+    "dez": 11,
+    "jan": 12
+}
+
+REGEX_RELATORIO_MENSAL = re.compile(
+    r"^(?P<mes>jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)_(?P<inicio>\d{2})_(?P<fim>\d{2})_(?P<valor>[+-]?\d[\d.,]*)\.png$",
+    flags=re.IGNORECASE
+)
+
 backfill_analytics_from_orders({
     plano_id: int(info.get("preco") or 0)
     for plano_id, info in PLANOS.items()
@@ -467,6 +503,54 @@ def obter_ip_request():
     return (request.remote_addr or "").strip()
 
 
+def parse_relatorio_mensal_nome(arquivo):
+    match = REGEX_RELATORIO_MENSAL.match((arquivo or "").strip())
+    if not match:
+        return None
+
+    mes = match.group("mes").lower()
+    dia_inicio = match.group("inicio")
+    dia_fim = match.group("fim")
+    valor_raw = match.group("valor")
+
+    valor_normalizado = valor_raw.strip()
+    if "," in valor_normalizado:
+        valor_normalizado = valor_normalizado.replace(".", "").replace(",", ".")
+
+    try:
+        valor_float = float(valor_normalizado)
+    except ValueError:
+        return None
+
+    valor_abs = abs(valor_float)
+    valor_fmt = f"{valor_abs:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    if valor_float > 0:
+        ganho_fmt = f"R$ +{valor_fmt}"
+        status = "pos"
+    elif valor_float < 0:
+        ganho_fmt = f"R$ -{valor_fmt}"
+        status = "neg"
+    else:
+        ganho_fmt = f"R$ {valor_fmt}"
+        status = "neutral"
+
+    return {
+        "month": MESES_ROTULO.get(mes, mes.upper()),
+        "start_day": dia_inicio,
+        "end_day": dia_fim,
+        "gain": ganho_fmt,
+        "status": status,
+        "image_url": f"/assets/meses/{arquivo}",
+        "_sort": (
+            MESES_ORDEM_CARROSSEL.get(mes, 99),
+            int(dia_inicio),
+            int(dia_fim),
+            arquivo.lower()
+        )
+    }
+
+
 def registrar_usuario_online():
     identificador = identificador_online_request()
     agora = time.time()
@@ -603,6 +687,28 @@ def privacidade():
 @app.route("/contato")
 def contato():
     return render_template("contato.html")
+
+
+@app.route("/api/reports/monthly")
+def api_reports_monthly():
+    pasta_meses = os.path.join("assets", "meses")
+    reports = []
+
+    if os.path.isdir(pasta_meses):
+        for arquivo in os.listdir(pasta_meses):
+            parsed = parse_relatorio_mensal_nome(arquivo)
+            if not parsed:
+                continue
+            reports.append(parsed)
+
+    reports.sort(key=lambda item: item.get("_sort", (99, 99, 99, "")))
+    for item in reports:
+        item.pop("_sort", None)
+
+    return jsonify({
+        "ok": True,
+        "reports": reports
+    })
 
 
 @app.route("/api/quiz/submit", methods=["POST"])
