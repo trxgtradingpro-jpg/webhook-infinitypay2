@@ -1678,6 +1678,8 @@ def montar_curva_capital_plano(order):
         labels = []
         date_labels = []
         valores = []
+        resultados_dia = []
+        resultados_dia_pontos = []
         valores_visiveis = []
 
         for dia in range(inicio_dia, fim_dia + 1):
@@ -1687,11 +1689,23 @@ def montar_curva_capital_plano(order):
 
             if ocultar_futuro and dia > dia_ultimo_atualizado:
                 valores.append(None)
+                resultados_dia.append(None)
+                resultados_dia_pontos.append(None)
                 continue
 
             valor_dia = float(valores_acumulados[dia - 1])
             valor_dia_round = round(valor_dia, 2)
+            delta_dia_brl = round(float(deltas[dia - 1]), 2)
+            if CAPITAL_CURVE_VALUE_MODE == "points" and CAPITAL_CURVE_BRL_PER_POINT > 0:
+                delta_dia_pontos = round(delta_dia_brl / CAPITAL_CURVE_BRL_PER_POINT, 2)
+                if math.isclose(delta_dia_pontos, round(delta_dia_pontos), abs_tol=1e-9):
+                    delta_dia_pontos = int(round(delta_dia_pontos))
+            else:
+                delta_dia_pontos = None
+
             valores.append(valor_dia_round)
+            resultados_dia.append(delta_dia_brl)
+            resultados_dia_pontos.append(delta_dia_pontos)
             valores_visiveis.append(valor_dia_round)
 
         if not valores_visiveis:
@@ -1717,6 +1731,8 @@ def montar_curva_capital_plano(order):
             "labels": labels,
             "date_labels": date_labels,
             "values": valores,
+            "daily_values": resultados_dia,
+            "daily_points": resultados_dia_pontos,
             "y_min": round(y_min, 2),
             "y_max": round(y_max, 2),
         }
@@ -1768,6 +1784,8 @@ def montar_curva_capital_plano(order):
         "labels": janela_30_posteriores["labels"],
         "date_labels": janela_30_posteriores["date_labels"],
         "values": janela_30_posteriores["values"],
+        "daily_values": janela_30_posteriores["daily_values"],
+        "daily_points": janela_30_posteriores["daily_points"],
         "y_min": janela_30_posteriores["y_min"],
         "y_max": janela_30_posteriores["y_max"],
         "current_day": dia_ultimo_atualizado,

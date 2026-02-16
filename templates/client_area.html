@@ -827,6 +827,9 @@
           style: "currency",
           currency: "BRL"
         });
+        const curveLineColor = "rgb(32, 224, 120)";
+        const curveFillColor = "rgba(32, 224, 120, 0.26)";
+        const crosshairColor = "rgba(32, 224, 120, 0.82)";
         const windowModes = payload.window_modes || {};
         const fallbackModeData = {
           id: "fallback",
@@ -837,6 +840,8 @@
           labels: payload.labels || [],
           date_labels: payload.date_labels || [],
           values: payload.values || [],
+          daily_values: payload.daily_values || [],
+          daily_points: payload.daily_points || [],
           y_min: payload.y_min,
           y_max: payload.y_max
         };
@@ -908,10 +913,13 @@
 
         function getScaledModeData(modeData) {
           const scaledValues = scaleValues(modeData.values || []);
+          const scaledDailyValues = scaleValues(modeData.daily_values || []);
           const yBounds = calculateYBounds(scaledValues);
           return {
             ...modeData,
             values: scaledValues,
+            daily_values: scaledDailyValues,
+            daily_points: modeData.daily_points || [],
             y_min: yBounds.y_min,
             y_max: yBounds.y_max,
           };
@@ -960,6 +968,7 @@
 
         const initialModeData = getScaledModeData(getModeData(activeMode));
         const initialPointRadius = getPointRadius(initialModeData.values);
+        let renderedModeData = initialModeData;
 
         const crosshairPlugin = {
           id: "crosshairPlugin",
@@ -976,7 +985,7 @@
             const y = point.y;
 
             ctx.save();
-            ctx.strokeStyle = "rgba(116, 255, 214, 0.8)";
+            ctx.strokeStyle = crosshairColor;
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]);
 
@@ -1000,15 +1009,15 @@
             datasets: [{
               label: "Capital (1 contrato)",
               data: initialModeData.values || [],
-              borderColor: "#74ffd6",
-              backgroundColor: "rgba(57, 201, 145, 0.28)",
+              borderColor: curveLineColor,
+              backgroundColor: curveFillColor,
               fill: true,
-              tension: 0.28,
+              tension: 0,
               borderWidth: 2,
               pointRadius: initialPointRadius,
               pointHoverRadius: initialPointRadius > 0 ? 7 : 4,
               pointHitRadius: initialPointRadius > 0 ? 12 : 6,
-              pointHoverBackgroundColor: "#74ffd6",
+              pointHoverBackgroundColor: curveLineColor,
               pointHoverBorderColor: "#0f2d24"
             }]
           },
@@ -1029,18 +1038,37 @@
                   title(items) {
                     if (!items || !items.length) return "";
                     const idx = items[0].dataIndex;
-                    const modeData = getModeData(activeMode);
+                    const modeData = renderedModeData || getModeData(activeMode);
                     const dateLabel = (modeData.date_labels || [])[idx] || "";
                     const dayLabel = (modeData.labels || [])[idx] || "";
                     return dateLabel + " (Dia " + dayLabel + ")";
                   },
                   label(context) {
+                    const idx = context.dataIndex;
                     const valor = Number(context.parsed.y);
                     if (!Number.isFinite(valor)) {
                       return "Sem curva para esse dia.";
                     }
                     const sufixo = activeContracts > 1 ? "s" : "";
-                    return "Capital (" + activeContracts + " contrato" + sufixo + "): " + fmtBRL.format(valor);
+                    const lines = [];
+                    const dailyValue = Number((renderedModeData.daily_values || [])[idx]);
+                    const dailyPointsRaw = (renderedModeData.daily_points || [])[idx];
+
+                    if (Number.isFinite(dailyValue)) {
+                      if (payload.csv_value_mode === "points" && dailyPointsRaw !== null && dailyPointsRaw !== undefined && Number.isFinite(Number(dailyPointsRaw))) {
+                        const dailyPointsNum = Number(dailyPointsRaw);
+                        const dailyPointsText = Number.isInteger(dailyPointsNum)
+                          ? String(dailyPointsNum)
+                          : dailyPointsNum.toFixed(2).replace(".", ",");
+                        const signedPoints = (dailyPointsNum > 0 ? "+" : "") + dailyPointsText;
+                        lines.push("Resultado do dia: " + signedPoints + " pts (" + fmtBRL.format(dailyValue) + ")");
+                      } else {
+                        lines.push("Resultado do dia: " + fmtBRL.format(dailyValue));
+                      }
+                    }
+
+                    lines.push("Capital (" + activeContracts + " contrato" + sufixo + "): " + fmtBRL.format(valor));
+                    return lines;
                   }
                 }
               }
@@ -1086,6 +1114,7 @@
         function applyMode(modeId) {
           const modeData = getScaledModeData(getModeData(modeId));
           activeMode = modeId;
+          renderedModeData = modeData;
 
           chart.data.labels = modeData.labels || [];
           chart.data.datasets[0].label = "Capital (" + activeContracts + " contrato" + (activeContracts > 1 ? "s" : "") + ")";
