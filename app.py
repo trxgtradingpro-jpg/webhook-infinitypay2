@@ -83,7 +83,15 @@ WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
 
 WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
-    "Olá {nome}, vi que você baixou o plano {plano}. Posso te ajudar a começar?"
+    (
+        "Olá {nome}\n\n"
+        "Seu TRX {plano} foi liberado com sucesso ✅\n\n"
+        "Quero confirmar se conseguiu instalar corretamente.\n"
+        "Caso tenha qualquer dúvida ou dificuldade, é só me chamar que te dou suporte imediato 🤝\n\n"
+        "Lembre-se de entrar na nossa comunidade para receber atualizações do nosso robô:\n"
+        "https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE\n\n"
+        "Estou à disposição."
+    )
 )
 WHATSAPP_TEMPLATE = os.environ.get(
     "WHATSAPP_TEMPLATE",
