@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if status_pago %}Compra confirmada{% else %}Processando compra{% endif %} | TRX PRO</title>
+  <link rel="icon" href="/assets/logo2.png?v=3" type="image/png" sizes="32x32">
+  <style>
+    :root{
+      --bg:#05070f;
+      --panel:#0b1224;
+      --line:#213255;
+      --text:#e9f1ff;
+      --muted:#9fb0d0;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --btn:#16a34a;
+      --btn2:#0f172a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Arial,Helvetica,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 560px at 12% -10%, rgba(34,197,94,.14), transparent 60%),
+        radial-gradient(900px 520px at 90% 0%, rgba(56,189,248,.12), transparent 60%),
+        var(--bg);
+      display:grid;
+      place-items:center;
+      padding:20px;
+    }
+    .card{
+      width:min(620px, 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:linear-gradient(180deg, rgba(12,19,35,.95), rgba(7,11,20,.98));
+      box-shadow:0 26px 90px rgba(0,0,0,.5);
+      padding:24px;
+    }
+    h1{
+      margin:0 0 10px;
+      font-size:30px;
+      letter-spacing:-.4px;
+    }
+    p{
+      margin:0;
+      line-height:1.5;
+    }
+    .sub{
+      color:var(--muted);
+      margin-bottom:16px;
+    }
+    .meta{
+      margin:14px 0;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#0a1325;
+      padding:12px;
+      display:grid;
+      gap:8px;
+    }
+    .meta strong{
+      color:#dbeafe;
+    }
+    .msg{
+      margin:10px 0 0;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      font-weight:700;
+      line-height:1.45;
+    }
+    .msg.ok{
+      border-color:rgba(34,197,94,.45);
+      background:rgba(34,197,94,.14);
+      color:#bbf7d0;
+    }
+    .msg.warn{
+      border-color:rgba(245,158,11,.45);
+      background:rgba(245,158,11,.14);
+      color:#fde68a;
+    }
+    .actions{
+      margin-top:16px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:0;
+      border-radius:10px;
+      padding:11px 16px;
+      font-weight:900;
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .btn.main{
+      background:linear-gradient(180deg, #22c55e, var(--btn));
+      color:#04120a;
+    }
+    .btn.alt{
+      background:var(--btn2);
+      border:1px solid #32476f;
+      color:#d9e6ff;
+    }
+    .foot{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+    }
+  </style>
+</head>
+<body>
+  <section class="card">
+    {% if status_pago %}
+      <h1>Compra confirmada</h1>
+      <p class="sub">Seu acesso foi liberado. Vamos entrar na sua conta automaticamente.</p>
+    {% else %}
+      <h1>Processando pagamento</h1>
+      <p class="sub">Estamos aguardando a confirmacao final da compra.</p>
+    {% endif %}
+
+    <div class="meta">
+      <p>Pedido: <strong>{{ order_id }}</strong></p>
+      <p>Plano: <strong>{{ plano_nome }}</strong></p>
+      {% if nome_cliente %}
+      <p>Cliente: <strong>{{ nome_cliente }}</strong></p>
+      {% endif %}
+    </div>
+
+    {% if status_pago %}
+      <div class="msg ok">
+        Redirecionando para sua area logada em <span id="count">{{ redirect_seconds }}</span> segundo(s)...
+      </div>
+      <div class="actions">
+        <a class="btn main" href="{{ redirect_url }}">Ir agora para minha conta</a>
+      </div>
+    {% else %}
+      <div class="msg warn">
+        Pagamento ainda em analise. Esta pagina atualiza automaticamente em <span id="count">{{ refresh_seconds }}</span> segundo(s).
+      </div>
+      <div class="actions">
+        <a class="btn alt" href="{{ refresh_url }}">Atualizar agora</a>
+      </div>
+    {% endif %}
+
+    <p class="foot">Se a pagina nao atualizar automaticamente, use o botao acima.</p>
+  </section>
+
+  <script>
+    (function(){
+      const statusPago = {{ "true" if status_pago else "false" }};
+      const count = document.getElementById("count");
+      const redirectUrl = "{{ redirect_url }}";
+      const refreshUrl = "{{ refresh_url }}";
+      const total = statusPago ? {{ redirect_seconds|int }} : {{ refresh_seconds|int }};
+      let secs = total;
+
+      const timer = setInterval(() => {
+        secs = Math.max(0, secs - 1);
+        if (count) count.textContent = String(secs);
+      }, 1000);
+
+      setTimeout(() => {
+        clearInterval(timer);
+        if (statusPago) {
+          window.location.href = redirectUrl;
+          return;
+        }
+        window.location.href = refreshUrl;
+      }, total * 1000);
+    })();
+  </script>
+</body>
+</html>

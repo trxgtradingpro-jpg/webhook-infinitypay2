@@ -266,6 +266,7 @@ RESERVED_AFFILIATE_SLUGS = {
     "termos",
     "privacidade",
     "contato",
+    "sucesso",
     "webhook",
     "online",
     "favicon",
@@ -637,6 +638,28 @@ def montar_url_absoluta(path):
     base = (PUBLIC_BASE_URL or request.host_url.rstrip("/")).rstrip("/")
     path = "/" + (path or "").lstrip("/")
     return f"{base}{path}"
+
+
+def gerar_token_sucesso_order(order_id):
+    order_norm = (order_id or "").strip()
+    if not order_norm:
+        return ""
+    base = f"{order_norm}:{ADMIN_SECRET}:checkout-success:v1"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def validar_token_sucesso_order(order_id, token):
+    token = (token or "").strip()
+    esperado = gerar_token_sucesso_order(order_id)
+    if not token or not esperado:
+        return False
+    return hmac.compare_digest(token, esperado)
+
+
+def montar_url_sucesso_order(order_id):
+    order_norm = (order_id or "").strip()
+    token = gerar_token_sucesso_order(order_norm)
+    return montar_url_absoluta(f"/sucesso/{order_norm}?t={token}")
 
 
 def _remember_cookie_samesite():
@@ -1546,7 +1569,11 @@ def aplicar_headers_seguranca(response):
     if request.path.startswith("/admin"):
         response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         response.headers.setdefault("Pragma", "no-cache")
-    if request.path.startswith("/login") or request.path.startswith("/minha-conta"):
+    if (
+        request.path.startswith("/login")
+        or request.path.startswith("/minha-conta")
+        or request.path.startswith("/sucesso")
+    ):
         response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         response.headers.setdefault("Pragma", "no-cache")
 
@@ -1581,11 +1608,12 @@ def admin_online_count():
 
 def criar_checkout_dinamico(plano_id, order_id, nome, email, telefone):
     plano = PLANOS[plano_id]
+    redirect_sucesso = montar_url_sucesso_order(order_id)
 
     payload = {
         "handle": HANDLE,
         "webhook_url": WEBHOOK_URL,
-        "redirect_url": plano["redirect_url"],
+        "redirect_url": redirect_sucesso,
         "order_nsu": order_id,
         "customer": {
             "name": nome,
@@ -1687,6 +1715,53 @@ def privacidade():
 @app.route("/contato")
 def contato():
     return render_template("contato.html")
+
+
+@app.route("/sucesso/<order_id>")
+def checkout_sucesso(order_id):
+    order_id = (order_id or "").strip()
+    token = (request.args.get("t") or "").strip()
+    if not validar_token_sucesso_order(order_id, token):
+        return "Link de sucesso invalido.", 403
+
+    order = buscar_order_por_id(order_id)
+    if not order:
+        return "Pedido nao encontrado.", 404
+
+    status_pago = (order.get("status") or "").strip().upper() == "PAGO"
+    plano_id = (order.get("plano") or "").strip().lower()
+    plano_info = PLANOS.get(plano_id, {})
+    plano_nome = plano_info.get("nome", plano_id or "Plano")
+    nome_cliente = normalizar_nome(order.get("nome") or "")
+
+    if status_pago:
+        email = normalizar_email(order.get("email") or "")
+        if EMAIL_RE.fullmatch(email):
+            try:
+                garantir_conta_cliente_para_order(order, enviar_email_credenciais=False)
+            except Exception as exc:
+                print(f"[CLIENTE] Falha ao garantir conta no sucesso {order_id}: {exc}", flush=True)
+
+            limpar_sessao_cliente()
+            session[CLIENT_SESSION_EMAIL_KEY] = email
+            session["nome"] = nome_cliente
+            session["email"] = email
+            session["telefone"] = normalizar_telefone(order.get("telefone") or "")
+            session.permanent = True
+            atualizar_ultimo_login_conta_cliente(email)
+
+    refresh_url = f"/sucesso/{order_id}?t={token}"
+    return render_template(
+        "purchase_success.html",
+        order_id=order_id,
+        plano_nome=plano_nome,
+        nome_cliente=nome_cliente,
+        status_pago=status_pago,
+        redirect_seconds=3,
+        refresh_seconds=2,
+        redirect_url="/minha-conta",
+        refresh_url=refresh_url,
+    )
 
 
 @app.route("/api/client/email-status")
@@ -2249,7 +2324,7 @@ def comprar():
             registrar_compra_analytics(order_pago)
             agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
             agendar_whatsapp_pos_pago(order_pago)
-            return redirect(plano_info["redirect_url"])
+            return redirect(f"/sucesso/{order_id}?t={gerar_token_sucesso_order(order_id)}")
         except Exception as exc:
             registrar_falha_email(order_id, 1, str(exc))
             return "Falha ao enviar o acesso. Tente novamente em instantes.", 500
