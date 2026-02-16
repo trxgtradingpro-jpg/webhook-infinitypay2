@@ -638,7 +638,7 @@
       margin-top: 14px;
       display:grid;
       grid-auto-flow: column;
-      grid-auto-columns: minmax(260px, 318px);
+      grid-auto-columns: min(76vw, 780px);
       gap: 12px;
       overflow-x: auto;
       overscroll-behavior-x: contain;
@@ -648,6 +648,7 @@
       position: relative;
       z-index: 1;
     }
+    @media (max-width: 900px){ .report-track{ grid-auto-columns: 88vw; } }
     .report-track::-webkit-scrollbar{
       height: 10px;
     }
@@ -678,7 +679,7 @@
     }
     .report-image{
       position: relative;
-      height: 182px;
+      height: clamp(210px, 24vw, 300px);
       background: #0a0f17;
       border: 2px solid rgba(195,211,234,.32);
       overflow: hidden;
@@ -1363,13 +1364,13 @@
   <section class="proof reveal-up" id="prova">
     <div class="container">
       <div class="proof-shell">
-        <div class="pill proof-pill">RESULTADO AUDITÁVEL | 10 CONTRATOS</div>
-        <h2 class="proof-title">Transparência total para gerar confiança antes da compra</h2>
-        <p class="proof-sub">Estratégia TRX_GOLD | M5 | Período: 08/02/2025 a 16/02/2026 | Slippage: 0 | Ajustes: Todos</p>
+        <div class="pill proof-pill">RESULTADO AUDIT&Aacute;VEL | 10 CONTRATOS</div>
+        <h2 class="proof-title">Performance real para decis&atilde;o com confian&ccedil;a</h2>
+        <p class="proof-sub">TRX_GOLD | M5 | Per&iacute;odo: 08/02/2025 a 16/02/2026 | Slippage: 0 | Ajustes: Todos</p>
 
         <div class="proof-kpis">
           <article class="proof-kpi">
-            <div class="k-label">Lucro Líquido</div>
+            <div class="k-label">Lucro L&iacute;quido</div>
             <div class="k-value pos">R$ 75.910,00</div>
           </article>
           <article class="proof-kpi">
@@ -1381,7 +1382,7 @@
             <div class="k-value neutral">1,18</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Máx. Contratos</div>
+            <div class="k-label">M&aacute;x. Contratos</div>
             <div class="k-value neutral">10</div>
           </article>
           <article class="proof-kpi">
@@ -1389,37 +1390,35 @@
             <div class="k-value neutral">45,03%</div>
           </article>
           <article class="proof-kpi">
-            <div class="k-label">Drawdown Máx.</div>
+            <div class="k-label">Drawdown M&aacute;x.</div>
             <div class="k-value warn">12,90%</div>
           </article>
         </div>
 
         <div class="proof-grid">
           <article class="proof-card">
-            <h3>Leitura correta desse resultado anual</h3>
-            <p>Mesmo com taxa de acerto de 45,03%, o sistema continua lucrativo por causa da relação média lucro:média prejuízo de 1,43 e expectativa positiva por operação (R$ 57,64).</p>
-            <p>Isso reduz a dependência de acertar toda hora e aumenta a consistência para quem segue o plano com disciplina.</p>
+            <h3>Resultados que fortalecem a decis&atilde;o</h3>
+            <p>Lucro l&iacute;quido de R$ 75.910,00 no per&iacute;odo, retorno de 19,99% e fator de lucro 1,18.</p>
+            <p>Foram 1.317 opera&ccedil;&otilde;es executadas com consist&ecirc;ncia operacional em 10 contratos.</p>
             <div class="proof-tags">
-              <span>Expectativa positiva</span>
-              <span>Risco controlado</span>
-              <span>Método replicável</span>
+              <span>Retorno validado</span>
+              <span>Execu&ccedil;&atilde;o consistente</span>
+              <span>10 contratos</span>
             </div>
           </article>
 
           <article class="proof-card">
-            <h3>Confiança e autoridade para decidir</h3>
+            <h3>Risco sob controle</h3>
             <ul class="proof-list">
-              <li>Lucro bruto: R$ 507.190,00 | Prejuízo bruto: R$ -431.280,00</li>
-              <li>Maior ganho por operação: R$ 1.200,00 | Maior perda: R$ -600,00</li>
-              <li>Declínio máximo topo-fundo: R$ -9.790,00 (12,90%)</li>
-              <li>Declínio máx. trade a trade: R$ -7.200,00 (9,48%)</li>
-              <li>Patrimônio necessário (10 contratos): R$ 379.650,00</li>
+              <li>Drawdown m&aacute;ximo (topo-fundo): 12,90% (R$ -9.790,00)</li>
+              <li>Drawdown m&aacute;x. trade a trade: 9,48% (R$ -7.200,00)</li>
+              <li>Maior ganho por opera&ccedil;&atilde;o: R$ 1.200,00</li>
+              <li>Maior perda por opera&ccedil;&atilde;o: R$ -600,00</li>
+              <li>Patrim&ocirc;nio necess&aacute;rio (10 contratos): R$ 379.650,00</li>
             </ul>
             <div class="proof-actions">
               <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
-              <a class="btn ghost" href="#planos">Ver planos agora</a>
             </div>
-            <p class="proof-disclaimer">Trading envolve risco. Resultados passados não garantem resultados futuros.</p>
           </article>
         </div>
       </div>
@@ -1431,22 +1430,21 @@
       <div class="monthly-shell">
         <div class="monthly-head">
           <div>
-            <div class="pill monthly-pill">RELATÓRIOS MENSAIS</div>
-            <h2 class="monthly-title">Evolução mensal do robô: role e veja mês a mês</h2>
-            <p class="monthly-sub">Coloque as imagens em <code>/assets/meses</code> no formato: <code>mes_inicio_fim_valor.png</code> (ex.: <code>fev_02_04_-3570,57.png</code>).</p>
+            <div class="pill monthly-pill">RELAT&Oacute;RIOS MENSAIS</div>
+            <h2 class="monthly-title">Resultados mensais do rob&ocirc;</h2>
+            <p class="monthly-sub">Operando com 10 contratos, do primeiro ao &uacute;ltimo m&ecirc;s.</p>
           </div>
           <div class="monthly-nav">
-            <button id="reportPrev" class="report-nav" type="button" aria-label="Mês anterior">&#10094;</button>
-            <button id="reportNext" class="report-nav" type="button" aria-label="Próximo mês">&#10095;</button>
+            <button id="reportPrev" class="report-nav" type="button" aria-label="M&ecirc;s anterior">&#10094;</button>
+            <button id="reportNext" class="report-nav" type="button" aria-label="Pr&oacute;ximo m&ecirc;s">&#10095;</button>
           </div>
         </div>
-        <div id="reportTrack" class="report-track" aria-label="Relatórios mensais"></div>
-        <p class="monthly-note">No celular, arraste para o lado. No desktop, use os botões ou a roda do mouse para navegar.</p>
+        <div id="reportTrack" class="report-track" aria-label="Relat&oacute;rios mensais"></div>
       </div>
     </div>
   </section>
 
-  <!-- BONUS -->
+<!-- BONUS -->
   <section class="bonus" id="bonus">
     <div class="container">
       <div class="pill">✨ BÔNUS EXCLUSIVO</div>
@@ -1690,7 +1688,7 @@
       black:  "https://webhook-infinitypay.onrender.com/checkout/trx-black"
     };
 
-    const REPORT_AUTO_INTERVAL_MS = 9000;
+    const REPORT_AUTO_INTERVAL_MS = 12000;
     let autoReportTimer = null;
     let activeReportIndex = 0;
 
@@ -1703,8 +1701,8 @@
           <article class="report-card neutral">
             <div class="report-image"></div>
             <div class="report-body">
-              <h3 class="report-month">Aguardando relatórios</h3>
-              <p class="report-period">Adicione 12 imagens em /assets/meses usando o padrão: fev_02_04_-3570,57.png</p>
+              <h3 class="report-month">Relatórios mensais em atualização</h3>
+              <p class="report-period">Aguarde a próxima atualização.</p>
               <span class="report-gain neutral">R$ 0,00</span>
             </div>
           </article>
@@ -1719,21 +1717,22 @@
               src="${item.image_url}"
               alt="Relatório mensal ${item.month}"
               loading="lazy"
-              onerror="this.style.opacity=.28; this.alt='Adicione a imagem do relatorio mensal em ' + this.src;"
+              onerror="this.style.opacity=.28; this.alt='Imagem indisponível';"
             >
           </div>
           <div class="report-body">
             <h3 class="report-month">${item.month}</h3>
-            <p class="report-period">Inicio: dia ${item.start_day} | Fim: dia ${item.end_day}</p>
+            <p class="report-period">Início: dia ${item.start_day} | Fim: dia ${item.end_day}</p>
             <span class="report-gain ${item.status || "neutral"}">${item.gain}</span>
           </div>
         </article>
       `).join("");
 
-      const scrollStep = () => Math.max(280, Math.round(track.clientWidth * 0.75));
       const prev = document.getElementById("reportPrev");
       const next = document.getElementById("reportNext");
       const cards = Array.from(track.querySelectorAll(".report-card"));
+      const monthlySection = document.getElementById("relatorios");
+      let sectionVisible = false;
 
       function scrollToIndex(index, smooth = true){
         if (!cards.length) return;
@@ -1754,6 +1753,7 @@
 
       function startAuto(){
         stopAuto();
+        if (!sectionVisible) return;
         if (cards.length <= 1) return;
         autoReportTimer = setInterval(() => {
           scrollToIndex(activeReportIndex + 1, true);
@@ -1780,13 +1780,13 @@
       if (prev){
         prev.onclick = () => {
           scrollToIndex(activeReportIndex - 1, true);
-          startAuto();
+          if (sectionVisible) startAuto();
         };
       }
       if (next){
         next.onclick = () => {
           scrollToIndex(activeReportIndex + 1, true);
-          startAuto();
+          if (sectionVisible) startAuto();
         };
       }
 
@@ -1798,13 +1798,34 @@
 
       track.addEventListener("scroll", syncActiveIndexByScroll);
       track.addEventListener("mouseenter", stopAuto);
-      track.addEventListener("mouseleave", startAuto);
+      track.addEventListener("mouseleave", () => {
+        if (sectionVisible) startAuto();
+      });
       track.addEventListener("touchstart", stopAuto, { passive: true });
-      track.addEventListener("touchend", startAuto, { passive: true });
+      track.addEventListener("touchend", () => {
+        if (sectionVisible) startAuto();
+      }, { passive: true });
+
+      if (monthlySection){
+        const visibilityObserver = new IntersectionObserver((entries) => {
+          const entry = entries[0];
+          if (!entry) return;
+          sectionVisible = entry.isIntersecting && entry.intersectionRatio >= 0.45;
+          if (sectionVisible){
+            syncActiveIndexByScroll();
+            startAuto();
+          } else {
+            stopAuto();
+          }
+        }, { threshold: [0, 0.45, 0.8] });
+
+        visibilityObserver.observe(monthlySection);
+      }
 
       scrollToIndex(0, false);
-      startAuto();
+      syncActiveIndexByScroll();
     }
+
 
     async function loadMonthlyReports(){
       try {
