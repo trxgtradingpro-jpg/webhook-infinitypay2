@@ -1592,14 +1592,22 @@ def montar_curva_capital_plano(order):
 
     by_day = curva_csv.get("by_day") or {}
     sequence = curva_csv.get("sequence") or []
-    deltas = []
-    for dia in range(1, dias_plano + 1):
+    dias_csv = len(sequence)
+    if by_day:
+        dias_csv = max(dias_csv, max(by_day.keys()))
+    dias_csv = max(1, min(366, int(dias_csv)))
+
+    def obter_delta_dia(dia):
         delta = by_day.get(dia)
         if delta is None and (dia - 1) < len(sequence):
             delta = sequence[dia - 1]
         if delta is None:
             delta = 0.0
-        deltas.append(float(delta))
+        return float(delta)
+
+    deltas = []
+    for dia in range(1, dias_plano + 1):
+        deltas.append(obter_delta_dia(dia))
 
     valores_acumulados = []
     saldo = 0.0
@@ -1608,10 +1616,15 @@ def montar_curva_capital_plano(order):
         valores_acumulados.append(round(saldo, 2))
 
     valor_atual = valores_acumulados[dia_atual_idx - 1]
+    saldo_total_csv = 0.0
+    for dia in range(1, dias_csv + 1):
+        saldo_total_csv += obter_delta_dia(dia)
+    saldo_total_csv = round(saldo_total_csv, 2)
     axis_padding_base = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
 
     plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
     dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
+    dia_fim_csv = dia_inicio + timedelta(days=dias_csv - 1)
 
     def construir_janela(inicio_dia, fim_dia, ocultar_futuro=False):
         inicio_dia = int(max(1, min(dias_plano, inicio_dia)))
@@ -1694,6 +1707,9 @@ def montar_curva_capital_plano(order):
         "plan_days": dias_plano,
         "start_date": dia_inicio.strftime("%d/%m/%Y"),
         "end_date": dia_fim.strftime("%d/%m/%Y"),
+        "csv_last_day": dias_csv,
+        "csv_end_date": dia_fim_csv.strftime("%d/%m/%Y"),
+        "csv_total_value": saldo_total_csv,
         "default_window_mode": "back15_forward15",
         "window_modes": modos_janela,
         "window_start_day": janela_padrao["window_start_day"],

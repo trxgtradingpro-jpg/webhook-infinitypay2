@@ -659,12 +659,15 @@
       {% if capital_chart and capital_chart.available %}
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
         <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <p class="line"><span>Periodo do CSV:</span> {{ capital_chart.start_date }} ate {{ capital_chart.csv_end_date }}</p>
         <p class="line"><span>Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
         <div class="kpi" style="margin-top:8px;">
           <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
+          <span class="pill">Dias no CSV: {{ capital_chart.csv_last_day }}</span>
           <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
           <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
           <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
+          <span class="pill">Saldo total no CSV: <strong id="csvTotalValueText">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
         </div>
         <div class="chart-config-row">
           {% if capital_chart.window_modes %}
@@ -821,6 +824,7 @@
         const chartHintText = document.getElementById("chartHintText");
         const contractsSelectedEl = document.getElementById("contractsSelected");
         const currentValueTextEl = document.getElementById("currentValueText");
+        const csvTotalValueTextEl = document.getElementById("csvTotalValueText");
         const contractInput = document.getElementById("contractCountInput");
         const contractLimit = Math.max(1, Number.parseInt(payload.contract_limit || 1, 10) || 1);
         const axisPaddingBase = Math.max(0, Number(payload.axis_padding_base || 100));
@@ -901,6 +905,10 @@
           if (currentValueTextEl) {
             const currentValue = (Number(payload.current_value) || 0) * activeContracts;
             currentValueTextEl.textContent = fmtBRL.format(currentValue);
+          }
+          if (csvTotalValueTextEl) {
+            const csvTotalValue = (Number(payload.csv_total_value) || 0) * activeContracts;
+            csvTotalValueTextEl.textContent = fmtBRL.format(csvTotalValue);
           }
           if (contractInput) {
             contractInput.value = String(activeContracts);
