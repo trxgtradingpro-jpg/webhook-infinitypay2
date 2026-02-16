@@ -85,7 +85,7 @@ WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
     (
         "Olá {nome}\n\n"
-        "Seu TRX {plano} foi liberado com sucesso ✅\n\n"
+        "Seu {plano} foi liberado com sucesso ✅\n\n"
         "Quero confirmar se conseguiu instalar corretamente.\n"
         "Caso tenha qualquer dúvida ou dificuldade, é só me chamar que te dou suporte imediato 🤝\n\n"
         "Lembre-se de entrar na nossa comunidade para receber atualizações do nosso robô:\n"
