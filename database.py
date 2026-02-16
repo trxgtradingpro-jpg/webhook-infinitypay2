@@ -101,6 +101,20 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_created_at ON quiz_submissions(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_user_key ON quiz_submissions(user_key)")
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS affiliates (
+            id BIGSERIAL PRIMARY KEY,
+            slug TEXT UNIQUE NOT NULL,
+            nome TEXT NOT NULL,
+            email TEXT,
+            telefone TEXT,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliates_slug ON affiliates(slug)")
+
     # 🔥 MIGRATIONS SEGURAS
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS nome TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS telefone TEXT")
@@ -111,6 +125,13 @@ def init_db():
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS erro_whatsapp TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_agendado_para TIMESTAMP")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS whatsapp_mensagens_enviadas INTEGER DEFAULT 0")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS checkout_slug TEXT")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_slug TEXT")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_nome TEXT")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_email TEXT")
+    cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS affiliate_telefone TEXT")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_checkout_slug ON orders(checkout_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_affiliate_slug ON orders(affiliate_slug)")
 
     cur.execute("""
         UPDATE orders
@@ -127,6 +148,12 @@ def init_db():
           AND COALESCE(whatsapp_mensagens_enviadas, 0) = 0
     """)
 
+    cur.execute("""
+        UPDATE orders
+        SET checkout_slug = plano
+        WHERE checkout_slug IS NULL
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -138,14 +165,39 @@ def init_db():
 # PEDIDOS
 # ======================================================
 
-def salvar_order(order_id, plano, nome, email, telefone):
+def salvar_order(
+    order_id,
+    plano,
+    nome,
+    email,
+    telefone,
+    checkout_slug=None,
+    affiliate_slug=None,
+    affiliate_nome=None,
+    affiliate_email=None,
+    affiliate_telefone=None
+):
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
-        INSERT INTO orders (order_id, plano, nome, email, telefone)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (order_id, plano, nome, email, telefone))
+        INSERT INTO orders (
+            order_id, plano, nome, email, telefone,
+            checkout_slug, affiliate_slug, affiliate_nome, affiliate_email, affiliate_telefone
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        order_id,
+        plano,
+        nome,
+        email,
+        telefone,
+        checkout_slug or plano,
+        affiliate_slug,
+        affiliate_nome,
+        affiliate_email,
+        affiliate_telefone
+    ))
 
     conn.commit()
     cur.close()
@@ -161,7 +213,8 @@ def buscar_order_por_id(order_id):
                status, email_tentativas, erro_email,
                whatsapp_enviado, whatsapp_tentativas,
                erro_whatsapp, whatsapp_agendado_para,
-               whatsapp_mensagens_enviadas, created_at
+               whatsapp_mensagens_enviadas, created_at,
+               checkout_slug, affiliate_slug, affiliate_nome, affiliate_email, affiliate_telefone
         FROM orders
         WHERE order_id = %s
     """, (order_id,))
@@ -187,7 +240,12 @@ def buscar_order_por_id(order_id):
         "erro_whatsapp": row[10],
         "whatsapp_agendado_para": row[11],
         "whatsapp_mensagens_enviadas": row[12],
-        "created_at": row[13]
+        "created_at": row[13],
+        "checkout_slug": row[14],
+        "affiliate_slug": row[15],
+        "affiliate_nome": row[16],
+        "affiliate_email": row[17],
+        "affiliate_telefone": row[18]
     }
 
 
@@ -266,7 +324,8 @@ def listar_pedidos():
     cur.execute("""
         SELECT order_id, nome, email, telefone,
                plano, status, whatsapp_enviado,
-               whatsapp_agendado_para, whatsapp_mensagens_enviadas, created_at
+               whatsapp_agendado_para, whatsapp_mensagens_enviadas, created_at,
+               checkout_slug, affiliate_slug, affiliate_nome, affiliate_email, affiliate_telefone
         FROM orders
         ORDER BY created_at DESC
     """)
@@ -287,7 +346,12 @@ def listar_pedidos():
             "whatsapp_enviado": r[6],
             "whatsapp_agendado_para": r[7],
             "whatsapp_mensagens_enviadas": r[8],
-            "created_at": r[9]
+            "created_at": r[9],
+            "checkout_slug": r[10],
+            "affiliate_slug": r[11],
+            "affiliate_nome": r[12],
+            "affiliate_email": r[13],
+            "affiliate_telefone": r[14]
         })
 
     return pedidos
@@ -436,7 +500,7 @@ def excluir_duplicados_por_dados(order_id_referencia, nome, email, telefone):
         WHERE order_id <> %s
           AND LOWER(COALESCE(TRIM(nome), '')) = LOWER(COALESCE(TRIM(%s), ''))
           AND LOWER(COALESCE(TRIM(email), '')) = LOWER(COALESCE(TRIM(%s), ''))
-          AND REGEXP_REPLACE(COALESCE(telefone, ''), '\D', '', 'g') = REGEXP_REPLACE(COALESCE(%s, ''), '\D', '', 'g')
+          AND REGEXP_REPLACE(COALESCE(telefone, ''), '\\D', '', 'g') = REGEXP_REPLACE(COALESCE(%s, ''), '\\D', '', 'g')
     """, (order_id_referencia, nome, email, telefone))
 
     removidos = cur.rowcount
@@ -444,6 +508,134 @@ def excluir_duplicados_por_dados(order_id_referencia, nome, email, telefone):
     cur.close()
     conn.close()
     return removidos
+
+
+# ======================================================
+# AFILIADOS
+# ======================================================
+
+def listar_afiliados(include_inativos=True):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    sql = """
+        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        FROM affiliates
+    """
+    params = []
+
+    if not include_inativos:
+        sql += " WHERE ativo = TRUE"
+
+    sql += " ORDER BY created_at DESC"
+
+    cur.execute(sql, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    afiliados = []
+    for row in rows:
+        afiliados.append({
+            "id": row[0],
+            "slug": row[1],
+            "nome": row[2],
+            "email": row[3],
+            "telefone": row[4],
+            "ativo": bool(row[5]),
+            "created_at": row[6],
+            "updated_at": row[7]
+        })
+
+    return afiliados
+
+
+def buscar_afiliado_por_slug(slug, apenas_ativos=False):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    sql = """
+        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        FROM affiliates
+        WHERE slug = %s
+    """
+    params = [slug]
+
+    if apenas_ativos:
+        sql += " AND ativo = TRUE"
+
+    sql += " LIMIT 1"
+
+    cur.execute(sql, params)
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "slug": row[1],
+        "nome": row[2],
+        "email": row[3],
+        "telefone": row[4],
+        "ativo": bool(row[5]),
+        "created_at": row[6],
+        "updated_at": row[7]
+    }
+
+
+def criar_afiliado(slug, nome, email=None, telefone=None, ativo=True):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO affiliates (slug, nome, email, telefone, ativo, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+        ON CONFLICT (slug) DO NOTHING
+    """, (slug, nome, email, telefone, bool(ativo)))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido
+
+
+def atualizar_afiliado(slug_atual, slug_novo, nome, email=None, telefone=None, ativo=True):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE affiliates
+        SET slug = %s,
+            nome = %s,
+            email = %s,
+            telefone = %s,
+            ativo = %s,
+            updated_at = NOW()
+        WHERE slug = %s
+    """, (slug_novo, nome, email, telefone, bool(ativo), slug_atual))
+
+    atualizado = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return atualizado
+
+
+def excluir_afiliado(slug):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM affiliates WHERE slug = %s", (slug,))
+    removido = cur.rowcount > 0
+
+    conn.commit()
+    cur.close()
+    conn.close()
+    return removido
 
 
 # ======================================================

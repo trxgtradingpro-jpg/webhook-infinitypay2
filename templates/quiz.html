@@ -415,12 +415,40 @@
       width:min(980px, 96vw);
       color: rgba(224,236,247,.92);
     }
+    .site-trust-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .site-trust-item{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px 12px;
+      text-align:left;
+      box-shadow: 0 10px 24px rgba(0,0,0,.16);
+    }
+    .site-trust-item strong{
+      display:block;
+      font-size:13px;
+      font-weight:900;
+      color:#e8f2ff;
+    }
+    .site-trust-item span{
+      display:block;
+      margin-top:4px;
+      font-size:12px;
+      font-weight:700;
+      color: rgba(228,239,250,.68);
+      line-height:1.35;
+    }
     .site-seals{
       display:flex;
       flex-wrap:wrap;
       justify-content:center;
       gap:10px;
-      margin-bottom:14px;
+      margin-bottom:12px;
     }
     .site-seals span{
       border:1px solid rgba(255,255,255,.14);
@@ -432,33 +460,40 @@
       color: rgba(228,239,250,.88);
     }
     .security-badge-wrap{
-      margin: 10px auto 14px;
+      margin: 8px auto 10px;
       width:min(520px, 92vw);
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
     }
     .security-badge-img{
-      width:100%;
+      width:min(250px, 70vw);
       display:block;
       pointer-events:none;
       user-select:none;
       -webkit-user-drag:none;
     }
     .security-badge-secondary{
-      margin-top:10px;
-      display:flex;
-      justify-content:center;
+      margin-top:0;
+      display:block;
     }
     .security-badge-seal{
-      width:min(180px, 42vw);
+      width:min(96px, 24vw);
       display:block;
       pointer-events:none;
       user-select:none;
       -webkit-user-drag:none;
     }
+    .site-legal{
+      margin-top:2px;
+      font-size:12px;
+      color: rgba(228,239,250,.56);
+      font-weight:700;
+    }
     .site-copy{
+      margin-top:8px;
       font-weight:1000;
       letter-spacing:.3px;
       font-size:24px;
@@ -490,6 +525,7 @@
       .quiz-card{ padding:16px; border-radius:18px; }
       .answer-btn{ font-size:15px; padding:13px 14px; }
       .progress-meta{ font-size:12px; }
+      .site-trust-grid{ grid-template-columns:1fr; }
       .site-copy{ font-size:20px; }
       .site-rights{ font-size:14px; }
       .site-links{ gap:14px; }
@@ -527,6 +563,20 @@
     </section>
 
     <footer class="site-footer">
+      <div class="site-trust-grid">
+        <div class="site-trust-item">
+          <strong>Pagamento seguro</strong>
+          <span>Checkout protegido e processado pela InfinitePay.</span>
+        </div>
+        <div class="site-trust-item">
+          <strong>Privacidade de dados</strong>
+          <span>Seus dados são usados somente para acesso e suporte.</span>
+        </div>
+        <div class="site-trust-item">
+          <strong>Atendimento oficial</strong>
+          <span>Suporte direto da equipe TRX PRO após a compra.</span>
+        </div>
+      </div>
       <div class="site-seals">
         <span>SSL Seguro</span>
         <span>Dados Criptografados</span>
@@ -539,6 +589,7 @@
           <img class="security-badge-seal" src="/assets/secure.png" alt="Selo 100% Secure" draggable="false">
         </div>
       </div>
+      <div class="site-legal">Ambiente com criptografia SSL e monitoramento contínuo.</div>
       <div class="site-copy">TRX PRO © 2026</div>
       <div class="site-rights">Todos os direitos reservados</div>
       <div class="site-links">
@@ -554,11 +605,11 @@
       approxTime: "~1min",
       storageKey: "trx_quiz_state_v1",
       plans: {
-        gratis: { name: "GRATIS", checkout: "https://www.trxpro.com.br/checkout/trx-gratis", contracts: "Teste limitado", price: "GRATIS", theme: "plan-gratis" },
-        bronze: { name: "BRONZE", checkout: "https://www.trxpro.com.br/checkout/trx-bronze", contracts: "1 contrato", price: "R$ 197/mes", theme: "plan-bronze" },
-        prata: { name: "PRATA", checkout: "https://www.trxpro.com.br/checkout/trx-prata", contracts: "1-5 contratos", price: "R$ 247/mes", theme: "plan-prata" },
-        gold: { name: "GOLD", checkout: "https://www.trxpro.com.br/checkout/trx-gold", contracts: "1-20 contratos", price: "R$ 497/mes", theme: "plan-gold" },
-        black: { name: "BLACK", checkout: "https://www.trxpro.com.br/checkout/trx-black", contracts: "1-300 contratos", price: "R$ 697/mes", theme: "plan-black" }
+        gratis: { name: "GRATIS", checkout: "/checkout/trx-gratis{{ checkout_suffix|default('') }}", contracts: "Teste limitado", price: "GRATIS", theme: "plan-gratis" },
+        bronze: { name: "BRONZE", checkout: "/checkout/trx-bronze{{ checkout_suffix|default('') }}", contracts: "1 contrato", price: "R$ 197/mes", theme: "plan-bronze" },
+        prata: { name: "PRATA", checkout: "/checkout/trx-prata{{ checkout_suffix|default('') }}", contracts: "1-5 contratos", price: "R$ 247/mes", theme: "plan-prata" },
+        gold: { name: "GOLD", checkout: "/checkout/trx-gold{{ checkout_suffix|default('') }}", contracts: "1-20 contratos", price: "R$ 497/mes", theme: "plan-gold" },
+        black: { name: "BLACK", checkout: "/checkout/trx-black{{ checkout_suffix|default('') }}", contracts: "1-300 contratos", price: "R$ 697/mes", theme: "plan-black" }
       },
       planOrder: ["gratis", "bronze", "prata", "gold", "black"],
       contractAnchors: {

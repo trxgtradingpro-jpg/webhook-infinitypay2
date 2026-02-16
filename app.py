@@ -43,7 +43,12 @@ from database import (
     registrar_whatsapp_auto_agendamento,
     marcar_whatsapp_auto_enviado,
     registrar_falha_whatsapp_auto,
-    registrar_quiz_submission
+    registrar_quiz_submission,
+    listar_afiliados,
+    buscar_afiliado_por_slug,
+    criar_afiliado,
+    atualizar_afiliado,
+    excluir_afiliado
 )
 
 print("🚀 APP INICIADO", flush=True)
@@ -155,6 +160,92 @@ PLANOS = {
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     }
 }
+
+AFFILIATE_SLUG_RE = re.compile(r"^[a-z0-9-]{2,60}$")
+RESERVED_AFFILIATE_SLUGS = {
+    "admin",
+    "api",
+    "assets",
+    "checkout",
+    "comprar",
+    "dashboard",
+    "diagnostico-de-perfil-trx",
+    "quiz",
+    "termos",
+    "privacidade",
+    "contato",
+    "webhook",
+    "online",
+    "favicon",
+    "favicon-ico",
+    "static"
+}
+
+
+def normalizar_slug_afiliado(valor):
+    slug = re.sub(r"[^a-z0-9-]", "-", (valor or "").strip().lower())
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    return slug[:60]
+
+
+def slug_afiliado_valido(slug):
+    if not slug:
+        return False
+    return AFFILIATE_SLUG_RE.fullmatch(slug) is not None and slug not in RESERVED_AFFILIATE_SLUGS
+
+
+def montar_plano_checkout(plano_base, affiliate_slug=None):
+    if affiliate_slug:
+        return f"{plano_base}-{affiliate_slug}"
+    return plano_base
+
+
+def decompor_plano_checkout(plano_checkout):
+    plano_checkout = (plano_checkout or "").strip().lower()
+    if plano_checkout in PLANOS:
+        return plano_checkout, None
+
+    for plano_base in sorted(PLANOS.keys(), key=len, reverse=True):
+        prefixo = f"{plano_base}-"
+        if not plano_checkout.startswith(prefixo):
+            continue
+        affiliate_slug = normalizar_slug_afiliado(plano_checkout[len(prefixo):])
+        if not slug_afiliado_valido(affiliate_slug):
+            return None, None
+        return plano_base, affiliate_slug
+
+    return None, None
+
+
+def obter_afiliado_ativo(slug):
+    slug = normalizar_slug_afiliado(slug)
+    if not slug_afiliado_valido(slug):
+        return None
+    return buscar_afiliado_por_slug(slug, apenas_ativos=True)
+
+
+def carregar_afiliado_contexto():
+    slug_query = normalizar_slug_afiliado(request.args.get("aff"))
+    if slug_query:
+        afiliado_query = obter_afiliado_ativo(slug_query)
+        if afiliado_query:
+            session["affiliate_slug"] = afiliado_query["slug"]
+            return afiliado_query
+
+    session_slug = normalizar_slug_afiliado(session.get("affiliate_slug"))
+    if session_slug:
+        afiliado_sessao = obter_afiliado_ativo(session_slug)
+        if afiliado_sessao:
+            return afiliado_sessao
+        session.pop("affiliate_slug", None)
+
+    return None
+
+
+def montar_checkout_suffix(affiliate):
+    if not affiliate:
+        return ""
+    return f"-{affiliate['slug']}"
 
 MESES_ROTULO = {
     "jan": "JAN",
@@ -670,18 +761,31 @@ def favicon():
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    afiliado = carregar_afiliado_contexto()
+    return render_template(
+        "index.html",
+        affiliate=afiliado,
+        checkout_suffix=montar_checkout_suffix(afiliado)
+    )
 
 
 @app.route("/diagnostico-de-perfil-trx")
 def diagnostico_perfil_trx():
     obter_quiz_user_key()
-    return render_template("quiz.html")
+    afiliado = carregar_afiliado_contexto()
+    return render_template(
+        "quiz.html",
+        affiliate=afiliado,
+        checkout_suffix=montar_checkout_suffix(afiliado)
+    )
 
 
 @app.route("/quiz")
 def quiz():
-    return redirect("/diagnostico-de-perfil-trx", code=302)
+    destino = "/diagnostico-de-perfil-trx"
+    if request.query_string:
+        destino = f"{destino}?{request.query_string.decode('utf-8', errors='ignore')}"
+    return redirect(destino, code=302)
 
 
 @app.route("/termos")
@@ -697,6 +801,25 @@ def privacidade():
 @app.route("/contato")
 def contato():
     return render_template("contato.html")
+
+
+@app.route("/<affiliate_slug>")
+def landing_afiliado(affiliate_slug):
+    slug = normalizar_slug_afiliado(affiliate_slug)
+    if not slug_afiliado_valido(slug):
+        return "Pagina nao encontrada", 404
+
+    afiliado = obter_afiliado_ativo(slug)
+    if not afiliado:
+        return "Pagina nao encontrada", 404
+
+    session["affiliate_slug"] = afiliado["slug"]
+
+    return render_template(
+        "index.html",
+        affiliate=afiliado,
+        checkout_suffix=montar_checkout_suffix(afiliado)
+    )
 
 
 @app.route("/api/reports/monthly")
@@ -788,17 +911,27 @@ def api_quiz_submit():
 @app.route("/checkout/<plano>")
 def checkout(plano):
     registrar_usuario_online()
-    if plano not in PLANOS:
+    plano_base, affiliate_slug = decompor_plano_checkout(plano)
+    if plano_base not in PLANOS:
         return "Plano inválido", 404
+
+    afiliado = None
+    if affiliate_slug:
+        afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
+        if not afiliado:
+            return "Afiliado inválido", 404
+        session["affiliate_slug"] = afiliado["slug"]
 
     return render_template(
         "checkout.html",
         plano=plano,
+        plano_base=plano_base,
+        is_free_plan=PLANOS[plano_base]["preco"] <= 0,
+        affiliate=afiliado,
         nome=session.get("nome", ""),
         email=session.get("email", ""),
         telefone=session.get("telefone", "")
     )
-
 # 🚫 nunca permitir GET em /comprar
 @app.route("/comprar", methods=["GET"])
 def comprar_get():
@@ -810,9 +943,19 @@ def comprar():
     nome = request.form.get("nome")
     email = request.form.get("email")
     telefone = request.form.get("telefone")
-    plano_id = request.form.get("plano")
+    plano_checkout = (request.form.get("plano") or "").strip().lower()
+    plano_id, affiliate_slug = decompor_plano_checkout(plano_checkout)
 
-    if not nome or not email or not telefone or plano_id not in PLANOS:
+    if plano_id not in PLANOS:
+        return "Dados inválidos", 400
+
+    afiliado = None
+    if affiliate_slug:
+        afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
+        if not afiliado:
+            return "Afiliado inválido", 400
+
+    if not nome or not email or not telefone:
         return "Dados inválidos", 400
 
     order_id = str(uuid.uuid4())
@@ -822,7 +965,12 @@ def comprar():
         plano=plano_id,
         nome=nome,
         email=email,
-        telefone=telefone
+        telefone=telefone,
+        checkout_slug=plano_checkout or plano_id,
+        affiliate_slug=afiliado["slug"] if afiliado else None,
+        affiliate_nome=afiliado["nome"] if afiliado else None,
+        affiliate_email=afiliado.get("email") if afiliado else None,
+        affiliate_telefone=afiliado.get("telefone") if afiliado else None
     )
 
     plano_info = PLANOS[plano_id]
@@ -854,7 +1002,6 @@ def comprar():
     )
 
     return redirect(checkout_url)
-
 
 # ======================================================
 # WEBHOOK
@@ -1005,6 +1152,9 @@ def admin_dashboard():
                 pedido.get("email") or "",
                 pedido.get("telefone") or "",
                 pedido.get("plano") or "",
+                pedido.get("checkout_slug") or "",
+                pedido.get("affiliate_slug") or "",
+                pedido.get("affiliate_nome") or "",
                 pedido.get("status") or "",
                 pedido.get("data_formatada_busca") or "",
                 str(pedido.get("dias_restantes_30") if pedido.get("dias_restantes_30") is not None else ""),
@@ -1026,6 +1176,115 @@ def admin_dashboard():
         filtro_plano=filtro_plano,
         planos=list(PLANOS.keys())
     )
+
+
+def redirecionar_admin_afiliados(msg=None, ok=False):
+    url = "/admin/afiliados"
+    if msg:
+        url += f"?ok={'1' if ok else '0'}&msg={quote(msg)}"
+    return redirect(url)
+
+
+@app.route("/admin/afiliados")
+def admin_afiliados():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    afiliados = listar_afiliados(include_inativos=True)
+    return render_template(
+        "admin_afiliados.html",
+        afiliados=afiliados,
+        msg=(request.args.get("msg") or "").strip(),
+        ok=(request.args.get("ok") or "").strip() == "1",
+        base_url=(PUBLIC_BASE_URL or request.host_url.rstrip("/"))
+    )
+
+
+@app.route("/admin/afiliados/adicionar", methods=["POST"])
+def admin_afiliados_adicionar():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    nome = (request.form.get("nome") or "").strip()
+    slug_raw = (request.form.get("slug") or nome).strip()
+    slug = normalizar_slug_afiliado(slug_raw)
+    email = (request.form.get("email") or "").strip() or None
+    telefone = (request.form.get("telefone") or "").strip() or None
+    ativo = (request.form.get("ativo") or "").strip().lower() in ("1", "on", "true", "yes")
+
+    if not nome:
+        return redirecionar_admin_afiliados("Informe o nome do afiliado.")
+
+    if not slug_afiliado_valido(slug):
+        return redirecionar_admin_afiliados("Slug invalido ou reservado.")
+
+    try:
+        inserido = criar_afiliado(slug=slug, nome=nome, email=email, telefone=telefone, ativo=ativo)
+    except Exception:
+        return redirecionar_admin_afiliados("Erro ao adicionar afiliado.")
+
+    if not inserido:
+        return redirecionar_admin_afiliados("Ja existe um afiliado com esse slug.")
+
+    return redirecionar_admin_afiliados("Afiliado adicionado com sucesso.", ok=True)
+
+
+@app.route("/admin/afiliados/<slug>/editar", methods=["POST"])
+def admin_afiliados_editar(slug):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    slug_atual = normalizar_slug_afiliado(slug)
+    slug_novo = normalizar_slug_afiliado((request.form.get("slug") or "").strip())
+    nome = (request.form.get("nome") or "").strip()
+    email = (request.form.get("email") or "").strip() or None
+    telefone = (request.form.get("telefone") or "").strip() or None
+    ativo = (request.form.get("ativo") or "").strip().lower() in ("1", "on", "true", "yes")
+
+    if not slug_afiliado_valido(slug_atual):
+        return redirecionar_admin_afiliados("Afiliado invalido.")
+
+    if not nome:
+        return redirecionar_admin_afiliados("Informe o nome do afiliado.")
+
+    if not slug_afiliado_valido(slug_novo):
+        return redirecionar_admin_afiliados("Novo slug invalido ou reservado.")
+
+    try:
+        atualizado = atualizar_afiliado(
+            slug_atual=slug_atual,
+            slug_novo=slug_novo,
+            nome=nome,
+            email=email,
+            telefone=telefone,
+            ativo=ativo
+        )
+    except Exception:
+        return redirecionar_admin_afiliados("Erro ao editar afiliado. Verifique se o slug ja existe.")
+
+    if not atualizado:
+        return redirecionar_admin_afiliados("Afiliado nao encontrado.")
+
+    return redirecionar_admin_afiliados("Afiliado atualizado com sucesso.", ok=True)
+
+
+@app.route("/admin/afiliados/<slug>/excluir", methods=["POST"])
+def admin_afiliados_excluir(slug):
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    slug = normalizar_slug_afiliado(slug)
+    if not slug_afiliado_valido(slug):
+        return redirecionar_admin_afiliados("Afiliado invalido.")
+
+    removido = excluir_afiliado(slug)
+    if not removido:
+        return redirecionar_admin_afiliados("Afiliado nao encontrado.")
+
+    if session.get("affiliate_slug") == slug:
+        session.pop("affiliate_slug", None)
+
+    return redirecionar_admin_afiliados("Afiliado excluido com sucesso.", ok=True)
 
 
 @app.route("/admin/relatorios")
@@ -1385,6 +1644,7 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 

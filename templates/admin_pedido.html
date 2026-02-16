@@ -1,60 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <title>Pedido {{ pedido.order_id }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background: #f4f6f8;
-            margin: 0;
-            padding: 30px;
-        }
-
-        .box {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-            max-width: 700px;
-        }
-
-        h2 {
-            margin-top: 0;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            margin-bottom: 10px;
-            font-size: 15px;
-        }
-
-        strong {
-            display: inline-block;
-            width: 140px;
-        }
-
-        .erro {
-            margin-top: 20px;
-            padding: 15px;
-            background: #fff4f4;
-            border-radius: 8px;
-            color: #c0392b;
-        }
-
-        a {
-            display: inline-block;
-            margin-top: 20px;
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 500;
-        }
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f4f6f8;margin:0;padding:30px}
+        .box{background:#fff;padding:25px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.06);max-width:780px}
+        h2{margin-top:0}
+        ul{list-style:none;padding:0;margin:0}
+        li{margin-bottom:10px;font-size:15px;word-break:break-word}
+        strong{display:inline-block;min-width:170px}
+        .muted{color:#64748b}
+        .erro{margin-top:20px;padding:15px;background:#fff4f4;border-radius:8px;color:#c0392b}
+        a{display:inline-block;margin-top:20px;color:#3498db;text-decoration:none;font-weight:500}
     </style>
 </head>
 <body>
@@ -65,12 +24,21 @@
         <ul>
             <li><strong>ID:</strong> {{ pedido.order_id }}</li>
             <li><strong>Nome:</strong> {{ pedido.nome }}</li>
-            <li><strong>Email:</strong> {{ pedido.email }}</li>
+            <li><strong>E-mail:</strong> {{ pedido.email }}</li>
             <li><strong>Telefone:</strong> {{ pedido.telefone }}</li>
-            <li><strong>Plano:</strong> {{ pedido.plano }}</li>
+            <li><strong>Plano base:</strong> {{ pedido.plano }}</li>
+            <li><strong>Checkout ref:</strong> {{ pedido.checkout_slug or pedido.plano }}</li>
             <li><strong>Status:</strong> {{ pedido.status }}</li>
-            <li><strong>Criado em:</strong> {{ pedido.created_at.strftime("%d/%m/%Y %H:%M") }}</li>
+            <li><strong>Criado em:</strong> {{ pedido.created_at.strftime("%d/%m/%Y %H:%M") if pedido.created_at else '-' }}</li>
+            <li><strong>Afiliado (slug):</strong> {{ pedido.affiliate_slug or '-' }}</li>
+            <li><strong>Afiliado (nome):</strong> {{ pedido.affiliate_nome or '-' }}</li>
+            <li><strong>Afiliado (e-mail):</strong> {{ pedido.affiliate_email or '-' }}</li>
+            <li><strong>Afiliado (telefone):</strong> {{ pedido.affiliate_telefone or '-' }}</li>
         </ul>
+
+        {% if pedido.affiliate_slug %}
+            <p class="muted">Origem registrada via afiliado no momento da compra.</p>
+        {% endif %}
 
         {% if pedido.ultimo_erro %}
         <div class="erro">

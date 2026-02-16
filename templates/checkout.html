@@ -111,8 +111,38 @@
       box-shadow: 0 10px 20px rgba(39,174,96,0.3);
     }
 
+    .site-footer {
+      margin-top: 18px;
+      text-align: center;
+    }
+    .site-trust-grid {
+      margin-top: 22px;
+      display: grid;
+      gap: 8px;
+    }
+    .site-trust-item {
+      border: 1px solid #d8e2ea;
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .site-trust-item strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .site-trust-item span {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 700;
+      line-height: 1.35;
+    }
     .site-seals {
-      margin-top: 24px;
+      margin-top: 14px;
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
@@ -129,39 +159,40 @@
       color: #334155;
     }
     .security-badge-wrap {
-      margin: 12px auto 0;
-      width: min(300px, 100%);
-      border-radius: 12px;
-      border: none;
-      background: transparent;
-      padding: 0;
+      margin: 10px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .security-badge-img {
-      width: min(280px, 100%);
-      margin: 0 auto;
+      width: min(220px, 72vw);
+      margin: 0;
       display: block;
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
     }
     .security-badge-secondary {
-      margin-top: 8px;
-      display: flex;
-      justify-content: center;
+      margin-top: 0;
+      display: block;
     }
     .security-badge-seal {
-      width: min(120px, 34vw);
+      width: min(88px, 24vw);
       display: block;
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
     }
-
-    .site-footer {
-      margin-top: 18px;
-      text-align: center;
+    .site-legal {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 700;
     }
     .site-copy {
+      margin-top: 10px;
       font-size: 20px;
       font-weight: 900;
       color: #0f172a;
@@ -195,13 +226,18 @@
   <div class="checkout-container">
 
     <div class="badge-secure">
-      {{ "Ambiente seguro - Ativação do TRX Grátis" if plano == "gratis" else "Ambiente seguro - Pagamento processado pela InfinitePay" }}
+      {{ "Ambiente seguro - Ativação do TRX Grátis" if is_free_plan else "Ambiente seguro - Pagamento processado pela InfinitePay" }}
     </div>
 
-    <h1>{{ "Ativar acesso grátis" if plano == "gratis" else "Finalizar compra" }}</h1>
+    <h1>{{ "Ativar acesso grátis" if is_free_plan else "Finalizar compra" }}</h1>
     <p class="subtitle">
-      {{ "Preencha seus dados para liberar o TRX Grátis imediatamente" if plano == "gratis" else "Preencha seus dados para liberar o acesso imediatamente" }}
+      {{ "Preencha seus dados para liberar o TRX Grátis imediatamente" if is_free_plan else "Preencha seus dados para liberar o acesso imediatamente" }}
     </p>
+    {% if affiliate %}
+      <p class="subtitle" style="margin-top:-10px;margin-bottom:14px;">
+        Indicação: <strong>{{ affiliate.nome }}</strong> ({{ affiliate.slug }})
+      </p>
+    {% endif %}
 
     <form method="POST" action="/comprar">
 
@@ -245,10 +281,25 @@
       <input type="hidden" name="plano" value="{{ plano }}">
 
       <button type="submit">
-        {{ "Continuar para ativar grátis" if plano == "gratis" else "Continuar para pagamento" }}
+        {{ "Continuar para ativar grátis" if is_free_plan else "Continuar para pagamento" }}
       </button>
 
     </form>
+
+    <div class="site-trust-grid">
+      <div class="site-trust-item">
+        <strong>Pagamento seguro</strong>
+        <span>Checkout protegido e processado pela InfinitePay.</span>
+      </div>
+      <div class="site-trust-item">
+        <strong>Privacidade de dados</strong>
+        <span>Seus dados são usados somente para acesso e suporte.</span>
+      </div>
+      <div class="site-trust-item">
+        <strong>Atendimento oficial</strong>
+        <span>Suporte direto da equipe TRX PRO após a compra.</span>
+      </div>
+    </div>
 
     <div class="site-seals">
       <span>SSL Seguro</span>
@@ -262,6 +313,7 @@
         <img class="security-badge-seal" src="/assets/secure.png" alt="Selo 100% Secure" draggable="false">
       </div>
     </div>
+    <div class="site-legal">Ambiente com criptografia SSL e monitoramento contínuo.</div>
 
     <div class="site-footer">
       <div class="site-copy">TRX PRO &copy; 2026</div>

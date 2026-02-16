@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,7 @@
         body{margin:0;font-family:'Inter',sans-serif;color:var(--txt);background:radial-gradient(circle at 10% 10%,#12244f 0%,transparent 40%),radial-gradient(circle at 90% 0%,#1f1155 0%,transparent 35%),var(--bg);padding:24px}
         .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
         .title{font-size:28px;font-weight:800}
-        .menu{display:flex;gap:10px}
+        .menu{display:flex;gap:10px;flex-wrap:wrap}
         .menu a{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s}
         .menu a.active,.menu a:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
         .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
@@ -23,21 +23,33 @@
         .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
         .filters input,.filters select{background:#08112a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px}
         .filters button,.filters a{background:#0a1734;border:1px solid var(--border);color:var(--cyan);border-radius:10px;padding:10px 14px;text-decoration:none}
-        table{width:100%;border-collapse:collapse;background:rgba(10,18,40,.92);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;background:rgba(10,18,40,.92);border:1px solid var(--border);border-radius:14px;overflow:hidden;min-width:1280px}
         th,td{padding:12px;border-bottom:1px solid #16244a;text-align:left;font-size:13px;vertical-align:top}
         th{background:#071126;color:var(--muted)}
         tr:hover{background:rgba(56,189,248,.06)}
-        .plan{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
-        
-        .bronze{color:#f59e0b;background:rgba(245,158,11,.12)} .prata{color:#cbd5e1;background:rgba(148,163,184,.14)} .gold{color:#facc15;background:rgba(250,204,21,.12)} .black{color:#e2e8f0;background:rgba(30,41,59,.75)} .gratis{color:#38bdf8;background:rgba(56,189,248,.12)} .teste{color:#a78bfa;background:rgba(167,139,250,.12)}
-        .plan{transition:all .2s ease}
+        .plan{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;transition:all .2s ease}
+        .bronze{color:#f59e0b;background:rgba(245,158,11,.12)}
+        .prata{color:#cbd5e1;background:rgba(148,163,184,.14)}
+        .gold{color:#facc15;background:rgba(250,204,21,.12)}
+        .black{color:#e2e8f0;background:rgba(30,41,59,.75)}
+        .gratis{color:#38bdf8;background:rgba(56,189,248,.12)}
+        .teste{color:#a78bfa;background:rgba(167,139,250,.12)}
         .plan.bronze:hover{background:rgba(245,158,11,.28);box-shadow:0 0 14px rgba(245,158,11,.35)}
         .plan.prata:hover{background:rgba(203,213,225,.25);box-shadow:0 0 14px rgba(203,213,225,.35)}
         .plan.gold:hover{background:rgba(250,204,21,.28);box-shadow:0 0 14px rgba(250,204,21,.35)}
         .plan.black:hover{background:rgba(71,85,105,.5);box-shadow:0 0 14px rgba(100,116,139,.35)}
-
-        .ok{color:var(--green);font-weight:700}.okfree{color:var(--cyan);font-weight:700}.pend{color:var(--amber);font-weight:700}
-        .alert{color:var(--amber);font-weight:700}.expired{color:var(--red);font-weight:700}
+        .ok{color:var(--green);font-weight:700}
+        .okfree{color:var(--cyan);font-weight:700}
+        .pend{color:var(--amber);font-weight:700}
+        .alert{color:var(--amber);font-weight:700}
+        .expired{color:var(--red);font-weight:700}
+        .muted{color:var(--muted)}
+        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+        .aff-name{font-weight:700}
+        .actions-inline{display:inline}
+        .btn-link{background:none;border:none;color:#f59e0b;cursor:pointer;padding:0}
+        .btn-link-danger{background:none;border:none;color:#f87171;cursor:pointer;padding:0}
         a{color:var(--cyan);text-decoration:none}
     </style>
 </head>
@@ -49,6 +61,7 @@
             <a href="/admin/relatorios">Relatórios</a>
             <a href="/dashboard">Gráficos</a>
             <a href="/admin/analytics">Analytics</a>
+            <a href="/admin/afiliados">Afiliados</a>
         </nav>
     </div>
 
@@ -63,7 +76,7 @@
     </div>
 
     <form class="filters" method="GET" action="/admin/dashboard">
-        <input type="text" name="q" value="{{ busca or '' }}" placeholder="Buscar por nome, email, telefone, data, dias restantes...">
+        <input type="text" name="q" value="{{ busca or '' }}" placeholder="Buscar por nome, email, telefone, plano, afiliado, checkout...">
         <select name="plano">
             <option value="todos" {% if filtro_plano == 'todos' %}selected{% endif %}>Todos</option>
             <option value="pagos" {% if filtro_plano == 'pagos' %}selected{% endif %}>Somente pagos</option>
@@ -77,63 +90,100 @@
         {% if busca or filtro_plano != 'todos' %}<a href="/admin/dashboard">Limpar</a>{% endif %}
     </form>
 
-    <table>
-        <thead>
-            <tr><th>Pedido</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Plano</th><th>Status</th><th>Data</th><th>Dias p/30</th><th>Ações</th></tr>
-        </thead>
-        <tbody>
-            {% for p in pedidos %}
-            <tr>
-                <td>{{ p.order_id[:8] }}...</td>
-                <td>{{ p.nome or '-' }}</td>
-                <td>{{ p.email }}</td>
-                <td>{{ p.telefone or '-' }}</td>
-                <td>
-                    {% if p.plano == 'trx-bronze' %}<span class="plan bronze">🥉 TRX BRONZE</span>
-                    {% elif p.plano == 'trx-prata' %}<span class="plan prata">🥈 TRX PRATA</span>
-                    {% elif p.plano == 'trx-gold' %}<span class="plan gold">🥇 TRX GOLD</span>
-                    {% elif p.plano == 'trx-black' %}<span class="plan black">⚫ TRX BLACK</span>
-                    {% elif p.plano == 'trx-gratis' %}<span class="plan gratis">🆓 TRX GRÁTIS</span>
-                    {% elif p.plano == 'trx-teste' %}<span class="plan teste">🧪 TRX TESTE</span>
-                    {% else %}<span class="plan">{{ p.plano }}</span>{% endif %}
-                </td>
-                <td>{% if p.status == 'PAGO' and p.plano == 'trx-gratis' %}<span class="okfree">✔ Pago (grátis)</span>{% elif p.status == 'PAGO' %}<span class="ok">✔ Pago</span>{% else %}<span class="pend">⏳ Pendente</span>{% endif %}</td>
-                <td>{{ p.created_at_local }}</td>
-                <td>
-                    {% if p.dias_restantes_30 is none %}-
-                    {% elif p.dias_restantes_30 <= 0 %}<span class="expired">encerrado</span>
-                    {% elif p.dias_restantes_30 in [5,3] %}<span class="alert">⚠ faltam {{ p.dias_restantes_30 }} dias</span>
-                    {% else %}{{ p.dias_restantes_30 }} dias{% endif %}
-                </td>
-                <td>
-                    <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
-                    {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
-                    {% if p.whatsapp_status %} | <span style="color:#94a3b8">{{ p.whatsapp_status }}</span>{% endif %}
-                    {% if p.tem_duplicados %}
-                        <br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>
-                        <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" style="display:inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
-                            <input type="hidden" name="nome" value="{{ p.nome or '' }}">
-                            <input type="hidden" name="email" value="{{ p.email or '' }}">
-                            <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
-                            <button type="submit" style="background:none;border:none;color:#f59e0b;cursor:pointer">Excluir duplicados</button>
-                        </form>
-                    {% endif %}
-                    | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" style="display:inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><button type="submit" style="background:none;border:none;color:#f87171;cursor:pointer">Excluir</button></form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Plano</th>
+                    <th>Afiliado</th>
+                    <th>Checkout ref</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th>Dias p/30</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pedidos %}
+                <tr>
+                    <td><span class="mono">{{ p.order_id[:8] }}...</span></td>
+                    <td>{{ p.nome or '-' }}</td>
+                    <td>{{ p.email }}</td>
+                    <td>{{ p.telefone or '-' }}</td>
+                    <td>
+                        {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
+                        {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
+                        {% elif p.plano == 'trx-gold' %}<span class="plan gold">TRX GOLD</span>
+                        {% elif p.plano == 'trx-black' %}<span class="plan black">TRX BLACK</span>
+                        {% elif p.plano == 'trx-gratis' %}<span class="plan gratis">TRX GRÁTIS</span>
+                        {% elif p.plano == 'trx-teste' %}<span class="plan teste">TRX TESTE</span>
+                        {% else %}<span class="plan">{{ p.plano }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.affiliate_slug %}
+                            <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
+                            <div class="muted mono">/{{ p.affiliate_slug }}</div>
+                            {% if p.affiliate_email %}<div class="muted">{{ p.affiliate_email }}</div>{% endif %}
+                        {% else %}
+                            <span class="muted">Direto</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="mono">{{ p.checkout_slug or p.plano }}</span></td>
+                    <td>
+                        {% if p.status == 'PAGO' and p.plano == 'trx-gratis' %}
+                            <span class="okfree">✔ Pago (grátis)</span>
+                        {% elif p.status == 'PAGO' %}
+                            <span class="ok">✔ Pago</span>
+                        {% else %}
+                            <span class="pend">⏳ Pendente</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.created_at_local }}</td>
+                    <td>
+                        {% if p.dias_restantes_30 is none %}
+                            -
+                        {% elif p.dias_restantes_30 <= 0 %}
+                            <span class="expired">encerrado</span>
+                        {% elif p.dias_restantes_30 in [5,3] %}
+                            <span class="alert">⚠ faltam {{ p.dias_restantes_30 }} dias</span>
+                        {% else %}
+                            {{ p.dias_restantes_30 }} dias
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
+                        {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
+                        {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}
+                        {% if p.tem_duplicados %}
+                            <br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>
+                            <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" class="actions-inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
+                                <input type="hidden" name="nome" value="{{ p.nome or '' }}">
+                                <input type="hidden" name="email" value="{{ p.email or '' }}">
+                                <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
+                                <button type="submit" class="btn-link">Excluir duplicados</button>
+                            </form>
+                        {% endif %}
+                        | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><button type="submit" class="btn-link-danger">Excluir</button></form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <script>
-        async function atualizarOnline(){
-            try{
+        async function atualizarOnline() {
+            try {
                 const r = await fetch('/admin/online-count');
-                if(!r.ok) return;
+                if (!r.ok) return;
                 const d = await r.json();
                 const el = document.getElementById('online-count');
-                if(el) el.textContent = d.online;
-            }catch(e){}
+                if (el) el.textContent = d.online;
+            } catch (e) {}
         }
         atualizarOnline();
         setInterval(atualizarOnline, 10000);
