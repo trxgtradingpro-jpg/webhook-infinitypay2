@@ -139,7 +139,49 @@ html[data-theme="light"] :is(
   .proof-micro,
   .proof-disclaimer
 ) {
-  color: rgba(30, 41, 59, 0.72) !important;
+  color: rgba(15, 23, 42, 0.84) !important;
+}
+
+html[data-theme="light"] :is(
+  p,
+  li,
+  label,
+  summary,
+  small,
+  td,
+  th,
+  .line,
+  .line span,
+  .notif-desc,
+  .notif-empty,
+  .wa-item-msg,
+  .site-trust-item span,
+  .faq-item p,
+  .proof-card p,
+  .how-step p
+) {
+  color: #1f2937 !important;
+}
+
+html[data-theme="light"] :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .headline .w,
+  .proof-title,
+  .monthly-title,
+  .free-title,
+  .faq-title,
+  .notif-title,
+  .report-month,
+  .site-copy,
+  .site-trust-item strong,
+  .wa-panel-head strong
+) {
+  color: #0f172a !important;
 }
 
 html[data-theme="light"] :is(
