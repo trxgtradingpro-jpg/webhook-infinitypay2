@@ -4,34 +4,121 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minha Conta | TRX PRO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#050914;
-      --panel:#0d1629;
-      --line:#223253;
-      --txt:#e8efff;
-      --muted:#9db0d4;
-      --ok:#22c55e;
-      --danger:#ef4444;
-      --warn:#f59e0b;
-      --info:#38bdf8;
+      --bg:#05070a;
+      --bg2:#070b12;
+      --txt:#eef6ff;
+      --muted:rgba(238,246,255,.68);
+      --muted2:rgba(238,246,255,.55);
+      --line:rgba(255,255,255,.12);
+      --line2:rgba(255,255,255,.18);
+      --green:#23b00b;
+      --green2:#1d8f09;
+      --red:#ff3a3a;
+      --blue:#4aa3ff;
+      --warn:#ffd21a;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
       min-height:100vh;
-      font-family:Arial,Helvetica,sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--txt);
       background:
-        radial-gradient(1000px 560px at 0% -10%, rgba(56,189,248,.14), transparent 60%),
-        radial-gradient(900px 540px at 100% 0%, rgba(34,197,94,.12), transparent 60%),
-        var(--bg);
+        radial-gradient(1100px 650px at 20% 8%, rgba(35,176,11,.18), transparent 58%),
+        radial-gradient(900px 600px at 80% 18%, rgba(255,138,31,.12), transparent 62%),
+        radial-gradient(900px 700px at 60% 86%, rgba(168,85,247,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
+      overflow-x:hidden;
+    }
+    .grid-bg{
+      position:fixed; inset:0;
+      pointer-events:none;
+      opacity:.16;
+      background:
+        linear-gradient(to right, rgba(255,255,255,.09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.09) 1px, transparent 1px);
+      background-size:64px 64px;
+      mask-image:radial-gradient(circle at 50% 18%, rgba(0,0,0,1) 0%, rgba(0,0,0,.65) 45%, rgba(0,0,0,0) 76%);
+    }
+    .vignette{
+      position:fixed; inset:-40px;
+      pointer-events:none;
+      background:radial-gradient(circle at 50% 22%, transparent 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.75) 90%);
+    }
+    .aurora-bg{
+      position:fixed;
+      inset:-18%;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+      opacity:.78;
+      filter:saturate(1.08);
+    }
+    .aurora-blob{
+      position:absolute;
+      width:min(62vw, 820px);
+      min-width:320px;
+      aspect-ratio:1/1;
+      border-radius:999px;
+      filter:blur(92px);
+      mix-blend-mode:screen;
+      opacity:.26;
+      transform:translate3d(0,0,0);
+      will-change:transform;
+    }
+    .aurora-blob.a{
+      top:-16%;
+      left:-8%;
+      background:radial-gradient(circle at 36% 34%, rgba(35,176,11,.46), rgba(35,176,11,.12) 50%, transparent 74%);
+      animation:auroraDriftA 24s ease-in-out infinite alternate;
+    }
+    .aurora-blob.b{
+      top:8%;
+      right:-22%;
+      background:radial-gradient(circle at 44% 40%, rgba(74,163,255,.42), rgba(74,163,255,.12) 52%, transparent 76%);
+      animation:auroraDriftB 30s ease-in-out infinite alternate;
+      animation-delay:-7s;
+    }
+    .aurora-blob.c{
+      bottom:-24%;
+      left:18%;
+      background:radial-gradient(circle at 50% 44%, rgba(255,138,31,.34), rgba(240,90,26,.09) 50%, transparent 76%);
+      animation:auroraDriftC 34s ease-in-out infinite alternate;
+      animation-delay:-12s;
+    }
+    @keyframes auroraDriftA{
+      0%{ transform:translate3d(-4%, -1%, 0) scale(1); }
+      50%{ transform:translate3d(8%, -6%, 0) scale(1.08); }
+      100%{ transform:translate3d(-2%, 9%, 0) scale(.96); }
+    }
+    @keyframes auroraDriftB{
+      0%{ transform:translate3d(1%, -3%, 0) scale(.98); }
+      50%{ transform:translate3d(-8%, 6%, 0) scale(1.10); }
+      100%{ transform:translate3d(5%, -2%, 0) scale(.95); }
+    }
+    @keyframes auroraDriftC{
+      0%{ transform:translate3d(0, 3%, 0) scale(1); }
+      50%{ transform:translate3d(-7%, -7%, 0) scale(1.07); }
+      100%{ transform:translate3d(6%, 5%, 0) scale(.94); }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .aurora-blob{
+        animation:none !important;
+        opacity:.18;
+      }
     }
     .wrap{
-      width:min(1060px, 94vw);
-      margin:20px auto;
+      position:relative;
+      z-index:2;
+      width:min(1120px, 92vw);
+      margin:20px auto 28px;
       display:grid;
-      gap:12px;
+      gap:14px;
     }
     .top{
       display:flex;
@@ -39,69 +126,97 @@
       align-items:center;
       gap:12px;
       flex-wrap:wrap;
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(8,13,18,.88), rgba(6,9,14,.92));
+      box-shadow:0 18px 50px rgba(0,0,0,.34);
     }
     .title{
       font-size:30px;
-      letter-spacing:-.4px;
-      font-weight:900;
+      letter-spacing:-.5px;
+      font-weight:1000;
       margin:0;
+      text-transform:uppercase;
     }
     .subtitle{
       margin:4px 0 0;
       color:var(--muted);
       font-size:14px;
+      font-weight:700;
     }
     .msg{
       margin:0;
       padding:10px 12px;
-      border-radius:10px;
+      border-radius:12px;
       border:1px solid var(--line);
       font-size:14px;
       line-height:1.4;
+      background:rgba(255,255,255,.03);
+      box-shadow:0 12px 30px rgba(0,0,0,.18);
     }
     .msg.ok{
-      border-color:rgba(34,197,94,.45);
-      background:rgba(34,197,94,.12);
-      color:#bbf7d0;
+      border-color:rgba(35,176,11,.42);
+      background:rgba(35,176,11,.12);
+      color:#b9ffd3;
     }
     .logout{
-      border:1px solid rgba(239,68,68,.45);
-      border-radius:10px;
-      background:rgba(239,68,68,.14);
-      color:#fecaca;
-      font-weight:800;
+      border:1px solid rgba(255,58,58,.56);
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(255,58,58,.26), rgba(255,58,58,.12));
+      color:#ffd4d4;
+      font-weight:900;
+      letter-spacing:.2px;
       padding:10px 14px;
       cursor:pointer;
+      transition:.16s transform, .16s filter;
     }
+    .logout:hover{ transform:translateY(-1px); filter:brightness(1.06); }
     .grid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
+      gap:14px;
     }
     @media (max-width: 860px){
       .grid{ grid-template-columns:1fr; }
     }
     .card{
-      border-radius:14px;
+      position:relative;
+      overflow:hidden;
+      border-radius:16px;
       border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(13,22,41,.95), rgba(8,12,23,.96));
-      box-shadow:0 20px 60px rgba(0,0,0,.4);
+      background:linear-gradient(180deg, rgba(8,13,18,.88), rgba(6,9,14,.92));
+      box-shadow:0 24px 80px rgba(0,0,0,.42);
       padding:16px;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:radial-gradient(760px 220px at 18% 0%, rgba(35,176,11,.12), transparent 62%);
+      pointer-events:none;
+    }
+    .card > *{
+      position:relative;
+      z-index:1;
     }
     h2{
       margin:0 0 10px;
-      font-size:18px;
-      letter-spacing:-.2px;
+      font-size:20px;
+      letter-spacing:-.3px;
+      font-weight:900;
     }
     .line{
-      margin:6px 0;
+      margin:7px 0;
       color:#dbe7ff;
       font-size:14px;
+      font-weight:700;
     }
     .line span{
       color:var(--muted);
       display:inline-block;
-      min-width:90px;
+      min-width:95px;
+      font-weight:800;
     }
     .kpi{
       display:flex;
@@ -113,39 +228,48 @@
       height:360px;
       margin-top:12px;
       position:relative;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:8px;
+      background:rgba(0,0,0,.22);
     }
     .chart-hint{
       margin-top:10px;
-      color:var(--muted);
+      color:var(--muted2);
       font-size:12px;
       line-height:1.4;
+      font-weight:700;
     }
     .pill{
-      border:1px solid var(--line);
+      border:1px solid var(--line2);
       border-radius:999px;
       padding:7px 10px;
-      background:#0b1324;
-      color:#dce7fd;
+      background:rgba(255,255,255,.04);
+      color:#e9f3ff;
       font-size:12px;
-      font-weight:800;
+      font-weight:900;
+      letter-spacing:.2px;
     }
     .pill.ok{
-      border-color:rgba(34,197,94,.45);
-      background:rgba(34,197,94,.12);
-      color:#bbf7d0;
+      border-color:rgba(35,176,11,.50);
+      background:rgba(35,176,11,.15);
+      color:#b9ffd3;
     }
     .pill.warn{
-      border-color:rgba(245,158,11,.45);
-      background:rgba(245,158,11,.12);
-      color:#fde68a;
+      border-color:rgba(255,210,26,.55);
+      background:rgba(255,210,26,.14);
+      color:#ffe79b;
     }
     .pill.bad{
-      border-color:rgba(239,68,68,.45);
-      background:rgba(239,68,68,.12);
-      color:#fecaca;
+      border-color:rgba(255,58,58,.52);
+      background:rgba(255,58,58,.14);
+      color:#ffd4d4;
     }
     .table-wrap{
       overflow-x:auto;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(0,0,0,.18);
     }
     table{
       width:100%;
@@ -153,15 +277,20 @@
       min-width:780px;
     }
     th,td{
-      padding:10px;
+      padding:11px 10px;
       text-align:left;
-      border-bottom:1px solid #1b2946;
+      border-bottom:1px solid rgba(255,255,255,.08);
       font-size:13px;
+      font-weight:700;
     }
     th{
       color:var(--muted);
-      font-weight:700;
-      background:#0a1222;
+      font-weight:900;
+      background:rgba(255,255,255,.03);
+      letter-spacing:.2px;
+    }
+    tbody tr:hover{
+      background:rgba(255,255,255,.03);
     }
     td strong{
       font-size:13px;
@@ -172,60 +301,70 @@
       padding:5px 8px;
       font-size:11px;
       font-weight:900;
+      letter-spacing:.2px;
     }
     .status.ok{
       color:#bbf7d0;
-      background:rgba(34,197,94,.16);
-      border:1px solid rgba(34,197,94,.35);
+      background:rgba(35,176,11,.18);
+      border:1px solid rgba(35,176,11,.42);
     }
     .status.bad{
-      color:#fecaca;
-      background:rgba(239,68,68,.16);
-      border:1px solid rgba(239,68,68,.35);
+      color:#ffd2d2;
+      background:rgba(255,58,58,.18);
+      border:1px solid rgba(255,58,58,.42);
     }
     .empty{
       color:var(--muted);
       font-size:14px;
       line-height:1.5;
-    }
-    .back{
-      color:var(--info);
-      text-decoration:none;
-      font-size:13px;
       font-weight:700;
     }
+    .back{
+      width:fit-content;
+      color:#eaf4ff;
+      text-decoration:none;
+      font-size:13px;
+      font-weight:900;
+      border:1px solid var(--line2);
+      background:rgba(255,255,255,.04);
+      border-radius:12px;
+      padding:9px 12px;
+      transition:.16s transform, .16s filter;
+    }
+    .back:hover{ transform:translateY(-1px); filter:brightness(1.08); }
     .upsell-intro{
       margin:0;
       color:#dbe7ff;
       font-size:14px;
       line-height:1.5;
+      font-weight:700;
     }
     .upsell-grid{
       display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
       gap:10px;
       margin-top:10px;
     }
     .upsell-card{
       display:block;
-      border:1px solid #2a3d66;
-      border-radius:12px;
+      border:1px solid rgba(74,163,255,.44);
+      border-radius:14px;
       padding:12px;
       text-decoration:none;
       background:linear-gradient(180deg, rgba(11,20,40,.96), rgba(8,14,30,.98));
       color:#ecf3ff;
       transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
-      box-shadow:0 8px 30px rgba(0,0,0,.22);
+      box-shadow:0 10px 30px rgba(0,0,0,.24);
     }
     .upsell-card:hover{
       transform:translateY(-2px);
-      border-color:#4ea4ff;
-      box-shadow:0 10px 26px rgba(25,86,160,.35);
+      border-color:#6cc8ff;
+      box-shadow:0 12px 30px rgba(25,86,160,.35);
     }
     .upsell-card.recommended{
-      border-color:rgba(34,197,94,.55);
+      border-color:rgba(35,176,11,.58);
       background:linear-gradient(180deg, rgba(17,33,55,.96), rgba(10,18,34,.98));
-      box-shadow:0 12px 32px rgba(20,97,72,.26);
+      box-shadow:0 12px 32px rgba(20,97,72,.30);
     }
     .upsell-card .tag{
       display:inline-block;
@@ -234,48 +373,57 @@
       padding:4px 8px;
       font-size:11px;
       font-weight:900;
-      background:rgba(56,189,248,.14);
-      border:1px solid rgba(56,189,248,.4);
-      color:#bdeaff;
+      background:rgba(74,163,255,.16);
+      border:1px solid rgba(74,163,255,.50);
+      color:#c9ecff;
+      letter-spacing:.2px;
     }
     .upsell-card.recommended .tag{
-      background:rgba(34,197,94,.16);
-      border-color:rgba(34,197,94,.45);
+      background:rgba(35,176,11,.18);
+      border-color:rgba(35,176,11,.48);
       color:#bbf7d0;
     }
     .upsell-name{
       margin:0 0 6px;
       font-size:17px;
-      font-weight:900;
+      font-weight:1000;
       letter-spacing:-.2px;
     }
     .upsell-price{
       margin:0;
       font-size:22px;
-      font-weight:900;
+      font-weight:1000;
       color:#ecf2ff;
     }
     .upsell-price small{
       font-size:12px;
       color:#aac0e8;
-      font-weight:700;
+      font-weight:800;
       margin-left:4px;
     }
     .upsell-cta{
       margin-top:10px;
       font-size:12px;
       font-weight:900;
-      color:#86efac;
+      color:#8dffc9;
       letter-spacing:.2px;
     }
     .upsell-note{
       margin-top:10px;
-      color:var(--muted);
+      color:var(--muted2);
       font-size:12px;
+      font-weight:700;
     }
   </style>
 </head>
 <body>
+  <div class="aurora-bg" aria-hidden="true">
+    <span class="aurora-blob a"></span>
+    <span class="aurora-blob b"></span>
+    <span class="aurora-blob c"></span>
+  </div>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
   <main class="wrap">
     <header class="top">
       <div>
@@ -316,6 +464,29 @@
       </article>
     </section>
 
+    <section class="card">
+      <h2>Crescimento do capital</h2>
+      {% if capital_chart and capital_chart.available %}
+        <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
+        <p class="line"><span>Periodo:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <div class="kpi" style="margin-top:8px;">
+          <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
+          <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
+          <span class="pill">Valor atual: R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="capitalChart"></canvas>
+        </div>
+        <p class="chart-hint">
+          Passe o mouse sobre a linha para ver a data e o valor do dia.
+          Eixo X: dias do plano. Eixo Y: capital diario com margem de R$ 100 acima/abaixo.
+        </p>
+      {% else %}
+        <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
+        <p class="empty">CSV esperado: <code>dia,valor</code> (ex.: <code>1,10000</code> ... <code>30,12800</code>).</p>
+      {% endif %}
+    </section>
+
     {% if upsell_plans %}
     <section class="card">
       <h2>Evolua para um plano pago</h2>
@@ -340,29 +511,6 @@
       <p class="upsell-note">Ao clicar, voce sera direcionado para o checkout do plano selecionado.</p>
     </section>
     {% endif %}
-
-    <section class="card">
-      <h2>Crescimento do capital</h2>
-      {% if capital_chart and capital_chart.available %}
-        <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
-        <p class="line"><span>Periodo:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
-        <div class="kpi" style="margin-top:8px;">
-          <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
-          <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
-          <span class="pill">Valor atual: R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
-        </div>
-        <div class="chart-wrap">
-          <canvas id="capitalChart"></canvas>
-        </div>
-        <p class="chart-hint">
-          Passe o mouse sobre a linha para ver a data e o valor do dia.
-          Eixo X: dias do plano. Eixo Y: capital diario com margem de R$ 100 acima/abaixo.
-        </p>
-      {% else %}
-        <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
-        <p class="empty">CSV esperado: <code>dia,valor</code> (ex.: <code>1,10000</code> ... <code>30,12800</code>).</p>
-      {% endif %}
-    </section>
 
     <section class="card">
       <h2>Historico de acessos liberados</h2>
