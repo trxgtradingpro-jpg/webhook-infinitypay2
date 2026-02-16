@@ -1587,6 +1587,19 @@ def carregar_curva_capital_csv(path_csv=None):
                 dia_seq = len(valores_sequencia)
                 dia_marcador = max(int(dia_marcador or 0), dia_seq)
 
+    # Se houver marcador "g", ignora qualquer dado posterior para evitar
+    # exibir dias alem do ultimo dia atualizado.
+    if int(dia_marcador or 0) > 0:
+        cutoff = int(dia_marcador)
+        if valores_por_dia:
+            valores_por_dia = {
+                int(dia): float(valor)
+                for dia, valor in valores_por_dia.items()
+                if int(dia) <= cutoff
+            }
+        if valores_sequencia:
+            valores_sequencia = [float(v) for v in valores_sequencia[:cutoff]]
+
     has_data = bool(valores_por_dia or valores_sequencia)
     return {
         "has_data": has_data,
@@ -1742,25 +1755,29 @@ def montar_curva_capital_plano(order):
         fim_dia=dia_ultimo_atualizado,
         ocultar_futuro=False
     )
+
+    inicio_back30 = max(1, dia_ultimo_atualizado - 29)
     janela_30_anteriores = construir_janela(
-        inicio_dia=max(1, dia_ultimo_atualizado - 30),
+        inicio_dia=inicio_back30,
         fim_dia=dia_ultimo_atualizado,
         ocultar_futuro=False
     )
+
     modos_janela = {
         "forward30": {
             "id": "forward30",
             "title": "30 dias posteriores",
             "description": "Mostra do inicio do plano ate o ultimo dia atualizado (marcado com g no CSV).",
             **janela_30_posteriores
-        },
-        "back30": {
+        }
+    }
+    if inicio_back30 > 1:
+        modos_janela["back30"] = {
             "id": "back30",
             "title": "30 dias anteriores",
             "description": "Mostra os ultimos 30 dias e posiciona o ultimo dia atualizado no fim.",
             **janela_30_anteriores
         }
-    }
 
     return {
         "available": True,
