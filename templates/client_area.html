@@ -251,6 +251,70 @@
       gap:8px;
       flex-wrap:wrap;
     }
+    .chart-config-row{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+      align-items:flex-end;
+      flex-wrap:wrap;
+    }
+    .chart-config-row .chart-window-controls{
+      margin-top:0;
+      flex:1 1 460px;
+    }
+    .chart-contract-control{
+      display:grid;
+      gap:6px;
+      min-width:220px;
+    }
+    .chart-contract-control label{
+      font-size:12px;
+      font-weight:900;
+      color:#b9c8e8;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    .chart-contract-input-wrap{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .chart-contract-input{
+      width:96px;
+      border:1px solid var(--line2);
+      border-radius:10px;
+      background:rgba(255,255,255,.04);
+      color:#e9f3ff;
+      padding:7px 10px;
+      font-size:14px;
+      font-weight:900;
+      outline:none;
+      transition:.16s border-color, .16s box-shadow, .16s filter;
+    }
+    .chart-contract-input:hover{
+      filter:brightness(1.06);
+    }
+    .chart-contract-input:focus{
+      border-color:rgba(35,176,11,.62);
+      box-shadow:0 0 0 2px rgba(35,176,11,.20);
+    }
+    .chart-contract-input[disabled]{
+      opacity:.65;
+      cursor:not-allowed;
+    }
+    .chart-contract-limit{
+      border:1px solid rgba(35,176,11,.42);
+      border-radius:999px;
+      padding:6px 10px;
+      background:rgba(35,176,11,.14);
+      color:#b9ffd3;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
     .chart-mode-btn{
       border:1px solid var(--line2);
       border-radius:999px;
@@ -292,6 +356,9 @@
       border-color:rgba(255,210,26,.55);
       background:rgba(255,210,26,.14);
       color:#ffe79b;
+    }
+    .pill strong{
+      color:#f2f8ff;
     }
     .pill.bad{
       border-color:rgba(255,58,58,.52);
@@ -596,21 +663,40 @@
         <div class="kpi" style="margin-top:8px;">
           <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
           <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
-          <span class="pill">Valor atual: R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
+          <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
+          <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
         </div>
-        {% if capital_chart.window_modes %}
-        <div class="chart-window-controls">
-          {% for mode_id, mode in capital_chart.window_modes.items() %}
-            <button
-              type="button"
-              class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'back15_forward15') else '' }}"
-              data-chart-mode="{{ mode_id }}"
-            >
-              {{ mode.title }}
-            </button>
-          {% endfor %}
+        <div class="chart-config-row">
+          {% if capital_chart.window_modes %}
+          <div class="chart-window-controls">
+            {% for mode_id, mode in capital_chart.window_modes.items() %}
+              <button
+                type="button"
+                class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'back15_forward15') else '' }}"
+                data-chart-mode="{{ mode_id }}"
+              >
+                {{ mode.title }}
+              </button>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <div class="chart-contract-control">
+            <label for="contractCountInput">Quantidade de contratos</label>
+            <div class="chart-contract-input-wrap">
+              <input
+                id="contractCountInput"
+                class="chart-contract-input"
+                type="number"
+                min="1"
+                max="{{ capital_chart.contract_limit or 1 }}"
+                step="1"
+                value="{{ capital_chart.contract_default or 1 }}"
+                {% if (capital_chart.contract_limit or 1) <= 1 %}disabled{% endif %}
+              >
+              <span class="chart-contract-limit">Limite: {{ capital_chart.contract_limit or 1 }}</span>
+            </div>
+          </div>
         </div>
-        {% endif %}
         <div class="chart-wrap">
           <canvas id="capitalChart"></canvas>
         </div>
@@ -733,9 +819,92 @@
         const modeButtons = Array.from(document.querySelectorAll(".chart-mode-btn[data-chart-mode]"));
         const windowRangeText = document.getElementById("windowRangeText");
         const chartHintText = document.getElementById("chartHintText");
+        const contractsSelectedEl = document.getElementById("contractsSelected");
+        const currentValueTextEl = document.getElementById("currentValueText");
+        const contractInput = document.getElementById("contractCountInput");
+        const contractLimit = Math.max(1, Number.parseInt(payload.contract_limit || 1, 10) || 1);
+        const axisPaddingBase = Math.max(0, Number(payload.axis_padding_base || 100));
+        let activeContracts = Math.max(1, Math.min(
+          contractLimit,
+          Number.parseInt(payload.contract_default || 1, 10) || 1
+        ));
 
         function getModeData(modeId) {
           return windowModes[modeId] || fallbackModeData;
+        }
+
+        function roundTo2(value) {
+          return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+        }
+
+        function normalizeContract(value) {
+          const parsed = Number.parseInt(value, 10);
+          if (!Number.isFinite(parsed)) return 1;
+          return Math.max(1, Math.min(contractLimit, parsed));
+        }
+
+        function scaleValues(values) {
+          return (values || []).map((value) => {
+            if (value === null || value === undefined) {
+              return null;
+            }
+            return roundTo2(Number(value) * activeContracts);
+          });
+        }
+
+        function calculateYBounds(values) {
+          const visibles = (values || []).filter((value) => Number.isFinite(value));
+          const fallbackCurrent = roundTo2((Number(payload.current_value) || 0) * activeContracts);
+          const baseValues = visibles.length ? visibles : [fallbackCurrent];
+          const minimo = Math.min(...baseValues);
+          const maximo = Math.max(...baseValues);
+          const padding = axisPaddingBase * Math.max(1, activeContracts);
+
+          let yMin = minimo - padding;
+          let yMax = maximo + padding;
+
+          if (Math.abs(yMax - yMin) < 0.01) {
+            const fallbackPadding = padding || 100;
+            yMin -= fallbackPadding;
+            yMax += fallbackPadding;
+          }
+
+          return {
+            y_min: roundTo2(yMin),
+            y_max: roundTo2(yMax),
+          };
+        }
+
+        function getScaledModeData(modeData) {
+          const scaledValues = scaleValues(modeData.values || []);
+          const yBounds = calculateYBounds(scaledValues);
+          return {
+            ...modeData,
+            values: scaledValues,
+            y_min: yBounds.y_min,
+            y_max: yBounds.y_max,
+          };
+        }
+
+        function countVisibleValues(values) {
+          return (values || []).filter((value) => Number.isFinite(value)).length;
+        }
+
+        function getPointRadius(values) {
+          return countVisibleValues(values) <= 1 ? 4 : 0;
+        }
+
+        function refreshContractIndicators() {
+          if (contractsSelectedEl) {
+            contractsSelectedEl.textContent = String(activeContracts);
+          }
+          if (currentValueTextEl) {
+            const currentValue = (Number(payload.current_value) || 0) * activeContracts;
+            currentValueTextEl.textContent = fmtBRL.format(currentValue);
+          }
+          if (contractInput) {
+            contractInput.value = String(activeContracts);
+          }
         }
 
         function getHintText(modeData) {
@@ -743,10 +912,13 @@
             return "Passe o mouse sobre a linha para ver a data e o valor do dia.";
           }
           if (modeData.id === "back30") {
-            return "Janela de 30 dias anteriores. O dia atual fica no fim do grafico.";
+            return "Janela de 30 dias anteriores. O dia atual fica no fim do grafico. Contratos aplicados: " + activeContracts + ".";
           }
-          return "Janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva.";
+          return "Janela de 15 dias para tras e 15 para frente. Dias futuros ficam sem curva. Contratos aplicados: " + activeContracts + ".";
         }
+
+        const initialModeData = getScaledModeData(getModeData(activeMode));
+        const initialPointRadius = getPointRadius(initialModeData.values);
 
         const crosshairPlugin = {
           id: "crosshairPlugin",
@@ -783,17 +955,18 @@
         const chart = new Chart(canvas, {
           type: "line",
           data: {
-            labels: getModeData(activeMode).labels || [],
+            labels: initialModeData.labels || [],
             datasets: [{
-              label: "Capital",
-              data: getModeData(activeMode).values || [],
+              label: "Capital (1 contrato)",
+              data: initialModeData.values || [],
               borderColor: "#74ffd6",
               backgroundColor: "rgba(57, 201, 145, 0.28)",
               fill: true,
               tension: 0.28,
               borderWidth: 2,
-              pointRadius: 0,
-              pointHoverRadius: 4,
+              pointRadius: initialPointRadius,
+              pointHoverRadius: initialPointRadius > 0 ? 7 : 4,
+              pointHitRadius: initialPointRadius > 0 ? 12 : 6,
               pointHoverBackgroundColor: "#74ffd6",
               pointHoverBorderColor: "#0f2d24"
             }]
@@ -821,7 +994,12 @@
                     return dateLabel + " (Dia " + dayLabel + ")";
                   },
                   label(context) {
-                    return "Capital: " + fmtBRL.format(context.parsed.y || 0);
+                    const valor = Number(context.parsed.y);
+                    if (!Number.isFinite(valor)) {
+                      return "Sem curva para esse dia.";
+                    }
+                    const sufixo = activeContracts > 1 ? "s" : "";
+                    return "Capital (" + activeContracts + " contrato" + sufixo + "): " + fmtBRL.format(valor);
                   }
                 }
               }
@@ -842,8 +1020,8 @@
                 }
               },
               y: {
-                min: getModeData(activeMode).y_min ?? payload.y_min,
-                max: getModeData(activeMode).y_max ?? payload.y_max,
+                min: initialModeData.y_min ?? payload.y_min,
+                max: initialModeData.y_max ?? payload.y_max,
                 grid: {
                   color: "rgba(120, 142, 184, 0.18)"
                 },
@@ -865,11 +1043,16 @@
         });
 
         function applyMode(modeId) {
-          const modeData = getModeData(modeId);
+          const modeData = getScaledModeData(getModeData(modeId));
           activeMode = modeId;
 
           chart.data.labels = modeData.labels || [];
+          chart.data.datasets[0].label = "Capital (" + activeContracts + " contrato" + (activeContracts > 1 ? "s" : "") + ")";
           chart.data.datasets[0].data = modeData.values || [];
+          const pointRadius = getPointRadius(modeData.values);
+          chart.data.datasets[0].pointRadius = pointRadius;
+          chart.data.datasets[0].pointHoverRadius = pointRadius > 0 ? 7 : 4;
+          chart.data.datasets[0].pointHitRadius = pointRadius > 0 ? 12 : 6;
           chart.options.scales.y.min = modeData.y_min ?? payload.y_min;
           chart.options.scales.y.max = modeData.y_max ?? payload.y_max;
           chart.update();
@@ -882,6 +1065,7 @@
           if (chartHintText) {
             chartHintText.textContent = getHintText(modeData);
           }
+          refreshContractIndicators();
 
           modeButtons.forEach((btn) => {
             btn.classList.toggle("is-active", (btn.getAttribute("data-chart-mode") || "") === modeId);
@@ -896,6 +1080,23 @@
           });
         });
 
+        if (contractInput) {
+          contractInput.addEventListener("change", () => {
+            const nextContracts = normalizeContract(contractInput.value);
+            if (nextContracts === activeContracts) {
+              contractInput.value = String(activeContracts);
+              return;
+            }
+            activeContracts = nextContracts;
+            applyMode(activeMode);
+          });
+
+          contractInput.addEventListener("blur", () => {
+            contractInput.value = String(normalizeContract(contractInput.value));
+          });
+        }
+
+        refreshContractIndicators();
         applyMode(activeMode);
       })();
     </script>

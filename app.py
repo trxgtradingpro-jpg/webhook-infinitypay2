@@ -222,6 +222,15 @@ CLIENT_PLAN_EXPIRY_DAYS = {
     "trx-black": int(os.environ.get("EXP_DIAS_TRX_BLACK", "30")),
 }
 
+CLIENT_PLAN_CONTRACT_LIMITS = {
+    "trx-gratis": 1,
+    "trx-teste": 1,
+    "trx-bronze": 1,
+    "trx-prata": 5,
+    "trx-gold": 20,
+    "trx-black": 300,
+}
+
 _CLIENT_DATA_FERNET = None
 
 # ======================================================
@@ -1560,6 +1569,9 @@ def montar_curva_capital_plano(order):
     plano_id = (order.get("plano") or "").strip().lower()
     dias_plano = int(CLIENT_PLAN_EXPIRY_DAYS.get(plano_id, 30) or 30)
     dias_plano = max(1, min(365, dias_plano))
+    limite_contratos = int(CLIENT_PLAN_CONTRACT_LIMITS.get(plano_id, 1) or 1)
+    limite_contratos = max(1, min(300, limite_contratos))
+    contrato_padrao = 1
 
     created_at_local = converter_data_para_timezone_admin(order.get("created_at"))
     if not created_at_local:
@@ -1596,6 +1608,7 @@ def montar_curva_capital_plano(order):
         valores_acumulados.append(round(saldo, 2))
 
     valor_atual = valores_acumulados[dia_atual_idx - 1]
+    axis_padding_base = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
 
     plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
     dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
@@ -1628,7 +1641,7 @@ def montar_curva_capital_plano(order):
 
         minimo = min(valores_visiveis)
         maximo = max(valores_visiveis)
-        padding = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
+        padding = axis_padding_base
         y_min = minimo - padding
         y_max = maximo + padding
         if math.isclose(y_min, y_max):
@@ -1694,6 +1707,9 @@ def montar_curva_capital_plano(order):
         "y_max": janela_padrao["y_max"],
         "current_day": dia_atual_idx,
         "current_value": round(valor_atual, 2),
+        "contract_limit": limite_contratos,
+        "contract_default": contrato_padrao,
+        "axis_padding_base": round(axis_padding_base, 2),
         "source_file": os.path.basename(curva_csv.get("path") or ""),
     }
 
