@@ -1039,10 +1039,14 @@
       if (freeFirstResultBtn) {
         freeFirstResultBtn.addEventListener("click", () => {
           state.answers.start_mode = "free_first";
+          state.step = QUIZ_CONFIG.questions.length;
           state.submitted = false;
-          state.submissionId = null;
           saveState();
-          animateSwap(renderResultView);
+
+          const freeResult = getRecommendation(state.answers);
+          submitQuizResult(freeResult);
+
+          window.location.href = QUIZ_CONFIG.plans.gratis.checkout;
         });
       }
 
