@@ -458,6 +458,41 @@ def obter_estatisticas():
     }
 
 
+def contar_pedidos_pagos_por_plano(planos):
+    planos_norm = []
+    for plano in (planos or []):
+        plano_norm = (plano or "").strip().lower()
+        if plano_norm and plano_norm not in planos_norm:
+            planos_norm.append(plano_norm)
+
+    if not planos_norm:
+        return {}
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    placeholders = ", ".join(["%s"] * len(planos_norm))
+    cur.execute(f"""
+        SELECT plano, COUNT(*)
+        FROM orders
+        WHERE status = 'PAGO'
+          AND plano IN ({placeholders})
+        GROUP BY plano
+    """, tuple(planos_norm))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    resultado = {plano: 0 for plano in planos_norm}
+    for plano, quantidade in rows:
+        plano_norm = (plano or "").strip().lower()
+        if plano_norm in resultado:
+            resultado[plano_norm] = int(quantidade or 0)
+
+    return resultado
+
+
 def agendar_whatsapp(order_id, minutos=5):
     conn = get_conn()
     cur = conn.cursor()

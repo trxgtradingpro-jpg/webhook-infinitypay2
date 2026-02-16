@@ -39,6 +39,7 @@ from database import (
     listar_pedidos,
     buscar_pedido_detalhado,
     obter_estatisticas,
+    contar_pedidos_pagos_por_plano,
     agendar_whatsapp,
     listar_whatsapp_pendentes,
     registrar_falha_whatsapp,
@@ -2458,11 +2459,36 @@ def cliente_area():
             if slug_afiliado_valido(affiliate_candidato):
                 affiliate_slug_upsell = affiliate_candidato
 
-        for plano_id in ("trx-bronze", "trx-prata", "trx-gold", "trx-black"):
+        paid_plan_ids = ("trx-bronze", "trx-prata", "trx-gold", "trx-black")
+        contracts_map = {
+            "trx-bronze": "1 contrato",
+            "trx-prata": "1-5 contratos",
+            "trx-gold": "1-20 contratos",
+            "trx-black": "1-300 contratos",
+        }
+        theme_class_map = {
+            "trx-bronze": "plan-bronze",
+            "trx-prata": "plan-prata",
+            "trx-gold": "plan-gold",
+            "trx-black": "plan-black",
+        }
+
+        vendas_por_plano = contar_pedidos_pagos_por_plano(paid_plan_ids)
+        plano_mais_comprado = None
+        plano_mais_comprado_count = 0
+        for pid in paid_plan_ids:
+            count = int(vendas_por_plano.get(pid) or 0)
+            if count > plano_mais_comprado_count:
+                plano_mais_comprado = pid
+                plano_mais_comprado_count = count
+
+        for plano_id in paid_plan_ids:
             plano_info = PLANOS.get(plano_id, {})
             preco_centavos = int(plano_info.get("preco") or 0)
             if preco_centavos <= 0:
                 continue
+
+            is_most_chosen = bool(plano_mais_comprado_count > 0 and plano_id == plano_mais_comprado)
             checkout_slug = montar_plano_checkout(plano_id, affiliate_slug_upsell or None)
             upsell_plans.append({
                 "plano_id": plano_id,
@@ -2470,7 +2496,11 @@ def cliente_area():
                 "preco_centavos": preco_centavos,
                 "preco_fmt": fmt_brl_from_centavos(preco_centavos),
                 "checkout_slug": checkout_slug,
-                "recommended": plano_id == "trx-prata"
+                "theme_class": theme_class_map.get(plano_id, ""),
+                "contracts_text": contracts_map.get(plano_id, ""),
+                "is_most_chosen": is_most_chosen,
+                "tag_text": "Mais escolhido" if is_most_chosen else "Upgrade",
+                "sales_count": int(vendas_por_plano.get(plano_id) or 0),
             })
 
     return render_template(

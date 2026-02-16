@@ -374,72 +374,162 @@
     }
     .upsell-grid{
       display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
-      gap:10px;
-      margin-top:10px;
+      grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+      gap:12px;
+      margin-top:12px;
     }
     .upsell-card{
+      --card-border:rgba(74,163,255,.44);
+      --card-top:rgba(11,20,40,.96);
+      --card-bottom:rgba(8,14,30,.98);
+      --card-shine:rgba(74,163,255,.16);
+      --card-tag-bg:rgba(74,163,255,.16);
+      --card-tag-border:rgba(74,163,255,.52);
+      --card-tag-color:#c9ecff;
+      --card-price:#ecf2ff;
+      --card-cta:#90ffd4;
+      position:relative;
+      overflow:hidden;
       display:block;
-      border:1px solid rgba(74,163,255,.44);
+      border:1px solid var(--card-border);
       border-radius:14px;
       padding:12px;
       text-decoration:none;
-      background:linear-gradient(180deg, rgba(11,20,40,.96), rgba(8,14,30,.98));
+      background:linear-gradient(180deg, var(--card-top), var(--card-bottom));
       color:#ecf3ff;
-      transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
-      box-shadow:0 10px 30px rgba(0,0,0,.24);
+      transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease, filter .16s ease;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.24);
+    }
+    .upsell-card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:radial-gradient(420px 170px at 10% 0%, var(--card-shine), transparent 68%);
+      pointer-events:none;
+      opacity:.95;
+    }
+    .upsell-card > *{
+      position:relative;
+      z-index:1;
     }
     .upsell-card:hover{
       transform:translateY(-2px);
-      border-color:#6cc8ff;
-      box-shadow:0 12px 30px rgba(25,86,160,.35);
+      filter:brightness(1.05);
+      border-color:rgba(116,199,255,.66);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 14px 34px rgba(25,86,160,.30);
+    }
+    .upsell-card.plan-bronze{
+      --card-border:rgba(255,138,31,.52);
+      --card-top:rgba(36,18,4,.96);
+      --card-bottom:rgba(21,11,3,.98);
+      --card-shine:rgba(255,138,31,.20);
+      --card-tag-bg:rgba(255,138,31,.18);
+      --card-tag-border:rgba(255,138,31,.48);
+      --card-tag-color:#ffd4b0;
+      --card-price:#ffbc67;
+    }
+    .upsell-card.plan-prata{
+      --card-border:rgba(198,212,235,.52);
+      --card-top:rgba(22,30,46,.96);
+      --card-bottom:rgba(12,18,30,.98);
+      --card-shine:rgba(198,212,235,.18);
+      --card-tag-bg:rgba(198,212,235,.18);
+      --card-tag-border:rgba(198,212,235,.50);
+      --card-tag-color:#deebff;
+      --card-price:#dbe6f6;
+    }
+    .upsell-card.plan-gold{
+      --card-border:rgba(255,210,26,.52);
+      --card-top:rgba(36,27,4,.96);
+      --card-bottom:rgba(19,13,2,.98);
+      --card-shine:rgba(255,210,26,.18);
+      --card-tag-bg:rgba(255,210,26,.18);
+      --card-tag-border:rgba(255,210,26,.52);
+      --card-tag-color:#ffe89a;
+      --card-price:#ffe26a;
+    }
+    .upsell-card.plan-black{
+      --card-border:rgba(207,164,255,.52);
+      --card-top:rgba(28,12,46,.96);
+      --card-bottom:rgba(16,6,28,.98);
+      --card-shine:rgba(207,164,255,.20);
+      --card-tag-bg:rgba(207,164,255,.17);
+      --card-tag-border:rgba(207,164,255,.52);
+      --card-tag-color:#e6d0ff;
+      --card-price:#ddc0ff;
     }
     .upsell-card.recommended{
-      border-color:rgba(35,176,11,.58);
-      background:linear-gradient(180deg, rgba(17,33,55,.96), rgba(10,18,34,.98));
-      box-shadow:0 12px 32px rgba(20,97,72,.30);
+      border-color:rgba(35,176,11,.66);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 14px 36px rgba(20,97,72,.34);
+    }
+    .upsell-card.recommended::after{
+      content:"";
+      position:absolute;
+      inset:auto -18% -42% -18%;
+      height:68%;
+      background:radial-gradient(440px 170px at 50% 0%, rgba(35,176,11,.22), transparent 74%);
+      pointer-events:none;
     }
     .upsell-card .tag{
       display:inline-block;
       margin-bottom:8px;
       border-radius:999px;
-      padding:4px 8px;
+      padding:4px 10px;
       font-size:11px;
       font-weight:900;
-      background:rgba(74,163,255,.16);
-      border:1px solid rgba(74,163,255,.50);
-      color:#c9ecff;
+      background:var(--card-tag-bg);
+      border:1px solid var(--card-tag-border);
+      color:var(--card-tag-color);
       letter-spacing:.2px;
+      text-transform:uppercase;
     }
     .upsell-card.recommended .tag{
       background:rgba(35,176,11,.18);
-      border-color:rgba(35,176,11,.48);
+      border-color:rgba(35,176,11,.52);
       color:#bbf7d0;
     }
     .upsell-name{
-      margin:0 0 6px;
-      font-size:17px;
+      margin:0;
+      font-size:32px;
       font-weight:1000;
-      letter-spacing:-.2px;
+      line-height:.92;
+      letter-spacing:-.8px;
+      text-transform:uppercase;
+    }
+    .upsell-contracts{
+      margin:6px 0 0;
+      font-size:12px;
+      font-weight:800;
+      color:#c9daef;
+      letter-spacing:.2px;
+      text-transform:uppercase;
     }
     .upsell-price{
-      margin:0;
-      font-size:22px;
+      margin:14px 0 0;
+      font-size:40px;
       font-weight:1000;
-      color:#ecf2ff;
+      line-height:.92;
+      letter-spacing:-.9px;
+      color:var(--card-price);
+    }
+    .upsell-price .rs{
+      font-size:20px;
+      margin-right:2px;
     }
     .upsell-price small{
-      font-size:12px;
-      color:#aac0e8;
+      font-size:16px;
+      color:#d9e6fa;
       font-weight:800;
       margin-left:4px;
+      letter-spacing:.1px;
     }
     .upsell-cta{
-      margin-top:10px;
+      margin-top:12px;
       font-size:12px;
       font-weight:900;
-      color:#8dffc9;
+      color:var(--card-cta);
       letter-spacing:.2px;
+      text-transform:uppercase;
     }
     .upsell-note{
       margin-top:10px;
@@ -540,13 +630,14 @@
       <div class="upsell-grid">
         {% for plano in upsell_plans %}
           <a
-            class="upsell-card js-upsell-link {{ 'recommended' if plano.recommended else '' }}"
+            class="upsell-card js-upsell-link {{ plano.theme_class }} {{ 'recommended' if plano.is_most_chosen else '' }}"
             href="/checkout/{{ plano.checkout_slug }}"
             data-upgrade-plan="{{ plano.plano_id }}"
             data-upgrade-source="client_area_free_upsell"
           >
-            <span class="tag">{{ 'Mais escolhido' if plano.recommended else 'Upgrade' }}</span>
+            <span class="tag">{{ plano.tag_text }}</span>
             <p class="upsell-name">{{ plano.nome }}</p>
+            <p class="upsell-contracts">{{ plano.contracts_text }}</p>
             <p class="upsell-price">{{ plano.preco_fmt }}<small>/mes</small></p>
             <p class="upsell-cta">Clique para ir ao checkout</p>
           </a>
