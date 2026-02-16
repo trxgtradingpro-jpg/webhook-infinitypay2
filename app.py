@@ -4,6 +4,7 @@
 )
 import os
 import json
+import csv
 import uuid
 import requests
 import time
@@ -105,6 +106,8 @@ init_db()
 
 PASTA_SAIDA = "saida"
 os.makedirs(PASTA_SAIDA, exist_ok=True)
+CAPITAL_CURVE_CSV_PATH = (os.environ.get("CAPITAL_CURVE_CSV_PATH") or os.path.join("assets", "capital_curve.csv")).strip()
+CAPITAL_CURVE_AXIS_PADDING = float(os.environ.get("CAPITAL_CURVE_AXIS_PADDING", "100"))
 
 # ======================================================
 # INFINITEPAY CONFIG
@@ -1449,6 +1452,188 @@ def fmt_brl_from_centavos(valor):
     return f"R$ {valor / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def parse_numero_curva_csv(valor):
+    texto = re.sub(r"[^\d,.\-]", "", (str(valor or "")).strip())
+    if not texto:
+        return None
+
+    if "," in texto and "." in texto:
+        if texto.rfind(",") > texto.rfind("."):
+            texto = texto.replace(".", "").replace(",", ".")
+        else:
+            texto = texto.replace(",", "")
+    elif "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    else:
+        texto = texto.replace(",", "")
+
+    try:
+        return float(texto)
+    except ValueError:
+        return None
+
+
+def parse_dia_curva_csv(valor):
+    texto = (str(valor or "")).strip()
+    if not re.fullmatch(r"\d{1,3}", texto):
+        return None
+    dia = int(texto)
+    if 1 <= dia <= 366:
+        return dia
+    return None
+
+
+def carregar_curva_capital_csv(path_csv=None):
+    caminho = (path_csv or CAPITAL_CURVE_CSV_PATH or "").strip()
+    if not caminho:
+        return {"has_data": False, "by_day": {}, "sequence": [], "path": caminho}
+
+    if not os.path.exists(caminho):
+        return {"has_data": False, "by_day": {}, "sequence": [], "path": caminho}
+
+    try:
+        with open(caminho, "r", encoding="utf-8-sig", errors="ignore") as f:
+            linhas = f.read().splitlines()
+    except Exception:
+        return {"has_data": False, "by_day": {}, "sequence": [], "path": caminho}
+
+    sample = ""
+    for linha in linhas:
+        linha_limpa = (linha or "").strip()
+        if linha_limpa and not linha_limpa.startswith("#"):
+            sample = linha_limpa
+            break
+
+    if not sample:
+        return {"has_data": False, "by_day": {}, "sequence": [], "path": caminho}
+
+    delimitador = ";" if sample.count(";") >= sample.count(",") else ","
+    reader = csv.reader(linhas, delimiter=delimitador)
+
+    valores_por_dia = {}
+    valores_sequencia = []
+
+    for row in reader:
+        cols = [(c or "").strip() for c in row]
+        if not any(cols):
+            continue
+        if cols[0].startswith("#"):
+            continue
+
+        if len(cols) == 1:
+            valor = parse_numero_curva_csv(cols[0])
+            if valor is not None:
+                valores_sequencia.append(float(valor))
+            continue
+
+        dia = parse_dia_curva_csv(cols[0])
+        valor = None
+        for item in cols[1:]:
+            candidato = parse_numero_curva_csv(item)
+            if candidato is not None:
+                valor = float(candidato)
+                break
+
+        if valor is None:
+            continue
+
+        if dia is not None:
+            valores_por_dia[dia] = valor
+        else:
+            valores_sequencia.append(valor)
+
+    has_data = bool(valores_por_dia or valores_sequencia)
+    return {
+        "has_data": has_data,
+        "by_day": valores_por_dia,
+        "sequence": valores_sequencia,
+        "path": caminho,
+    }
+
+
+def montar_curva_capital_plano(order):
+    if not order:
+        return {"available": False, "message": "Nenhum plano pago/gratis encontrado para gerar a curva."}
+
+    plano_id = (order.get("plano") or "").strip().lower()
+    dias_plano = int(CLIENT_PLAN_EXPIRY_DAYS.get(plano_id, 30) or 30)
+    dias_plano = max(1, min(365, dias_plano))
+
+    created_at_local = converter_data_para_timezone_admin(order.get("created_at"))
+    if not created_at_local:
+        return {"available": False, "message": "Data de inicio do plano nao encontrada."}
+
+    curva_csv = carregar_curva_capital_csv()
+    if not curva_csv.get("has_data"):
+        caminho = curva_csv.get("path") or os.path.join("assets", "capital_curve.csv")
+        return {
+            "available": False,
+            "message": f"CSV da curva nao encontrado ou sem dados ({caminho}).",
+        }
+
+    by_day = curva_csv.get("by_day") or {}
+    sequence = curva_csv.get("sequence") or []
+    primeiro_dia_disponivel = by_day[min(by_day.keys())] if by_day else None
+    valor_base = sequence[0] if sequence else (primeiro_dia_disponivel if primeiro_dia_disponivel is not None else 0.0)
+
+    labels = []
+    date_labels = []
+    valores = []
+    ultimo_valor = float(valor_base)
+    dia_inicio = created_at_local.date()
+
+    for dia in range(1, dias_plano + 1):
+        valor = by_day.get(dia)
+        if valor is None and (dia - 1) < len(sequence):
+            valor = sequence[dia - 1]
+        if valor is None:
+            valor = ultimo_valor
+
+        valor_float = float(valor)
+        ultimo_valor = valor_float
+        data_ref = dia_inicio + timedelta(days=dia - 1)
+
+        labels.append(str(dia))
+        date_labels.append(data_ref.strftime("%d/%m/%Y"))
+        valores.append(round(valor_float, 2))
+
+    if not valores:
+        return {"available": False, "message": "Nao foi possivel gerar a curva com o CSV informado."}
+
+    minimo = min(valores)
+    maximo = max(valores)
+    padding = max(0.0, float(CAPITAL_CURVE_AXIS_PADDING or 100.0))
+    y_min = minimo - padding
+    y_max = maximo + padding
+    if math.isclose(y_min, y_max):
+        y_min -= 100.0
+        y_max += 100.0
+
+    hoje_local = converter_data_para_timezone_admin(agora_utc()).date()
+    dia_atual_idx = (hoje_local - dia_inicio).days + 1
+    dia_atual_idx = max(1, min(dias_plano, dia_atual_idx))
+    valor_atual = valores[dia_atual_idx - 1]
+
+    plano_nome = PLANOS.get(plano_id, {}).get("nome", plano_id or "Plano")
+    dia_fim = dia_inicio + timedelta(days=dias_plano - 1)
+
+    return {
+        "available": True,
+        "plan_name": plano_nome,
+        "plan_days": dias_plano,
+        "start_date": dia_inicio.strftime("%d/%m/%Y"),
+        "end_date": dia_fim.strftime("%d/%m/%Y"),
+        "labels": labels,
+        "date_labels": date_labels,
+        "values": valores,
+        "y_min": round(y_min, 2),
+        "y_max": round(y_max, 2),
+        "current_day": dia_atual_idx,
+        "current_value": round(valor_atual, 2),
+        "source_file": os.path.basename(curva_csv.get("path") or ""),
+    }
+
+
 def agrupar_periodo(data_obj, group_by):
     if group_by == "week":
         iso = data_obj.isocalendar()
@@ -2103,6 +2288,15 @@ def cliente_area():
     conta_nome = conta_nome_decrypt or (pedidos_view[0]["nome"] if pedidos_view else "")
     ativos = [p for p in pedidos_view if p.get("ativo")]
     ultimo_pedido = pedidos_view[0] if pedidos_view else None
+    pedido_curva = None
+    for pedido in pedidos:
+        exp = montar_expiracao_pedido(pedido)
+        if exp and exp.get("ativo"):
+            pedido_curva = pedido
+            break
+    if not pedido_curva and pedidos:
+        pedido_curva = pedidos[0]
+    capital_chart = montar_curva_capital_plano(pedido_curva)
 
     return render_template(
         "client_area.html",
@@ -2111,6 +2305,7 @@ def cliente_area():
         conta_nome=conta_nome,
         email=email,
         info_message=info_message,
+        capital_chart=capital_chart,
         pedidos=pedidos_view,
         ativos=ativos,
         ultimo_pedido=ultimo_pedido

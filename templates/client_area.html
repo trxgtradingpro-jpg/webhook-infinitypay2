@@ -108,6 +108,18 @@
       gap:8px;
       flex-wrap:wrap;
     }
+    .chart-wrap{
+      width:100%;
+      height:360px;
+      margin-top:12px;
+      position:relative;
+    }
+    .chart-hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
     .pill{
       border:1px solid var(--line);
       border-radius:999px;
@@ -226,6 +238,29 @@
     </section>
 
     <section class="card">
+      <h2>Crescimento do capital</h2>
+      {% if capital_chart and capital_chart.available %}
+        <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
+        <p class="line"><span>Periodo:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <div class="kpi" style="margin-top:8px;">
+          <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
+          <span class="pill ok">Dia atual: {{ capital_chart.current_day }}</span>
+          <span class="pill">Valor atual: R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="capitalChart"></canvas>
+        </div>
+        <p class="chart-hint">
+          Passe o mouse sobre a linha para ver a data e o valor do dia.
+          Eixo X: dias do plano. Eixo Y: capital diario com margem de R$ 100 acima/abaixo.
+        </p>
+      {% else %}
+        <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
+        <p class="empty">CSV esperado: <code>dia,valor</code> (ex.: <code>1,10000</code> ... <code>30,12800</code>).</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
       <h2>Historico de acessos liberados</h2>
       {% if pedidos %}
         <div class="table-wrap">
@@ -276,5 +311,134 @@
 
     <a class="back" href="/">Voltar para a pagina inicial</a>
   </main>
+
+  {% if capital_chart and capital_chart.available %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      (function(){
+        const payload = {{ capital_chart | tojson }};
+        const canvas = document.getElementById("capitalChart");
+        if (!payload || !payload.available || !canvas) return;
+
+        const fmtBRL = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL"
+        });
+
+        const crosshairPlugin = {
+          id: "crosshairPlugin",
+          afterDatasetsDraw(chart) {
+            const active = chart.tooltip && chart.tooltip.getActiveElements
+              ? chart.tooltip.getActiveElements()
+              : [];
+            if (!active || !active.length) return;
+
+            const ctx = chart.ctx;
+            const area = chart.chartArea;
+            const point = active[0].element;
+            const x = point.x;
+            const y = point.y;
+
+            ctx.save();
+            ctx.strokeStyle = "rgba(116, 255, 214, 0.8)";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+
+            ctx.beginPath();
+            ctx.moveTo(x, area.top);
+            ctx.lineTo(x, area.bottom);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(area.left, y);
+            ctx.lineTo(area.right, y);
+            ctx.stroke();
+            ctx.restore();
+          }
+        };
+
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: payload.labels,
+            datasets: [{
+              label: "Capital",
+              data: payload.values,
+              borderColor: "#74ffd6",
+              backgroundColor: "rgba(57, 201, 145, 0.28)",
+              fill: true,
+              tension: 0.28,
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: "#74ffd6",
+              pointHoverBorderColor: "#0f2d24"
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                displayColors: false,
+                callbacks: {
+                  title(items) {
+                    if (!items || !items.length) return "";
+                    const idx = items[0].dataIndex;
+                    return payload.date_labels[idx] + " (Dia " + payload.labels[idx] + ")";
+                  },
+                  label(context) {
+                    return "Capital: " + fmtBRL.format(context.parsed.y || 0);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: {
+                  color: "rgba(120, 142, 184, 0.18)"
+                },
+                ticks: {
+                  color: "#9db0d4",
+                  maxTicksLimit: 10
+                },
+                title: {
+                  display: true,
+                  text: "Dias do plano",
+                  color: "#9db0d4"
+                }
+              },
+              y: {
+                min: payload.y_min,
+                max: payload.y_max,
+                grid: {
+                  color: "rgba(120, 142, 184, 0.18)"
+                },
+                ticks: {
+                  color: "#9db0d4",
+                  callback(value) {
+                    return fmtBRL.format(value);
+                  }
+                },
+                title: {
+                  display: true,
+                  text: "Capital diario (R$)",
+                  color: "#9db0d4"
+                }
+              }
+            }
+          },
+          plugins: [crosshairPlugin]
+        });
+      })();
+    </script>
+  {% endif %}
 </body>
 </html>
