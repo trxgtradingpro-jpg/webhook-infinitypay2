@@ -693,9 +693,12 @@ def gerar_token_remember_cliente():
     return secrets.token_urlsafe(48)
 
 
-def autenticar_cliente_resposta(email, remember=False):
+def autenticar_cliente_resposta(email, remember=False, redirect_path="/minha-conta"):
     email = normalizar_email(email)
     remember = bool(remember)
+    destino = (redirect_path or "/minha-conta").strip()
+    if not destino.startswith("/"):
+        destino = "/minha-conta"
 
     session.pop(CLIENT_PENDING_EMAIL_KEY, None)
     session.pop(CLIENT_VERIFY_EMAIL_KEY, None)
@@ -704,7 +707,7 @@ def autenticar_cliente_resposta(email, remember=False):
     session.permanent = remember
     atualizar_ultimo_login_conta_cliente(email)
 
-    response = redirect("/minha-conta")
+    response = redirect(destino)
     if remember:
         token = gerar_token_remember_cliente()
         token_hash = hash_token_remember_cliente(token)
@@ -1934,8 +1937,6 @@ def cliente_primeiro_acesso():
         limpar_sessao_cliente()
         return redirect("/login")
 
-    nome_conta = descriptografar_texto_cliente(conta.get("nome"))
-
     if not conta.get("first_access_required"):
         remember_pending = (session.get(CLIENT_PENDING_REMEMBER_KEY) or "").strip() == "1"
         return autenticar_cliente_resposta(email, remember=remember_pending)
@@ -1958,107 +1959,33 @@ def cliente_primeiro_acesso():
         elif conta.get("password_hash") and check_password_hash(conta["password_hash"], senha_nova):
             erro = "A nova senha precisa ser diferente da senha temporaria."
         else:
-            codigo = gerar_codigo_seis_digitos()
-            codigo_hash = hash_codigo_validacao(email, codigo)
-            pending_hash = generate_password_hash(senha_nova)
-            expira_em = agora_utc() + timedelta(seconds=CLIENT_CODE_TTL_SECONDS)
-
-            ok_save = registrar_codigo_primeiro_acesso(
-                email=email,
-                pending_password_hash=pending_hash,
-                code_hash=codigo_hash,
-                expires_at=expira_em
-            )
-            if not ok_save:
-                erro = "Falha ao iniciar confirmacao. Tente novamente."
+            senha_hash_nova = generate_password_hash(senha_nova)
+            ok_confirm = confirmar_senha_conta_cliente(email, senha_hash_nova)
+            if not ok_confirm:
+                erro = "Falha ao criar sua senha. Tente novamente."
             else:
-                try:
-                    enviar_email_codigo_cliente(
-                        destinatario=email,
-                        nome=nome_conta,
-                        codigo=codigo,
-                        ttl_seconds=CLIENT_CODE_TTL_SECONDS
-                    )
-                    session[CLIENT_VERIFY_EMAIL_KEY] = email
-                    return redirect("/login/confirmar-codigo")
-                except Exception as exc:
-                    print(f"[CLIENTE] Falha ao enviar codigo de confirmacao para {email}: {exc}", flush=True)
-                    limpar_codigo_cliente(email)
-                    erro = "Falha ao enviar codigo por e-mail. Tente novamente em instantes."
+                remember_pending = (session.get(CLIENT_PENDING_REMEMBER_KEY) or "").strip() == "1"
+                return autenticar_cliente_resposta(
+                    email,
+                    remember=remember_pending,
+                    redirect_path="/minha-conta?info=senha_criada"
+                )
 
     return render_template(
         "client_first_access.html",
         csrf_token=gerar_csrf_token(),
         email=email,
-        erro=erro,
-        ttl_seconds=CLIENT_CODE_TTL_SECONDS
+        erro=erro
     )
 
 
 @app.route("/login/confirmar-codigo", methods=["GET", "POST"])
 def cliente_confirmar_codigo():
     email = normalizar_email(session.get(CLIENT_VERIFY_EMAIL_KEY) or session.get(CLIENT_PENDING_EMAIL_KEY))
-    if not EMAIL_RE.fullmatch(email):
-        return redirect("/login")
-
-    conta = buscar_conta_cliente_por_email(email)
-    if not conta:
-        limpar_sessao_cliente()
-        return redirect("/login")
-
-    erro = ""
-    info = ""
-
-    if request.method == "POST":
-        token = (request.form.get("csrf_token") or "").strip()
-        if not validar_csrf_token(token):
-            return "Falha de validacao CSRF.", 403
-
-        codigo = re.sub(r"\D", "", request.form.get("codigo") or "")[:6]
-        if len(codigo) != 6:
-            erro = "Informe um codigo de 6 digitos."
-        else:
-            tentativas = int(conta.get("verification_attempts") or 0)
-            if tentativas >= CLIENT_CODE_MAX_ATTEMPTS:
-                erro = "Limite de tentativas excedido. Solicite um novo codigo."
-            elif not conta.get("verification_code_hash") or not conta.get("verification_expires_at"):
-                erro = "Codigo nao encontrado. Gere um novo codigo no primeiro acesso."
-            else:
-                expira_em = conta.get("verification_expires_at")
-                agora = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
-                if expira_em < agora:
-                    erro = "Codigo expirado. Gere um novo codigo no primeiro acesso."
-                else:
-                    recebido_hash = hash_codigo_validacao(email, codigo)
-                    esperado_hash = conta.get("verification_code_hash") or ""
-                    if not hmac.compare_digest(recebido_hash, esperado_hash):
-                        incrementar_tentativa_codigo_cliente(email)
-                        restantes = max(0, CLIENT_CODE_MAX_ATTEMPTS - (tentativas + 1))
-                        erro = f"Codigo invalido. Tentativas restantes: {restantes}."
-                    else:
-                        pending_hash = (conta.get("pending_password_hash") or "").strip()
-                        if not pending_hash:
-                            erro = "Nova senha pendente nao encontrada. RefaÃ§a o primeiro acesso."
-                        else:
-                            confirmar_senha_conta_cliente(email, pending_hash)
-                            remember_pending = (session.get(CLIENT_PENDING_REMEMBER_KEY) or "").strip() == "1"
-                            return autenticar_cliente_resposta(email, remember=remember_pending)
-
-        conta = buscar_conta_cliente_por_email(email) or conta
-
-    if request.args.get("enviado") == "1":
-        info = "Codigo enviado para seu e-mail."
-
-    return render_template(
-        "client_verify_code.html",
-        csrf_token=gerar_csrf_token(),
-        email=email,
-        erro=erro,
-        info=info,
-        ttl_seconds=CLIENT_CODE_TTL_SECONDS,
-        max_attempts=CLIENT_CODE_MAX_ATTEMPTS,
-        attempts_used=int(conta.get("verification_attempts") or 0)
-    )
+    if EMAIL_RE.fullmatch(email):
+        session[CLIENT_PENDING_EMAIL_KEY] = email
+    session.pop(CLIENT_VERIFY_EMAIL_KEY, None)
+    return redirect("/login/primeiro-acesso")
 
 
 @app.route("/logout", methods=["POST"])
@@ -2099,6 +2026,10 @@ def cliente_area():
     conta_view = dict(conta)
     conta_view["nome"] = conta_nome_decrypt
     conta_view["telefone"] = conta_telefone_decrypt
+    info_key = (request.args.get("info") or "").strip().lower()
+    info_message = ""
+    if info_key == "senha_criada":
+        info_message = "Senha criada com sucesso."
 
     pedidos = listar_pedidos_pagos_por_email(email, limite=30)
     pedidos_view = []
@@ -2130,6 +2061,7 @@ def cliente_area():
         conta=conta_view,
         conta_nome=conta_nome,
         email=email,
+        info_message=info_message,
         pedidos=pedidos_view,
         ativos=ativos,
         ultimo_pedido=ultimo_pedido

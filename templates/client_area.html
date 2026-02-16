@@ -51,6 +51,19 @@
       color:var(--muted);
       font-size:14px;
     }
+    .msg{
+      margin:0;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      font-size:14px;
+      line-height:1.4;
+    }
+    .msg.ok{
+      border-color:rgba(34,197,94,.45);
+      background:rgba(34,197,94,.12);
+      color:#bbf7d0;
+    }
     .logout{
       border:1px solid rgba(239,68,68,.45);
       border-radius:10px;
@@ -183,6 +196,9 @@
         <button class="logout" type="submit">Sair</button>
       </form>
     </header>
+    {% if info_message %}
+      <div class="msg ok">{{ info_message }}</div>
+    {% endif %}
 
     <section class="grid">
       <article class="card">

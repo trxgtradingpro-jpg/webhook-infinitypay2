@@ -155,7 +155,7 @@
 <body>
   <section class="card">
     <h1>Primeiro acesso</h1>
-    <p class="sub">Crie sua nova senha forte. Depois enviaremos um codigo de 6 digitos para confirmar a alteracao.</p>
+    <p class="sub">Crie sua nova senha forte para concluir seu primeiro acesso.</p>
     <p class="email">Conta: <strong>{{ email }}</strong></p>
 
     {% if erro %}
@@ -186,10 +186,10 @@
       <label for="senha_repetida">Repita a nova senha</label>
       <input id="senha_repetida" name="senha_repetida" type="password" autocomplete="new-password" required>
 
-      <button id="submitBtn" type="submit">Enviar codigo de confirmacao</button>
+      <button id="submitBtn" type="submit">Criar senha e finalizar</button>
     </form>
 
-    <p class="foot">O codigo de confirmacao expira em aproximadamente {{ (ttl_seconds / 60) | round | int }} minuto(s).</p>
+    <p class="foot">Assim que concluir, sua senha sera criada com sucesso e voce sera redirecionado para sua conta.</p>
     <a href="/login" class="back">Voltar ao login</a>
   </section>
 
