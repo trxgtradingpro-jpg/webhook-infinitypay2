@@ -14,8 +14,9 @@
         .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
         .title{font-size:28px;font-weight:800}
         .menu{display:flex;gap:10px;flex-wrap:wrap}
-        .menu a{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s}
-        .menu a.active,.menu a:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
+        .menu a,.menu button{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s;cursor:pointer;font:inherit}
+        .menu a.active,.menu a:hover,.menu button:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
+        .menu form{margin:0}
         .panel{background:linear-gradient(180deg,rgba(15,24,52,.95),rgba(10,16,35,.95));border:1px solid var(--border);border-radius:14px;padding:16px}
         .panel + .panel{margin-top:14px}
         .panel-title{font-size:16px;font-weight:800;margin:0 0 12px}
@@ -53,6 +54,11 @@
             <a href="/dashboard">Gráficos</a>
             <a href="/admin/analytics">Analytics</a>
             <a class="active" href="/admin/afiliados">Afiliados</a>
+            <button type="button" id="backupNowBtn">Backup agora</button>
+            <form method="POST" action="/admin/logout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit">Sair</button>
+            </form>
         </nav>
     </div>
 
@@ -63,6 +69,7 @@
     <section class="panel">
         <h2 class="panel-title">Adicionar afiliado</h2>
         <form method="POST" action="/admin/afiliados/adicionar">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-grid">
                 <div>
                     <label for="novo_nome">Nome</label>
@@ -131,6 +138,7 @@
                         <td>{{ a.updated_at.strftime("%d/%m/%Y %H:%M") if a.updated_at else '-' }}</td>
                         <td>
                             <form method="POST" action="/admin/afiliados/{{ a.slug }}/editar" class="row-actions">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <input type="text" name="slug" value="{{ a.slug }}" required pattern="[a-z0-9-]{2,60}" title="Somente letras minúsculas, números e hífen">
                                 <input type="text" name="nome" value="{{ a.nome }}" required>
                                 <input type="email" name="email" value="{{ a.email or '' }}" placeholder="E-mail">
@@ -139,6 +147,7 @@
                                 <button type="submit" class="btn-ok">Salvar</button>
                             </form>
                             <form method="POST" action="/admin/afiliados/{{ a.slug }}/excluir" onsubmit="return confirm('Excluir afiliado {{ a.slug }}?');" style="margin-top:8px;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <button type="submit" class="btn-danger">Excluir</button>
                             </form>
                         </td>
@@ -150,5 +159,27 @@
             </table>
         </div>
     </section>
+    <script>
+        const backupBtn = document.getElementById('backupNowBtn');
+        if (backupBtn) {
+            backupBtn.addEventListener('click', async () => {
+                backupBtn.disabled = true;
+                backupBtn.textContent = 'Gerando backup...';
+                try {
+                    const r = await fetch('/admin/backup/agora', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                    });
+                    const d = await r.json();
+                    alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+                } catch (e) {
+                    alert('Falha ao acionar backup.');
+                } finally {
+                    backupBtn.disabled = false;
+                    backupBtn.textContent = 'Backup agora';
+                }
+            });
+        }
+    </script>
 </body>
 </html>

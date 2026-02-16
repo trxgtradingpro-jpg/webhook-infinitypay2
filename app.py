@@ -12,12 +12,18 @@ import math
 from urllib.parse import quote
 import re
 import threading
+import hmac
+import hashlib
+import secrets
+from collections import defaultdict, deque
 from zoneinfo import ZoneInfo
-from collections import defaultdict
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash
 
 from compactador import compactar_plano
-from email_utils import enviar_email
+from email_utils import enviar_email, enviar_email_com_anexo
 from whatsapp_sender import schedule_whatsapp
+from backup_utils import criar_backup_criptografado, remover_backups_antigos
 
 from database import (
     init_db,
@@ -48,23 +54,32 @@ from database import (
     buscar_afiliado_por_slug,
     criar_afiliado,
     atualizar_afiliado,
-    excluir_afiliado
+    excluir_afiliado,
+    registrar_backup_execucao,
+    listar_backups_execucao,
+    adquirir_lock_backup_distribuido,
+    liberar_lock_backup_distribuido
 )
 
-print("🚀 APP INICIADO", flush=True)
+print("ðŸš€ APP INICIADO", flush=True)
 
 # ======================================================
 # APP
 # ======================================================
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # ======================================================
-# SEGURANÇA (ENV)
+# SEGURANÃ‡A (ENV)
 # ======================================================
 
-app.secret_key = os.environ["ADMIN_SECRET"]
-ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
+ADMIN_SECRET = os.environ["ADMIN_SECRET"]
+app.secret_key = ADMIN_SECRET
+ADMIN_PASSWORD = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+ADMIN_PASSWORD_HASH = (os.environ.get("ADMIN_PASSWORD_HASH") or "").strip()
+if not ADMIN_PASSWORD and not ADMIN_PASSWORD_HASH:
+    raise RuntimeError("Configure ADMIN_PASSWORD ou ADMIN_PASSWORD_HASH.")
 
 # ======================================================
 # INIT
@@ -82,27 +97,43 @@ os.makedirs(PASTA_SAIDA, exist_ok=True)
 INFINITEPAY_URL = "https://api.infinitepay.io/invoices/public/checkout/links"
 HANDLE = "guilherme-gomes-v85"
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://www.trxpro.com.br").strip().rstrip("/")
-WEBHOOK_URL = f"{PUBLIC_BASE_URL}/webhook/infinitypay"
+INFINITEPAY_WEBHOOK_TOKEN = (os.environ.get("INFINITEPAY_WEBHOOK_TOKEN") or "").strip()
+if not INFINITEPAY_WEBHOOK_TOKEN:
+    INFINITEPAY_WEBHOOK_TOKEN = hashlib.sha256(f"{ADMIN_SECRET}:{HANDLE}:webhook".encode("utf-8")).hexdigest()[:48]
+WEBHOOK_URL = f"{PUBLIC_BASE_URL}/webhook/infinitypay?token={INFINITEPAY_WEBHOOK_TOKEN}"
+ALLOW_LEGACY_UNSIGNED_WEBHOOK = (os.environ.get("ALLOW_LEGACY_UNSIGNED_WEBHOOK", "false").strip().lower() == "true")
+
+DEFAULT_SECURE_COOKIE = PUBLIC_BASE_URL.startswith("https://")
+SESSION_COOKIE_SECURE = (os.environ.get("SESSION_COOKIE_SECURE") or ("true" if DEFAULT_SECURE_COOKIE else "false")).strip().lower() == "true"
+SESSION_COOKIE_SAMESITE = (os.environ.get("SESSION_COOKIE_SAMESITE") or "Lax").strip()
+SESSION_TTL_HOURS = int(os.environ.get("SESSION_TTL_HOURS", "8"))
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=SESSION_COOKIE_SECURE,
+    SESSION_COOKIE_SAMESITE=SESSION_COOKIE_SAMESITE,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=max(1, SESSION_TTL_HOURS)),
+    MAX_CONTENT_LENGTH=int(os.environ.get("MAX_CONTENT_LENGTH_BYTES", str(2 * 1024 * 1024))),
+)
 
 # ======================================================
-# WHATSAPP FOLLOW-UP (PLANO GRÁTIS)
+# WHATSAPP FOLLOW-UP (PLANO GRÃTIS)
 # ======================================================
 
 WHATSAPP_MENSAGEM = os.environ.get(
     "WHATSAPP_MENSAGEM",
     (
-        "Olá {nome}\n\n"
-        "Seu {plano} foi liberado com sucesso ✅\n\n"
+        "OlÃ¡ {nome}\n\n"
+        "Seu {plano} foi liberado com sucesso âœ…\n\n"
         "Quero confirmar se conseguiu instalar corretamente.\n"
-        "Caso tenha qualquer dúvida ou dificuldade, é só me chamar que te dou suporte imediato 🤝\n\n"
-        "Lembre-se de entrar na nossa comunidade para receber atualizações do nosso robô:\n"
+        "Caso tenha qualquer dÃºvida ou dificuldade, Ã© sÃ³ me chamar que te dou suporte imediato ðŸ¤\n\n"
+        "Lembre-se de entrar na nossa comunidade para receber atualizaÃ§Ãµes do nosso robÃ´:\n"
         "https://chat.whatsapp.com/KPcaKf6OsaQHG2cUPAU1CE\n\n"
-        "Estou à disposição."
+        "Estou Ã  disposiÃ§Ã£o."
     )
 )
 WHATSAPP_TEMPLATE = os.environ.get(
     "WHATSAPP_TEMPLATE",
-    "✅ {nome}, seu pagamento do {plano} foi confirmado. Qualquer dúvida pode me chamar!"
+    "âœ… {nome}, seu pagamento do {plano} foi confirmado. Qualquer dÃºvida pode me chamar!"
 )
 WA_SENDER_URL = os.environ.get("WA_SENDER_URL", "").strip()
 WA_SENDER_TOKEN = os.environ.get("WA_SENDER_TOKEN", "").strip()
@@ -117,8 +148,29 @@ ONLINE_TTL_SECONDS = int(os.environ.get("ONLINE_TTL_SECONDS", "90"))
 _online_sessions = {}
 _online_lock = threading.Lock()
 
+BACKUP_ENABLED = (os.environ.get("BACKUP_ENABLED", "true").strip().lower() == "true")
+BACKUP_TIMEZONE = os.environ.get("BACKUP_TIMEZONE", ADMIN_TIMEZONE).strip()
+BACKUP_HOUR = int(os.environ.get("BACKUP_HOUR", "23"))
+BACKUP_MINUTE = int(os.environ.get("BACKUP_MINUTE", "59"))
+BACKUP_OUTPUT_DIR = os.environ.get("BACKUP_OUTPUT_DIR", "backups").strip() or "backups"
+BACKUP_EMAIL_TO = os.environ.get("BACKUP_EMAIL_TO", "trxtradingpro@gmail.com").strip()
+BACKUP_ENCRYPTION_PASSWORD = (os.environ.get("BACKUP_ENCRYPTION_PASSWORD") or ADMIN_SECRET).strip()
+BACKUP_RETENTION_DAYS = int(os.environ.get("BACKUP_RETENTION_DAYS", "15"))
+BACKUP_WORKER_ENABLED = (os.environ.get("BACKUP_WORKER_ENABLED", "true").strip().lower() == "true")
+_backup_lock = threading.Lock()
+
+CSRF_HEADER_NAME = "X-CSRF-Token"
+FAILED_LOGIN_LIMIT = int(os.environ.get("FAILED_LOGIN_LIMIT", "5"))
+FAILED_LOGIN_WINDOW_SECONDS = int(os.environ.get("FAILED_LOGIN_WINDOW_SECONDS", str(15 * 60)))
+FAILED_LOGIN_LOCK_SECONDS = int(os.environ.get("FAILED_LOGIN_LOCK_SECONDS", str(15 * 60)))
+_failed_login_attempts = {}
+_failed_login_lock = threading.Lock()
+
+_request_rate_limit = {}
+_request_rate_lock = threading.Lock()
+
 # ======================================================
-# PLANOS (COM TESTE + GRÁTIS)
+# PLANOS (COM TESTE + GRÃTIS)
 # ======================================================
 
 PLANOS = {
@@ -153,7 +205,7 @@ PLANOS = {
         "redirect_url": "https://sites.google.com/view/planogratuito/in%C3%ADcio"
     },
     "trx-gratis": {
-        "nome": "TRX GRÁTIS",
+        "nome": "TRX GRÃTIS",
         "pasta": "Licencas/TRX GRATIS",
         "preco": 0,
         "gratis": True,
@@ -283,7 +335,7 @@ REGEX_RELATORIO_MENSAL = re.compile(
     flags=re.IGNORECASE
 )
 
-# Valor oficial do acumulado final do ciclo (fev -> jan), alinhado à curva anual.
+# Valor oficial do acumulado final do ciclo (fev -> jan), alinhado Ã  curva anual.
 ACUMULADO_FINAL_CICLO = 78210.00
 
 
@@ -306,6 +358,147 @@ backfill_analytics_from_orders({
 # UTIL
 # ======================================================
 
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def agora_utc():
+    return datetime.now(timezone.utc)
+
+
+def gerar_csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+def validar_csrf_token(token_recebido):
+    token_sessao = (session.get("_csrf_token") or "").strip()
+    token_recebido = (token_recebido or "").strip()
+    if not token_sessao or not token_recebido:
+        return False
+    return hmac.compare_digest(token_sessao, token_recebido)
+
+
+def verificar_senha_admin(senha_digitada):
+    senha_digitada = senha_digitada or ""
+
+    if ADMIN_PASSWORD_HASH:
+        try:
+            return check_password_hash(ADMIN_PASSWORD_HASH, senha_digitada)
+        except Exception:
+            return False
+
+    return hmac.compare_digest(senha_digitada, ADMIN_PASSWORD)
+
+
+def _limpar_janela_timestamps(timestamps, agora_ts, janela):
+    while timestamps and (agora_ts - timestamps[0] > janela):
+        timestamps.popleft()
+
+
+def registrar_tentativa_login(ip, sucesso):
+    agora_ts = time.time()
+    with _failed_login_lock:
+        estado = _failed_login_attempts.setdefault(ip, {"fails": deque(), "locked_until": 0})
+        _limpar_janela_timestamps(estado["fails"], agora_ts, FAILED_LOGIN_WINDOW_SECONDS)
+
+        if sucesso:
+            estado["fails"].clear()
+            estado["locked_until"] = 0
+            return
+
+        estado["fails"].append(agora_ts)
+        if len(estado["fails"]) >= FAILED_LOGIN_LIMIT:
+            estado["locked_until"] = agora_ts + FAILED_LOGIN_LOCK_SECONDS
+            estado["fails"].clear()
+
+
+def login_bloqueado(ip):
+    agora_ts = time.time()
+    with _failed_login_lock:
+        estado = _failed_login_attempts.get(ip)
+        if not estado:
+            return False, 0
+
+        locked_until = float(estado.get("locked_until") or 0)
+        if locked_until <= agora_ts:
+            estado["locked_until"] = 0
+            return False, 0
+
+        return True, int(max(1, locked_until - agora_ts))
+
+
+def excedeu_rate_limit(chave, limite, janela_segundos):
+    agora_ts = time.time()
+    with _request_rate_lock:
+        fila = _request_rate_limit.setdefault(chave, deque())
+        _limpar_janela_timestamps(fila, agora_ts, janela_segundos)
+        if len(fila) >= limite:
+            return True
+        fila.append(agora_ts)
+        return False
+
+
+def normalizar_nome(nome):
+    nome = re.sub(r"\s+", " ", (nome or "").strip())
+    return nome[:120]
+
+
+def normalizar_email(email):
+    return (email or "").strip().lower()[:190]
+
+
+def normalizar_telefone(telefone):
+    return re.sub(r"\D", "", telefone or "")[:20]
+
+
+def validar_cadastro_cliente(nome, email, telefone):
+    nome = normalizar_nome(nome)
+    email = normalizar_email(email)
+    telefone_num = normalizar_telefone(telefone)
+    if telefone_num.startswith("55") and len(telefone_num) > 11:
+        telefone_num = telefone_num[2:]
+
+    if len(nome) < 3:
+        return False, "Nome invalido."
+    if not EMAIL_RE.fullmatch(email):
+        return False, "Email invalido."
+    if len(telefone_num) != 11:
+        return False, "Telefone invalido."
+
+    return True, {
+        "nome": nome,
+        "email": email,
+        "telefone": telefone_num
+    }
+
+
+def verificar_token_webhook():
+    token_qs = (request.args.get("token") or "").strip()
+    token_header = (request.headers.get("X-Webhook-Token") or "").strip()
+    recebido = token_qs or token_header
+    if recebido:
+        return hmac.compare_digest(recebido, INFINITEPAY_WEBHOOK_TOKEN)
+    return ALLOW_LEGACY_UNSIGNED_WEBHOOK
+
+
+def _cspr_headers():
+    return "; ".join([
+        "default-src 'self'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https: wss:",
+    ])
+
 def formatar_telefone_infinitepay(telefone):
     numeros = re.sub(r"\D", "", telefone)
 
@@ -313,7 +506,7 @@ def formatar_telefone_infinitepay(telefone):
         numeros = numeros[2:]
 
     if len(numeros) != 11:
-        raise ValueError("Telefone inválido")
+        raise ValueError("Telefone invÃ¡lido")
 
     return f"+55{numeros}"
 
@@ -330,7 +523,7 @@ def formatar_telefone_whatsapp(telefone):
     if len(numeros) in (10, 11):
         return f"55{numeros}"
 
-    raise ValueError("Telefone inválido para WhatsApp")
+    raise ValueError("Telefone invÃ¡lido para WhatsApp")
 
 
 def gerar_link_whatsapp(order):
@@ -356,7 +549,7 @@ def enviar_whatsapp_automatico(order):
 
     if not WHATSAPP_PHONE_NUMBER_ID or not WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError(
-            "Configure WHATSAPP_PHONE_NUMBER_ID e WHATSAPP_ACCESS_TOKEN para envio automático"
+            "Configure WHATSAPP_PHONE_NUMBER_ID e WHATSAPP_ACCESS_TOKEN para envio automÃ¡tico"
         )
 
     numero_destino = formatar_telefone_whatsapp(order.get("telefone"))
@@ -402,14 +595,14 @@ def processar_fila_whatsapp():
         try:
             enviar_whatsapp_automatico(pedido)
             incrementar_whatsapp_enviado(pedido["order_id"])
-            print(f"📲 WhatsApp automático enviado: {pedido['order_id']}", flush=True)
+            print(f"ðŸ“² WhatsApp automÃ¡tico enviado: {pedido['order_id']}", flush=True)
         except Exception as e:
             registrar_falha_whatsapp(
                 pedido["order_id"],
                 tentativas + 1,
                 str(e)
             )
-            print(f"❌ Falha WhatsApp automático {pedido['order_id']}: {e}", flush=True)
+            print(f"âŒ Falha WhatsApp automÃ¡tico {pedido['order_id']}: {e}", flush=True)
 
 
 def iniciar_worker_whatsapp():
@@ -418,8 +611,149 @@ def iniciar_worker_whatsapp():
             try:
                 processar_fila_whatsapp()
             except Exception as e:
-                print(f"⚠️ Worker WhatsApp com erro: {e}", flush=True)
+                print(f"âš ï¸ Worker WhatsApp com erro: {e}", flush=True)
             time.sleep(20)
+
+    thread = threading.Thread(target=worker_loop, daemon=True)
+    thread.start()
+
+
+def _backup_timezone():
+    try:
+        return ZoneInfo(BACKUP_TIMEZONE)
+    except Exception:
+        return ZoneInfo("America/Sao_Paulo")
+
+
+def _registrar_backup_execucao_seguro(**kwargs):
+    try:
+        registrar_backup_execucao(**kwargs)
+    except Exception as exc:
+        print(f"[BACKUP] falha ao registrar log: {exc}", flush=True)
+
+
+def _segundos_ate_proximo_backup():
+    tz = _backup_timezone()
+    now = datetime.now(tz)
+    alvo = now.replace(
+        hour=max(0, min(23, BACKUP_HOUR)),
+        minute=max(0, min(59, BACKUP_MINUTE)),
+        second=0,
+        microsecond=0,
+    )
+    if now >= alvo:
+        alvo += timedelta(days=1)
+    return max(1, int((alvo - now).total_seconds()))
+
+
+def executar_backup_criptografado(trigger_type="auto"):
+    inicio = agora_utc()
+
+    if not BACKUP_ENABLED:
+        return False, "Backup desativado por configuracao."
+
+    if not BACKUP_ENCRYPTION_PASSWORD:
+        return False, "Senha de criptografia do backup nao configurada."
+
+    if not BACKUP_EMAIL_TO:
+        return False, "Email de destino do backup nao configurado."
+
+    os.makedirs(BACKUP_OUTPUT_DIR, exist_ok=True)
+
+    with _backup_lock:
+        lock_conn = None
+        try:
+            lock_conn = adquirir_lock_backup_distribuido()
+        except Exception as exc:
+            _registrar_backup_execucao_seguro(
+                trigger_type=trigger_type,
+                status="FAILED",
+                message=f"Falha ao adquirir lock distribuido: {exc}",
+                started_at=inicio,
+                finished_at=agora_utc(),
+            )
+            return False, f"Falha ao iniciar backup: {exc}"
+
+        if not lock_conn:
+            _registrar_backup_execucao_seguro(
+                trigger_type=trigger_type,
+                status="SKIPPED",
+                message="Outro processo ja esta executando backup.",
+                started_at=inicio,
+                finished_at=agora_utc(),
+            )
+            return False, "Backup em andamento em outro processo."
+
+        try:
+            info = criar_backup_criptografado(
+                project_root=os.getcwd(),
+                output_dir=BACKUP_OUTPUT_DIR,
+                password=BACKUP_ENCRYPTION_PASSWORD,
+            )
+
+            assunto = f"Backup diario TRX PRO ({info['created_at_utc']})"
+            mensagem = (
+                "Backup criptografado gerado e enviado com sucesso.\n\n"
+                f"Arquivo: {info['filename']}\n"
+                f"Tamanho: {info['size_bytes']} bytes\n"
+                f"SHA256: {info['sha256']}\n"
+                f"Trigger: {trigger_type}\n"
+            )
+            enviar_email_com_anexo(
+                destinatario=BACKUP_EMAIL_TO,
+                assunto=assunto,
+                mensagem=mensagem,
+                caminho_arquivo=info["path"],
+            )
+
+            remover_backups_antigos(
+                output_dir=BACKUP_OUTPUT_DIR,
+                keep_days=BACKUP_RETENTION_DAYS,
+            )
+
+            fim = agora_utc()
+            _registrar_backup_execucao_seguro(
+                trigger_type=trigger_type,
+                status="SUCCESS",
+                filename=info["filename"],
+                size_bytes=info["size_bytes"],
+                sha256=info["sha256"],
+                message="Backup enviado por email com sucesso.",
+                started_at=inicio,
+                finished_at=fim,
+            )
+            return True, "Backup enviado com sucesso."
+        except Exception as exc:
+            fim = agora_utc()
+            _registrar_backup_execucao_seguro(
+                trigger_type=trigger_type,
+                status="FAILED",
+                message=str(exc),
+                started_at=inicio,
+                finished_at=fim,
+            )
+            return False, f"Falha no backup: {exc}"
+        finally:
+            liberar_lock_backup_distribuido(lock_conn)
+
+
+def iniciar_worker_backup_diario():
+    if not BACKUP_ENABLED or not BACKUP_WORKER_ENABLED:
+        print("Worker de backup diario desativado.", flush=True)
+        return
+
+    def worker_loop():
+        while True:
+            try:
+                esperar = _segundos_ate_proximo_backup()
+                time.sleep(esperar)
+                ok, msg = executar_backup_criptografado(trigger_type="auto")
+                print(f"[BACKUP] {msg}", flush=True)
+                if not ok and "em andamento em outro processo" not in msg.lower():
+                    time.sleep(60)
+            except Exception as exc:
+                print(f"[BACKUP] erro no worker: {exc}", flush=True)
+                time.sleep(60)
 
     thread = threading.Thread(target=worker_loop, daemon=True)
     thread.start()
@@ -441,6 +775,7 @@ def pedido_liberado_para_whatsapp(order):
 
 
 iniciar_worker_whatsapp()
+iniciar_worker_backup_diario()
 
 
 def chave_duplicidade_pedido(order):
@@ -465,7 +800,7 @@ def calcular_contagem_regressiva_30_dias(order):
 
     alerta = ""
     if dias_restantes in (5, 3):
-        alerta = f"⚠ Faltam {dias_restantes} dias para completar 30 dias"
+        alerta = f"âš  Faltam {dias_restantes} dias para completar 30 dias"
 
     return {
         "dias_restantes_30": dias_restantes,
@@ -487,16 +822,16 @@ def agendar_whatsapp_pos_pago(order):
         return
 
     if not WA_SENDER_URL or not WA_SENDER_TOKEN:
-        print(f"⚠️ WhatsApp sender não configurado; ignorando pedido {order_id}", flush=True)
+        print(f"âš ï¸ WhatsApp sender nÃ£o configurado; ignorando pedido {order_id}", flush=True)
         return
 
     agendado = registrar_whatsapp_auto_agendamento(order_id, delay_minutes=WHATSAPP_DELAY_MINUTES)
     if not agendado:
-        print(f"ℹ️ WhatsApp já agendado/enviado para {order_id}", flush=True)
+        print(f"â„¹ï¸ WhatsApp jÃ¡ agendado/enviado para {order_id}", flush=True)
         return
 
     mensagem = montar_mensagem_whatsapp_pos_pago(order)
-    print(f"✅ Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
+    print(f"âœ… Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
 
     schedule_whatsapp(
         phone=telefone,
@@ -603,9 +938,6 @@ def obter_quiz_user_key():
 
 
 def obter_ip_request():
-    forwarded = (request.headers.get("X-Forwarded-For") or "").strip()
-    if forwarded:
-        return forwarded.split(",")[0].strip()
     return (request.remote_addr or "").strip()
 
 
@@ -674,6 +1006,67 @@ def total_usuarios_online(excluir_request_atual=False):
                 total -= 1
 
         return max(0, total)
+
+
+@app.context_processor
+def injetar_contexto_global():
+    token = ""
+    if (request.path or "").startswith("/admin"):
+        token = gerar_csrf_token()
+    return {
+        "csrf_token": token,
+    }
+
+
+@app.before_request
+def aplicar_protecoes_request():
+    path = request.path or ""
+    method = request.method.upper()
+    ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
+
+    if method == "POST" and path == "/comprar":
+        if excedeu_rate_limit(f"post_comprar:{ip}", limite=18, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos e tente novamente.", 429
+
+    if method == "POST" and path == "/api/quiz/submit":
+        if excedeu_rate_limit(f"post_quiz:{ip}", limite=40, janela_segundos=60):
+            return jsonify({"ok": False, "error": "rate_limited"}), 429
+
+    if method == "POST" and path == "/webhook/infinitypay":
+        if excedeu_rate_limit(f"post_webhook:{ip}", limite=180, janela_segundos=60):
+            return jsonify({"msg": "Rate limited"}), 429
+
+    if method == "POST" and path == "/admin/login":
+        if excedeu_rate_limit(f"post_admin_login:{ip}", limite=12, janela_segundos=60):
+            return "Muitas tentativas de login. Aguarde alguns segundos.", 429
+
+    if path.startswith("/admin") and method in {"POST", "PUT", "PATCH", "DELETE"}:
+        token = (request.form.get("csrf_token") or request.headers.get(CSRF_HEADER_NAME) or "").strip()
+        if not validar_csrf_token(token):
+            return "Falha de validacao CSRF.", 403
+
+
+@app.after_request
+def aplicar_headers_seguranca(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+
+    content_type = (response.headers.get("Content-Type") or "").lower()
+    if "text/html" in content_type:
+        response.headers.setdefault("Content-Security-Policy", _cspr_headers())
+
+    if request.is_secure:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+
+    if request.path.startswith("/admin"):
+        response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        response.headers.setdefault("Pragma", "no-cache")
+
+    return response
 
 
 @app.route('/online/ping', methods=['POST'])
@@ -746,7 +1139,7 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
     return False
 
 # ======================================================
-# ROTAS PÚBLICAS
+# ROTAS PÃšBLICAS
 # ======================================================
 
 @app.route("/assets/<path:filename>")
@@ -872,14 +1265,14 @@ def api_quiz_submit():
     submission_id = (payload.get("submission_id") or "").strip()
 
     if not isinstance(answers, dict):
-        return jsonify({"ok": False, "error": "answers inválido"}), 400
+        return jsonify({"ok": False, "error": "answers invÃ¡lido"}), 400
 
     planos_validos = {"gratis", "bronze", "prata", "gold", "black"}
     if recommended_plan not in planos_validos:
-        return jsonify({"ok": False, "error": "recommended_plan inválido"}), 400
+        return jsonify({"ok": False, "error": "recommended_plan invÃ¡lido"}), 400
 
     if next_level_plan and next_level_plan not in planos_validos:
-        return jsonify({"ok": False, "error": "next_level_plan inválido"}), 400
+        return jsonify({"ok": False, "error": "next_level_plan invÃ¡lido"}), 400
 
     if not isinstance(reasons, list):
         reasons = []
@@ -913,13 +1306,13 @@ def checkout(plano):
     registrar_usuario_online()
     plano_base, affiliate_slug = decompor_plano_checkout(plano)
     if plano_base not in PLANOS:
-        return "Plano inválido", 404
+        return "Plano invÃ¡lido", 404
 
     afiliado = None
     if affiliate_slug:
         afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
         if not afiliado:
-            return "Afiliado inválido", 404
+            return "Afiliado invÃ¡lido", 404
         session["affiliate_slug"] = afiliado["slug"]
 
     return render_template(
@@ -932,31 +1325,40 @@ def checkout(plano):
         email=session.get("email", ""),
         telefone=session.get("telefone", "")
     )
-# 🚫 nunca permitir GET em /comprar
+# ðŸš« nunca permitir GET em /comprar
 @app.route("/comprar", methods=["GET"])
 def comprar_get():
     return redirect("/")
 
-# ✅ POST real
+# âœ… POST real
 @app.route("/comprar", methods=["POST"])
 def comprar():
-    nome = request.form.get("nome")
-    email = request.form.get("email")
-    telefone = request.form.get("telefone")
+    nome_raw = request.form.get("nome")
+    email_raw = request.form.get("email")
+    telefone_raw = request.form.get("telefone")
     plano_checkout = (request.form.get("plano") or "").strip().lower()
     plano_id, affiliate_slug = decompor_plano_checkout(plano_checkout)
 
     if plano_id not in PLANOS:
-        return "Dados inválidos", 400
+        return "Dados invalidos", 400
+
+    validacao_ok, dados = validar_cadastro_cliente(nome_raw, email_raw, telefone_raw)
+    if not validacao_ok:
+        return dados, 400
+
+    nome = dados["nome"]
+    email = dados["email"]
+    telefone = dados["telefone"]
+
+    session["nome"] = nome
+    session["email"] = email
+    session["telefone"] = telefone
 
     afiliado = None
     if affiliate_slug:
         afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
         if not afiliado:
-            return "Afiliado inválido", 400
-
-    if not nome or not email or not telefone:
-        return "Dados inválidos", 400
+            return "Afiliado invalido", 400
 
     order_id = str(uuid.uuid4())
 
@@ -970,35 +1372,41 @@ def comprar():
         affiliate_slug=afiliado["slug"] if afiliado else None,
         affiliate_nome=afiliado["nome"] if afiliado else None,
         affiliate_email=afiliado.get("email") if afiliado else None,
-        affiliate_telefone=afiliado.get("telefone") if afiliado else None
+        affiliate_telefone=afiliado.get("telefone") if afiliado else None,
     )
 
     plano_info = PLANOS[plano_id]
 
-    # 🔹 PLANO GRÁTIS → pula checkout
     if plano_info["preco"] <= 0:
-        arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
+        arquivo = None
+        try:
+            arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
+            enviar_email(
+                destinatario=email,
+                nome_plano=plano_info["nome"],
+                arquivo=arquivo,
+                senha=senha,
+            )
 
-        enviar_email(
-            destinatario=email,
-            nome_plano=plano_info["nome"],
-            arquivo=arquivo,
-            senha=senha
-        )
-
-        marcar_order_processada(order_id)
-        order_pago = buscar_order_por_id(order_id)
-        registrar_compra_analytics(order_pago)
-        agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
-        agendar_whatsapp_pos_pago(order_pago)
-        return redirect(plano_info["redirect_url"])
+            marcar_order_processada(order_id)
+            order_pago = buscar_order_por_id(order_id)
+            registrar_compra_analytics(order_pago)
+            agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
+            agendar_whatsapp_pos_pago(order_pago)
+            return redirect(plano_info["redirect_url"])
+        except Exception as exc:
+            registrar_falha_email(order_id, 1, str(exc))
+            return "Falha ao enviar o acesso. Tente novamente em instantes.", 500
+        finally:
+            if arquivo and os.path.exists(arquivo):
+                os.remove(arquivo)
 
     checkout_url = criar_checkout_dinamico(
         plano_id=plano_id,
         order_id=order_id,
         nome=nome,
         email=email,
-        telefone=telefone
+        telefone=telefone,
     )
 
     return redirect(checkout_url)
@@ -1009,25 +1417,41 @@ def comprar():
 
 @app.route("/webhook/infinitypay", methods=["POST"])
 def webhook():
-    data = json.loads(request.data.decode("utf-8", errors="ignore"))
+    if not verificar_token_webhook():
+        return jsonify({"msg": "Nao autorizado"}), 401
 
-    transaction_nsu = data.get("transaction_nsu")
-    order_id = data.get("order_nsu")
-    paid_amount = data.get("paid_amount", 0)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"msg": "Payload invalido"}), 400
+
+    transaction_nsu = str(data.get("transaction_nsu") or "").strip()
+    order_id = str(data.get("order_nsu") or "").strip()
+
+    try:
+        paid_amount = int(float(data.get("paid_amount") or 0))
+    except (TypeError, ValueError):
+        paid_amount = 0
 
     if not transaction_nsu or not order_id or paid_amount <= 0:
         return jsonify({"msg": "Ignorado"}), 200
 
     if transacao_ja_processada(transaction_nsu):
-        return jsonify({"msg": "Já processado"}), 200
+        return jsonify({"msg": "Ja processado"}), 200
 
     order = buscar_order_por_id(order_id)
-    if not order or order["status"] != "PENDENTE":
-        return jsonify({"msg": "Pedido inválido"}), 200
+    if not order or order.get("status") != "PENDENTE":
+        return jsonify({"msg": "Pedido invalido"}), 200
 
-    plano_info = PLANOS[order["plano"]]
+    plano_id = order.get("plano")
+    if plano_id not in PLANOS:
+        return jsonify({"msg": "Plano invalido"}), 400
+
+    plano_info = PLANOS[plano_id]
+    preco_esperado = int(plano_info.get("preco") or 0)
+    if preco_esperado > 0 and paid_amount < preco_esperado:
+        return jsonify({"msg": "Pagamento insuficiente"}), 400
+
     arquivo = None
-
     try:
         arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
         sucesso = enviar_email_com_retry(order, plano_info, arquivo, senha)
@@ -1037,6 +1461,9 @@ def webhook():
             order_pago = buscar_order_por_id(order_id)
             registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
             agendar_whatsapp_pos_pago(order_pago)
+    except Exception as exc:
+        print(f"Falha ao processar webhook {order_id}: {exc}", flush=True)
+        return jsonify({"msg": "Erro no processamento"}), 500
     finally:
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)
@@ -1049,12 +1476,62 @@ def webhook():
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
+    ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
+
     if request.method == "POST":
-        if request.form.get("senha") == ADMIN_PASSWORD:
+        bloqueado, espera = login_bloqueado(ip)
+        if bloqueado:
+            return f"Acesso temporariamente bloqueado. Tente novamente em {espera}s.", 429
+
+        senha_digitada = request.form.get("senha") or ""
+        if verificar_senha_admin(senha_digitada):
+            registrar_tentativa_login(ip, sucesso=True)
+            session.clear()
+            session["_csrf_token"] = secrets.token_urlsafe(32)
             session["admin"] = True
+            session.permanent = True
             return redirect("/admin/dashboard")
-        return "Senha inválida", 403
+
+        registrar_tentativa_login(ip, sucesso=False)
+        return "Senha invalida", 403
+
     return render_template("admin_login.html")
+
+
+@app.route("/admin/logout", methods=["POST"])
+def admin_logout():
+    session.clear()
+    return redirect("/admin/login")
+
+
+@app.route("/admin/backup/agora", methods=["POST"])
+def admin_backup_agora():
+    if not session.get("admin"):
+        return jsonify({"ok": False, "message": "Nao autorizado"}), 403
+
+    ok, msg = executar_backup_criptografado(trigger_type="manual")
+    if ok:
+        status = 200
+    elif "em andamento em outro processo" in (msg or "").lower():
+        status = 409
+    else:
+        status = 500
+    return jsonify({"ok": ok, "message": msg}), status
+
+
+@app.route("/admin/backup/logs")
+def admin_backup_logs():
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    itens = listar_backups_execucao(limit=30)
+    for item in itens:
+        for campo in ("started_at", "finished_at"):
+            valor = item.get(campo)
+            if hasattr(valor, "isoformat"):
+                item[campo] = valor.isoformat()
+
+    return jsonify({"ok": True, "items": itens})
 
 
 @app.route("/admin/dashboard")
@@ -1116,7 +1593,7 @@ def admin_dashboard():
 
         pedido["whatsapp_link"] = gerar_link_whatsapp(pedido)
         if not pedido["whatsapp_link"] and (pedido.get("telefone") or ""):
-            pedido["whatsapp_status"] = "telefone inválido"
+            pedido["whatsapp_status"] = "telefone invÃ¡lido"
 
         if mensagens_enviadas > 0:
             pedido["whatsapp_status"] = f"{mensagens_enviadas} mensagem(ns) enviada(s)"
@@ -1215,6 +1692,16 @@ def admin_afiliados_adicionar():
     if not nome:
         return redirecionar_admin_afiliados("Informe o nome do afiliado.")
 
+    if email:
+        email = normalizar_email(email)
+        if not EMAIL_RE.fullmatch(email):
+            return redirecionar_admin_afiliados("Email de afiliado invalido.")
+
+    if telefone:
+        telefone = normalizar_telefone(telefone)
+        if len(telefone) not in (10, 11, 12, 13):
+            return redirecionar_admin_afiliados("Telefone de afiliado invalido.")
+
     if not slug_afiliado_valido(slug):
         return redirecionar_admin_afiliados("Slug invalido ou reservado.")
 
@@ -1246,6 +1733,16 @@ def admin_afiliados_editar(slug):
 
     if not nome:
         return redirecionar_admin_afiliados("Informe o nome do afiliado.")
+
+    if email:
+        email = normalizar_email(email)
+        if not EMAIL_RE.fullmatch(email):
+            return redirecionar_admin_afiliados("Email de afiliado invalido.")
+
+    if telefone:
+        telefone = normalizar_telefone(telefone)
+        if len(telefone) not in (10, 11, 12, 13):
+            return redirecionar_admin_afiliados("Telefone de afiliado invalido.")
 
     if not slug_afiliado_valido(slug_novo):
         return redirecionar_admin_afiliados("Novo slug invalido ou reservado.")
@@ -1383,12 +1880,12 @@ def api_analytics_summary():
     try:
         start = parse_iso_date(request.args.get("start"))
     except Exception:
-        return jsonify({"error": "start inválido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "start invÃ¡lido (YYYY-MM-DD)"}), 400
 
     try:
         end = parse_iso_date(request.args.get("end"))
     except Exception:
-        return jsonify({"error": "end inválido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "end invÃ¡lido (YYYY-MM-DD)"}), 400
 
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
@@ -1462,21 +1959,21 @@ def api_analytics_chart():
     group_validos = {"day", "week", "month"}
 
     if metric not in metric_validas:
-        return jsonify({"error": "metric inválida"}), 400
+        return jsonify({"error": "metric invÃ¡lida"}), 400
     if group_by not in group_validos:
-        return jsonify({"error": "groupBy inválido"}), 400
+        return jsonify({"error": "groupBy invÃ¡lido"}), 400
     if plan != "all" and plan not in PLANOS:
-        return jsonify({"error": "plan inválido"}), 400
+        return jsonify({"error": "plan invÃ¡lido"}), 400
 
     try:
         start = parse_iso_date(request.args.get("start"))
     except Exception:
-        return jsonify({"error": "start inválido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "start invÃ¡lido (YYYY-MM-DD)"}), 400
 
     try:
         end = parse_iso_date(request.args.get("end"))
     except Exception:
-        return jsonify({"error": "end inválido (YYYY-MM-DD)"}), 400
+        return jsonify({"error": "end invÃ¡lido (YYYY-MM-DD)"}), 400
 
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
@@ -1537,11 +2034,11 @@ def admin_whatsapp(order_id):
 
     pedido = buscar_order_por_id(order_id)
     if not pedido:
-        return "Pedido não encontrado", 404
+        return "Pedido nÃ£o encontrado", 404
 
     link = gerar_link_whatsapp(pedido)
     if not link:
-        return "Telefone do usuário não encontrado/inválido", 400
+        return "Telefone do usuÃ¡rio nÃ£o encontrado/invÃ¡lido", 400
 
     incrementar_whatsapp_enviado(order_id)
     return redirect(link)
@@ -1633,7 +2130,7 @@ def admin_pedido(order_id):
 
     pedido = buscar_pedido_detalhado(order_id)
     if not pedido:
-        return "Pedido não encontrado", 404
+        return "Pedido nÃ£o encontrado", 404
 
     return render_template("admin_pedido.html", pedido=pedido)
 
@@ -1644,6 +2141,9 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+
+
 
 
 

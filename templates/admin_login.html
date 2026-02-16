@@ -62,6 +62,7 @@
     <h2>🔐 Admin</h2>
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="password" name="senha" placeholder="Senha do admin" required>
       <button type="submit">Entrar</button>
     </form>

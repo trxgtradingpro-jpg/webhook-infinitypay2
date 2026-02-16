@@ -14,8 +14,9 @@
         .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap}
         .title{font-size:28px;font-weight:800}
         .menu{display:flex;gap:10px;flex-wrap:wrap}
-        .menu a{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s}
-        .menu a.active,.menu a:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
+        .menu a,.menu button{padding:10px 16px;border-radius:999px;border:1px solid var(--border);text-decoration:none;color:var(--txt);background:rgba(255,255,255,.02);transition:.2s;cursor:pointer;font:inherit}
+        .menu a.active,.menu a:hover,.menu button:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(56,189,248,.2);transform:translateY(-1px)}
+        .menu form{margin:0}
         .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px}
         .card{background:linear-gradient(180deg,rgba(15,24,52,.95),rgba(10,16,35,.95));border:1px solid var(--border);border-radius:14px;padding:16px}
         .card .label{color:var(--muted);font-size:12px}
@@ -62,6 +63,11 @@
             <a href="/dashboard">Gráficos</a>
             <a href="/admin/analytics">Analytics</a>
             <a href="/admin/afiliados">Afiliados</a>
+            <button type="button" id="backupNowBtn">Backup agora</button>
+            <form method="POST" action="/admin/logout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit">Sair</button>
+            </form>
         </nav>
     </div>
 
@@ -161,13 +167,14 @@
                         {% if p.tem_duplicados %}
                             <br><span class="alert">⚠ {{ p.duplicados_total }} duplicado(s)</span>
                             <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir-duplicados" class="actions-inline" onsubmit="return confirm('Excluir os duplicados deste cadastro e manter este?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                                 <input type="hidden" name="nome" value="{{ p.nome or '' }}">
                                 <input type="hidden" name="email" value="{{ p.email or '' }}">
                                 <input type="hidden" name="telefone" value="{{ p.telefone or '' }}">
                                 <button type="submit" class="btn-link">Excluir duplicados</button>
                             </form>
                         {% endif %}
-                        | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><button type="submit" class="btn-link-danger">Excluir</button></form>
+                        | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-link-danger">Excluir</button></form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -187,6 +194,27 @@
         }
         atualizarOnline();
         setInterval(atualizarOnline, 10000);
+
+        const backupBtn = document.getElementById('backupNowBtn');
+        if (backupBtn) {
+            backupBtn.addEventListener('click', async () => {
+                backupBtn.disabled = true;
+                backupBtn.textContent = 'Gerando backup...';
+                try {
+                    const r = await fetch('/admin/backup/agora', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                    });
+                    const d = await r.json();
+                    alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+                } catch (e) {
+                    alert('Falha ao acionar backup.');
+                } finally {
+                    backupBtn.disabled = false;
+                    backupBtn.textContent = 'Backup agora';
+                }
+            });
+        }
     </script>
 </body>
 </html>

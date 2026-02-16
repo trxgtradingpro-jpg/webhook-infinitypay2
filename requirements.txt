@@ -1,5 +1,4 @@
 flask
 resend
 psycopg2-binary
-
-
+cryptography

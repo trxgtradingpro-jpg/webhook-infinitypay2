@@ -259,28 +259,44 @@
       background: radial-gradient(520px 220px at 50% 25%, rgba(35,176,11,.18), transparent 62%);
       pointer-events:none;
     }
-    .logo-box img{
+    .hero-video{
       width:100%;
       height:100%;
-      max-width:100%;
-      display:block;
-      object-fit: contain;
-      object-position: center center;
-      transform: none;
-      filter: drop-shadow(0 14px 32px rgba(0,0,0,.7));
-      position:relative; z-index:1;
+      border-radius:12px;
+      overflow:hidden;
+      background:#000;
+      position:relative;
+      z-index:1;
     }
+    .hero-video iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+      opacity:0;
+      transition: opacity .28s ease;
+    }
+    .hero-video-wait{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      padding:16px;
+      text-align:center;
+      color: rgba(235,246,255,.82);
+      font-weight:900;
+      font-size:13px;
+      letter-spacing:.2px;
+      background:
+        radial-gradient(700px 250px at 50% 0%, rgba(35,176,11,.16), transparent 60%),
+        linear-gradient(180deg, rgba(8,12,20,.95), rgba(4,6,12,.95));
+      transition: opacity .28s ease;
+    }
+    .hero-video.is-ready iframe{ opacity:1; }
+    .hero-video.is-ready .hero-video-wait{ opacity:0; pointer-events:none; }
     @media (max-width: 700px){
       .logo-box{
         width:min(520px, 94vw);
-      }
-      .logo-box img{
-        width:100%;
-        height:100%;
-        max-width:100%;
-        object-fit: contain;
-        object-position: center center;
-        transform: none;
       }
     }
 
@@ -1752,7 +1768,16 @@
 
       <div class="logo-wrap">
         <div class="logo-box">
-          <img src="/assets/logo-hero.png" alt="TRX PRO" onerror="this.style.opacity=.4; this.alt='Coloque /assets/logo-hero.png';">
+          <div class="hero-video" id="heroVideo" data-video-id="19bR-OLADRU" data-loaded="0">
+            <div class="hero-video-wait">Video oficial iniciando em alguns segundos...</div>
+            <iframe
+              id="heroVideoFrame"
+              title="TRX PRO video oficial"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          </div>
         </div>
 
         <div class="live-pill">
@@ -2517,6 +2542,35 @@
       targets.forEach((target) => observer.observe(target));
     }
 
+    function setupHeroVideoAutoplay(){
+      const videoWrap = document.getElementById("heroVideo");
+      const frame = document.getElementById("heroVideoFrame");
+      if (!videoWrap || !frame) return;
+
+      const videoId = (videoWrap.dataset.videoId || "").trim();
+      if (!videoId) return;
+
+      frame.addEventListener("load", () => {
+        videoWrap.classList.add("is-ready");
+      }, { once: true });
+
+      setTimeout(() => {
+        if (videoWrap.dataset.loaded === "1") return;
+
+        const params = new URLSearchParams({
+          autoplay: "1",
+          mute: "1",
+          playsinline: "1",
+          rel: "0",
+          modestbranding: "1",
+          controls: "1"
+        });
+
+        frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+        videoWrap.dataset.loaded = "1";
+      }, 3000);
+    }
+
     function setupContentProtection(){
       document.documentElement.classList.add("protect-mode");
       document.body.classList.add("protect-mode");
@@ -2562,6 +2616,7 @@
     setupContentProtection();
     loadMonthlyReports();
     setupReveal();
+    setupHeroVideoAutoplay();
 
     function goCheckout(plan){
       const url = CHECKOUT[plan] || CHECKOUT.gold;
@@ -2597,21 +2652,30 @@
     }, 2500);
   </script>
 
-  <!-- Botão flutuante WhatsApp -->
-<a
-  href="https://wa.me/5511940431906?text=Oi!%20Quero%20tirar%20d%C3%BAvidas%20sobre%20o%20TRX%20PRO."
-  class="whatsapp-float"
-  target="_blank"
-  rel="noopener noreferrer"
-  aria-label="Falar no WhatsApp"
-  title="Falar no WhatsApp"
->
-  <!-- Ícone WhatsApp (SVG) -->
-  <svg viewBox="0 0 32 32" aria-hidden="true">
-    <path d="M19.11 17.53c-.28-.14-1.64-.81-1.9-.9-.25-.09-.44-.14-.62.14-.18.28-.71.9-.87 1.09-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.38-.83-.74-1.4-1.65-1.56-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.43-.48.14-.16.18-.28.28-.46.09-.18.05-.35-.02-.48-.07-.14-.62-1.49-.85-2.04-.23-.55-.46-.48-.62-.49-.16 0-.35-.02-.53-.02-.18 0-.48.07-.73.35-.25.28-.96.94-.96 2.29s.98 2.66 1.11 2.85c.14.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.66.21 1.26.18 1.73.11.53-.08 1.64-.67 1.87-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/>
-    <path d="M26.66 5.33C24.02 2.69 20.51 1.24 16.77 1.24 9.12 1.24 2.9 7.47 2.9 15.11c0 2.44.64 4.82 1.86 6.92L2.78 30.76l8.93-1.95c2.03 1.11 4.33 1.7 6.69 1.7h.01c7.65 0 13.87-6.22 13.87-13.87 0-3.74-1.46-7.25-4.1-9.89zm-9.89 22.82h-.01c-2.07 0-4.1-.56-5.88-1.62l-.42-.25-5.3 1.16 1.13-5.16-.27-.44c-1.14-1.81-1.75-3.9-1.75-6.06 0-6.32 5.14-11.46 11.46-11.46 3.06 0 5.94 1.19 8.1 3.36 2.16 2.16 3.35 5.04 3.35 8.1 0 6.32-5.14 11.46-11.46 11.46z"/>
-  </svg>
-</a>
+  <button
+    id="whatsappFloatBtn"
+    class="whatsapp-float"
+    type="button"
+    aria-label="Abrir mensagens prontas do WhatsApp"
+    aria-expanded="false"
+    title="WhatsApp"
+  >
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M19.11 17.53c-.28-.14-1.64-.81-1.9-.9-.25-.09-.44-.14-.62.14-.18.28-.71.9-.87 1.09-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.38-.83-.74-1.4-1.65-1.56-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.43-.48.14-.16.18-.28.28-.46.09-.18.05-.35-.02-.48-.07-.14-.62-1.49-.85-2.04-.23-.55-.46-.48-.62-.49-.16 0-.35-.02-.53-.02-.18 0-.48.07-.73.35-.25.28-.96.94-.96 2.29s.98 2.66 1.11 2.85c.14.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.66.21 1.26.18 1.73.11.53-.08 1.64-.67 1.87-1.32.23-.65.23-1.2.16-1.32-.07-.12-.25-.18-.53-.32z"/>
+      <path d="M26.66 5.33C24.02 2.69 20.51 1.24 16.77 1.24 9.12 1.24 2.9 7.47 2.9 15.11c0 2.44.64 4.82 1.86 6.92L2.78 30.76l8.93-1.95c2.03 1.11 4.33 1.7 6.69 1.7h.01c7.65 0 13.87-6.22 13.87-13.87 0-3.74-1.46-7.25-4.1-9.89zm-9.89 22.82h-.01c-2.07 0-4.1-.56-5.88-1.62l-.42-.25-5.3 1.16 1.13-5.16-.27-.44c-1.14-1.81-1.75-3.9-1.75-6.06 0-6.32 5.14-11.46 11.46-11.46 3.06 0 5.94 1.19 8.1 3.36 2.16 2.16 3.35 5.04 3.35 8.1 0 6.32-5.14 11.46-11.46 11.46z"/>
+    </svg>
+  </button>
+
+  <aside id="whatsappPanel" class="wa-panel" aria-hidden="true">
+    <div class="wa-panel-head">
+      <div>
+        <strong>Mensagens prontas</strong>
+        <span>Escolha uma situacao para enviar no WhatsApp</span>
+      </div>
+      <button id="waCloseBtn" type="button" class="wa-close" aria-label="Fechar lista">×</button>
+    </div>
+    <div id="waList" class="wa-list"></div>
+  </aside>
 
 <style>
   .whatsapp-float{
@@ -2628,7 +2692,7 @@
     border: 1px solid rgba(255,255,255,.14);
     z-index: 9999;
     transition: transform .18s ease, filter .18s ease;
-    text-decoration: none;
+    cursor:pointer;
   }
   .whatsapp-float:hover{ transform: translateY(-2px); filter: brightness(1.06); }
   .whatsapp-float:active{ transform: translateY(0px) scale(.99); }
@@ -2638,7 +2702,183 @@
     fill: #ffffff;
     filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
   }
+  .wa-panel{
+    position: fixed;
+    right: 18px;
+    bottom: 86px;
+    width: min(420px, calc(100vw - 24px));
+    max-height: min(72vh, 620px);
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: linear-gradient(180deg, rgba(8,14,24,.98), rgba(5,10,18,.98));
+    box-shadow: 0 28px 80px rgba(0,0,0,.55);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px) scale(.98);
+    transition: .2s ease;
+  }
+  .wa-panel.open{
+    opacity:1;
+    pointer-events:auto;
+    transform: translateY(0) scale(1);
+  }
+  .wa-panel-head{
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .wa-panel-head strong{
+    display:block;
+    color:#e7f4ff;
+    font-size:15px;
+    font-weight:1000;
+  }
+  .wa-panel-head span{
+    display:block;
+    margin-top:2px;
+    color: rgba(220,233,246,.68);
+    font-size:12px;
+    font-weight:700;
+  }
+  .wa-close{
+    border:1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.05);
+    color:#dce9f7;
+    width:30px;
+    height:30px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:18px;
+    line-height:1;
+  }
+  .wa-list{
+    max-height: calc(min(72vh, 620px) - 62px);
+    overflow:auto;
+    padding: 8px;
+    display:grid;
+    gap:8px;
+  }
+  .wa-item{
+    text-align:left;
+    width:100%;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.03);
+    border-radius:12px;
+    padding:10px 12px;
+    cursor:pointer;
+    color:#e7f4ff;
+    transition: .16s ease;
+  }
+  .wa-item:hover{
+    border-color: rgba(35,176,11,.55);
+    background: rgba(35,176,11,.10);
+    transform: translateY(-1px);
+  }
+  .wa-item-title{
+    display:block;
+    font-size:12px;
+    color:#8ff0bf;
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+  .wa-item-msg{
+    display:block;
+    margin-top:4px;
+    font-size:12px;
+    color: rgba(232,244,255,.88);
+    font-weight:700;
+    line-height:1.35;
+  }
+  @media (max-width: 680px){
+    .wa-panel{
+      right: 12px;
+      bottom: 82px;
+      width: calc(100vw - 24px);
+    }
+  }
 </style>
+
+<script>
+  (function setupWhatsAppExamples(){
+    const waNumber = "5511940431906";
+    const examples = [
+      { title: "1. Quero ativar o gratis", msg: "Oi! Quero ativar o TRX Gratis e receber as instrucoes de instalacao." },
+      { title: "2. Ja comprei e nao recebi e-mail", msg: "Oi! Ja comprei o plano, mas ainda nao recebi o e-mail. Pode verificar para mim?" },
+      { title: "3. E-mail caiu no spam", msg: "Oi! Acho que o e-mail do acesso caiu no spam. Pode me reenviar as instrucoes?" },
+      { title: "4. Duvida para escolher plano", msg: "Oi! Quero ajuda para escolher o melhor plano para o meu perfil e quantidade de contratos." },
+      { title: "5. Ajuda na instalacao", msg: "Oi! Preciso de suporte para baixar e instalar o TRX no meu computador." },
+      { title: "6. Erro no acesso", msg: "Oi! Estou com erro ao abrir o arquivo/licenca do TRX. Podem me ajudar?" },
+      { title: "7. Quero upgrade de plano", msg: "Oi! Quero fazer upgrade do meu plano atual para um plano acima." },
+      { title: "8. Suporte tecnico rapido", msg: "Oi! Preciso de suporte tecnico rapido para configurar o TRX corretamente." },
+      { title: "9. Duvida sobre pagamento", msg: "Oi! Tenho uma duvida sobre pagamento, cobranca e confirmacao da compra." },
+      { title: "10. Falar com especialista", msg: "Oi! Quero falar com um especialista antes de finalizar minha compra." }
+    ];
+
+    const floatBtn = document.getElementById("whatsappFloatBtn");
+    const panel = document.getElementById("whatsappPanel");
+    const list = document.getElementById("waList");
+    const closeBtn = document.getElementById("waCloseBtn");
+    if (!floatBtn || !panel || !list || !closeBtn) return;
+
+    const openPanel = () => {
+      panel.classList.add("open");
+      panel.setAttribute("aria-hidden", "false");
+      floatBtn.setAttribute("aria-expanded", "true");
+    };
+
+    const closePanel = () => {
+      panel.classList.remove("open");
+      panel.setAttribute("aria-hidden", "true");
+      floatBtn.setAttribute("aria-expanded", "false");
+    };
+
+    const buildWaUrl = (msg) => `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+
+    list.innerHTML = examples.map((item, idx) => `
+      <button type="button" class="wa-item" data-index="${idx}">
+        <span class="wa-item-title">${item.title}</span>
+        <span class="wa-item-msg">${item.msg}</span>
+      </button>
+    `).join("");
+
+    list.addEventListener("click", (event) => {
+      const target = event.target.closest(".wa-item");
+      if (!target) return;
+      const idx = Number(target.getAttribute("data-index"));
+      const payload = examples[idx];
+      if (!payload) return;
+      window.open(buildWaUrl(payload.msg), "_blank", "noopener,noreferrer");
+      closePanel();
+    });
+
+    floatBtn.addEventListener("click", () => {
+      if (panel.classList.contains("open")) {
+        closePanel();
+      } else {
+        openPanel();
+      }
+    });
+
+    closeBtn.addEventListener("click", closePanel);
+
+    document.addEventListener("click", (event) => {
+      const clickInsidePanel = panel.contains(event.target);
+      const clickFloatBtn = floatBtn.contains(event.target);
+      if (!clickInsidePanel && !clickFloatBtn) {
+        closePanel();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closePanel();
+    });
+  })();
+</script>
 
 </body>
 </html>

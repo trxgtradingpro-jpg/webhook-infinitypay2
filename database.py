@@ -1,8 +1,12 @@
 import psycopg2
+from psycopg2 import sql
 import os
 import json
+from datetime import date, datetime, time
+from decimal import Decimal
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+BACKUP_ADVISORY_LOCK_KEY = 771200913
 
 # ======================================================
 # CONEXÃO
@@ -114,6 +118,21 @@ def init_db():
         )
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliates_slug ON affiliates(slug)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS backup_runs (
+            id BIGSERIAL PRIMARY KEY,
+            trigger_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            filename TEXT,
+            size_bytes BIGINT,
+            sha256 TEXT,
+            message TEXT,
+            started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            finished_at TIMESTAMP
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_backup_runs_started_at ON backup_runs(started_at DESC)")
 
     # 🔥 MIGRATIONS SEGURAS
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS nome TEXT")
@@ -975,3 +994,158 @@ def registrar_quiz_submission(
     cur.close()
     conn.close()
     return inserido
+
+
+def _valor_json_compat(v):
+    if isinstance(v, (datetime, date, time)):
+        return v.isoformat()
+    if isinstance(v, Decimal):
+        return float(v)
+    return v
+
+
+def exportar_snapshot_publico():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name ASC
+    """)
+    tabelas = [r[0] for r in cur.fetchall()]
+
+    snapshot = {
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "tables": {}
+    }
+
+    for tabela in tabelas:
+        query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(tabela))
+        cur.execute(query)
+        colunas = [desc[0] for desc in cur.description]
+        rows = cur.fetchall()
+
+        dados_tabela = []
+        for row in rows:
+            item = {}
+            for idx, col in enumerate(colunas):
+                item[col] = _valor_json_compat(row[idx])
+            dados_tabela.append(item)
+
+        snapshot["tables"][tabela] = dados_tabela
+
+    cur.close()
+    conn.close()
+    return snapshot
+
+
+def registrar_backup_execucao(
+    trigger_type,
+    status,
+    filename=None,
+    size_bytes=None,
+    sha256=None,
+    message=None,
+    started_at=None,
+    finished_at=None
+):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO backup_runs (
+            trigger_type,
+            status,
+            filename,
+            size_bytes,
+            sha256,
+            message,
+            started_at,
+            finished_at
+        )
+        VALUES (
+            %s, %s, %s, %s, %s, %s,
+            COALESCE(%s, NOW()),
+            COALESCE(%s, NOW())
+        )
+    """, (
+        (trigger_type or "manual")[:30],
+        (status or "UNKNOWN")[:30],
+        (filename or "")[:255] or None,
+        int(size_bytes) if size_bytes is not None else None,
+        (sha256 or "")[:128] or None,
+        (message or "")[:1000] or None,
+        started_at,
+        finished_at
+    ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def listar_backups_execucao(limit=30):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, trigger_type, status, filename, size_bytes, sha256, message, started_at, finished_at
+        FROM backup_runs
+        ORDER BY started_at DESC
+        LIMIT %s
+    """, (int(limit),))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    itens = []
+    for r in rows:
+        itens.append({
+            "id": r[0],
+            "trigger_type": r[1],
+            "status": r[2],
+            "filename": r[3],
+            "size_bytes": r[4],
+            "sha256": r[5],
+            "message": r[6],
+            "started_at": r[7],
+            "finished_at": r[8],
+        })
+
+    return itens
+
+
+def adquirir_lock_backup_distribuido():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (BACKUP_ADVISORY_LOCK_KEY,))
+        ok = bool(cur.fetchone()[0])
+    finally:
+        cur.close()
+
+    if ok:
+        return conn
+
+    conn.close()
+    return None
+
+
+def liberar_lock_backup_distribuido(conn):
+    if not conn:
+        return
+
+    try:
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT pg_advisory_unlock(%s)", (BACKUP_ADVISORY_LOCK_KEY,))
+        finally:
+            cur.close()
+    except Exception:
+        pass
+    finally:
+        conn.close()
