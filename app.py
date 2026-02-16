@@ -76,7 +76,8 @@ os.makedirs(PASTA_SAIDA, exist_ok=True)
 
 INFINITEPAY_URL = "https://api.infinitepay.io/invoices/public/checkout/links"
 HANDLE = "guilherme-gomes-v85"
-WEBHOOK_URL = "https://webhook-infinitypay.onrender.com/webhook/infinitypay"
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://www.trxpro.com.br").strip().rstrip("/")
+WEBHOOK_URL = f"{PUBLIC_BASE_URL}/webhook/infinitypay"
 
 # ======================================================
 # WHATSAPP FOLLOW-UP (PLANO GRÁTIS)
