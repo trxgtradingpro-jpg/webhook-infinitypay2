@@ -167,12 +167,12 @@
   <div class="checkout-container">
 
     <div class="badge-secure">
-      Ambiente seguro - Pagamento processado pela InfinitePay
+      {{ "Ambiente seguro - Ativação do TRX Grátis" if plano == "gratis" else "Ambiente seguro - Pagamento processado pela InfinitePay" }}
     </div>
 
-    <h1>Finalizar compra</h1>
+    <h1>{{ "Ativar acesso grátis" if plano == "gratis" else "Finalizar compra" }}</h1>
     <p class="subtitle">
-      Preencha seus dados para liberar o acesso imediatamente
+      {{ "Preencha seus dados para liberar o TRX Grátis imediatamente" if plano == "gratis" else "Preencha seus dados para liberar o acesso imediatamente" }}
     </p>
 
     <form method="POST" action="/comprar">
@@ -217,7 +217,7 @@
       <input type="hidden" name="plano" value="{{ plano }}">
 
       <button type="submit">
-        Continuar para pagamento
+        {{ "Continuar para ativar grátis" if plano == "gratis" else "Continuar para pagamento" }}
       </button>
 
     </form>
