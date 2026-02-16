@@ -92,6 +92,7 @@ def init_db():
             id BIGSERIAL PRIMARY KEY,
             submission_id TEXT UNIQUE NOT NULL,
             user_key TEXT NOT NULL,
+            account_email TEXT,
             ip_address TEXT,
             user_agent TEXT,
             answers JSONB NOT NULL,
@@ -104,6 +105,7 @@ def init_db():
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_created_at ON quiz_submissions(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_user_key ON quiz_submissions(user_key)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_account_email ON quiz_submissions(account_email)")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS client_upgrade_leads (
@@ -205,6 +207,8 @@ def init_db():
     cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
     cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_remember_token_hash ON customer_accounts(remember_token_hash)")
+    cur.execute("ALTER TABLE quiz_submissions ADD COLUMN IF NOT EXISTS account_email TEXT")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_account_email ON quiz_submissions(account_email)")
 
     cur.execute("""
         UPDATE orders
@@ -1128,6 +1132,7 @@ def registrar_falha_whatsapp_auto(order_id, erro):
 def registrar_quiz_submission(
     submission_id,
     user_key,
+    account_email,
     ip_address,
     user_agent,
     answers,
@@ -1143,6 +1148,7 @@ def registrar_quiz_submission(
         INSERT INTO quiz_submissions (
             submission_id,
             user_key,
+            account_email,
             ip_address,
             user_agent,
             answers,
@@ -1153,12 +1159,13 @@ def registrar_quiz_submission(
             created_at
         )
         VALUES (
-            %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, NOW()
+            %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s::jsonb, NOW()
         )
         ON CONFLICT (submission_id) DO NOTHING
     """, (
         submission_id,
         user_key,
+        _normalizar_email_interno(account_email) or None,
         ip_address,
         user_agent,
         json.dumps(answers or {}, ensure_ascii=False),
@@ -1173,6 +1180,43 @@ def registrar_quiz_submission(
     cur.close()
     conn.close()
     return inserido
+
+
+def existe_quiz_submission(account_email=None, user_key=None):
+    email_norm = _normalizar_email_interno(account_email)
+    user_key_norm = (user_key or "").strip()
+    if not email_norm and not user_key_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    if email_norm and user_key_norm:
+        cur.execute("""
+            SELECT 1
+            FROM quiz_submissions
+            WHERE account_email = %s OR user_key = %s
+            LIMIT 1
+        """, (email_norm, user_key_norm))
+    elif email_norm:
+        cur.execute("""
+            SELECT 1
+            FROM quiz_submissions
+            WHERE account_email = %s
+            LIMIT 1
+        """, (email_norm,))
+    else:
+        cur.execute("""
+            SELECT 1
+            FROM quiz_submissions
+            WHERE user_key = %s
+            LIMIT 1
+        """, (user_key_norm,))
+
+    existe = cur.fetchone() is not None
+    cur.close()
+    conn.close()
+    return existe
 
 
 def _normalizar_email_interno(email):

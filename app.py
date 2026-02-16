@@ -56,6 +56,7 @@ from database import (
     marcar_whatsapp_auto_enviado,
     registrar_falha_whatsapp_auto,
     registrar_quiz_submission,
+    existe_quiz_submission,
     listar_afiliados,
     buscar_afiliado_por_slug,
     criar_afiliado,
@@ -2518,6 +2519,11 @@ def cliente_area():
     info_message = ""
     if info_key == "senha_criada":
         info_message = "Senha criada com sucesso."
+    quiz_user_key = (session.get("quiz_user_key") or "").strip()
+    diagnostico_concluido = existe_quiz_submission(
+        account_email=email,
+        user_key=quiz_user_key
+    )
 
     pedidos = listar_pedidos_pagos_por_email(email, limite=30)
     pedidos_view = []
@@ -2542,6 +2548,40 @@ def cliente_area():
     conta_nome = conta_nome_decrypt or (pedidos_view[0]["nome"] if pedidos_view else "")
     ativos = [p for p in pedidos_view if p.get("ativo")]
     ultimo_pedido = pedidos_view[0] if pedidos_view else None
+    client_notifications = []
+    if not diagnostico_concluido:
+        client_notifications.append({
+            "id": "diagnostico_pendente",
+            "level": "warn",
+            "title": "Diagnostico pendente",
+            "message": "Complete o Diagnostico de Perfil TRX para liberar recomendacao de plano e completar seu perfil.",
+            "action_url": "/diagnostico-de-perfil-trx",
+            "action_label": "Fazer diagnostico"
+        })
+
+    if not ativos:
+        client_notifications.append({
+            "id": "sem_plano_ativo",
+            "level": "info",
+            "title": "Nenhum plano ativo",
+            "message": "Seu acesso ativo expirou. Escolha um plano para voltar a operar.",
+            "action_url": "/#planos",
+            "action_label": "Ver planos"
+        })
+    else:
+        for ativo in ativos:
+            dias_restantes = int(ativo.get("dias_restantes") or 0)
+            if dias_restantes <= 3:
+                client_notifications.append({
+                    "id": f"expira_{ativo.get('order_id')}",
+                    "level": "warn",
+                    "title": "Plano perto de expirar",
+                    "message": f"{ativo.get('plano_nome')}: restam {dias_restantes} dia(s).",
+                    "action_url": "/#planos",
+                    "action_label": "Renovar agora"
+                })
+    notification_count = len(client_notifications)
+
     pedido_curva = None
     for pedido in pedidos:
         exp = montar_expiracao_pedido(pedido)
@@ -2626,6 +2666,9 @@ def cliente_area():
         conta_nome=conta_nome,
         email=email,
         info_message=info_message,
+        diagnostico_concluido=diagnostico_concluido,
+        client_notifications=client_notifications,
+        notification_count=notification_count,
         capital_chart=capital_chart,
         pedidos=pedidos_view,
         ativos=ativos,
@@ -2723,6 +2766,7 @@ def api_quiz_submit():
     inserido = registrar_quiz_submission(
         submission_id=submission_id,
         user_key=obter_quiz_user_key(),
+        account_email=obter_email_cliente_logado() or None,
         ip_address=obter_ip_request(),
         user_agent=(request.headers.get("User-Agent") or "")[:300],
         answers=answers,

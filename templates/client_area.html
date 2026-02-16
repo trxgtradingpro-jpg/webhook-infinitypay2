@@ -150,6 +150,159 @@
       font-size:14px;
       font-weight:700;
     }
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .notif-wrap{
+      position:relative;
+    }
+    .notif-btn{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid rgba(74,163,255,.56);
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(16,32,56,.96), rgba(11,21,36,.96));
+      color:#eaf4ff;
+      font-weight:900;
+      letter-spacing:.2px;
+      padding:9px 12px;
+      cursor:pointer;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 10px 24px rgba(0,0,0,.24);
+      transition:.16s transform, .16s filter, .16s border-color;
+    }
+    .notif-btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.07);
+      border-color:rgba(120,210,255,.8);
+    }
+    .notif-btn[aria-expanded="true"]{
+      border-color:rgba(35,176,11,.72);
+      box-shadow:0 0 0 2px rgba(35,176,11,.22), inset 0 1px 0 rgba(255,255,255,.12), 0 10px 24px rgba(0,0,0,.24);
+    }
+    .notif-ic{
+      font-size:17px;
+      line-height:1;
+    }
+    .notif-text{
+      font-size:12px;
+      text-transform:uppercase;
+    }
+    .notif-badge{
+      min-width:20px;
+      height:20px;
+      border-radius:999px;
+      display:inline-grid;
+      place-items:center;
+      padding:0 6px;
+      font-size:11px;
+      font-weight:1000;
+      color:#150702;
+      background:linear-gradient(180deg, #ffb347, #ff7a18);
+      border:1px solid rgba(255,255,255,.28);
+      box-shadow:0 6px 14px rgba(255,122,24,.42);
+    }
+    .notif-panel{
+      position:absolute;
+      right:0;
+      top:calc(100% + 10px);
+      width:min(420px, 90vw);
+      max-height:min(68vh, 520px);
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.16);
+      background:linear-gradient(180deg, rgba(8,14,24,.98), rgba(5,10,18,.98));
+      box-shadow:0 24px 72px rgba(0,0,0,.52);
+      z-index:30;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(6px) scale(.98);
+      transition:.16s ease;
+    }
+    .notif-panel.open{
+      opacity:1;
+      pointer-events:auto;
+      transform:translateY(0) scale(1);
+    }
+    .notif-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:11px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      font-size:12px;
+      font-weight:900;
+      color:#eaf4ff;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    .notif-list{
+      max-height:calc(min(68vh, 520px) - 42px);
+      overflow:auto;
+      display:grid;
+      gap:8px;
+      padding:8px;
+    }
+    .notif-item{
+      border-radius:11px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.03);
+      padding:10px;
+      display:grid;
+      gap:6px;
+    }
+    .notif-item.warn{
+      border-color:rgba(255,138,31,.44);
+      background:linear-gradient(180deg, rgba(55,28,7,.42), rgba(35,20,6,.38));
+    }
+    .notif-item.info{
+      border-color:rgba(74,163,255,.44);
+      background:linear-gradient(180deg, rgba(18,37,63,.36), rgba(13,28,47,.30));
+    }
+    .notif-title{
+      margin:0;
+      font-size:13px;
+      font-weight:900;
+      color:#f3f8ff;
+    }
+    .notif-desc{
+      margin:0;
+      font-size:12px;
+      font-weight:700;
+      color:rgba(230,241,255,.78);
+      line-height:1.38;
+    }
+    .notif-action{
+      width:fit-content;
+      border:1px solid rgba(35,176,11,.52);
+      border-radius:999px;
+      padding:6px 10px;
+      color:#c8ffdf;
+      background:rgba(35,176,11,.14);
+      text-decoration:none;
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      transition:.16s transform, .16s filter;
+    }
+    .notif-action:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.08);
+    }
+    .notif-empty{
+      margin:0;
+      font-size:12px;
+      font-weight:700;
+      color:var(--muted);
+      padding:12px;
+      text-align:center;
+    }
     .msg{
       margin:0;
       padding:10px 12px;
@@ -165,6 +318,20 @@
       background:rgba(35,176,11,.12);
       color:#b9ffd3;
     }
+    .msg.warn{
+      border-color:rgba(255,138,31,.46);
+      background:linear-gradient(180deg, rgba(78,42,12,.36), rgba(56,30,8,.34));
+      color:#ffe0bd;
+    }
+    .msg a{
+      color:#fff0cf;
+      font-weight:900;
+      text-decoration:none;
+      border-bottom:1px dashed rgba(255,240,207,.55);
+    }
+    .msg a:hover{
+      filter:brightness(1.08);
+    }
     .logout{
       border:1px solid rgba(255,58,58,.56);
       border-radius:12px;
@@ -177,6 +344,19 @@
       transition:.16s transform, .16s filter;
     }
     .logout:hover{ transform:translateY(-1px); filter:brightness(1.06); }
+    @media (max-width: 620px){
+      .top-actions{
+        width:100%;
+        justify-content:space-between;
+      }
+      .notif-text{
+        display:none;
+      }
+      .notif-panel{
+        right:-6px;
+        width:min(380px, calc(100vw - 26px));
+      }
+    }
     .grid{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -697,13 +877,58 @@
         <h1 class="title"><span class="ic" aria-hidden="true">👤</span>Minha Conta</h1>
         <p class="subtitle">Bem-vindo, {{ conta_nome or 'Cliente' }}.</p>
       </div>
-      <form method="POST" action="/logout">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button class="logout" type="submit">Sair</button>
-      </form>
+      <div class="top-actions">
+        <div class="notif-wrap" id="notifWrap">
+          <button
+            id="notifToggleBtn"
+            class="notif-btn"
+            type="button"
+            aria-label="Abrir notificacoes"
+            aria-expanded="false"
+            aria-controls="notifPanel"
+          >
+            <span class="notif-ic" aria-hidden="true">&#128276;</span>
+            <span class="notif-text">Notificacoes</span>
+            {% if notification_count > 0 %}
+              <span class="notif-badge">{{ notification_count }}</span>
+            {% endif %}
+          </button>
+          <aside id="notifPanel" class="notif-panel" aria-hidden="true">
+            <div class="notif-head">
+              <span>Notificacoes</span>
+              <span>{{ notification_count }}</span>
+            </div>
+            <div class="notif-list">
+              {% if client_notifications %}
+                {% for notif in client_notifications %}
+                  <article class="notif-item {{ notif.level or 'info' }}">
+                    <p class="notif-title">{{ notif.title }}</p>
+                    <p class="notif-desc">{{ notif.message }}</p>
+                    {% if notif.action_url %}
+                      <a class="notif-action" href="{{ notif.action_url }}">{{ notif.action_label or 'Abrir' }}</a>
+                    {% endif %}
+                  </article>
+                {% endfor %}
+              {% else %}
+                <p class="notif-empty">Sem notificacoes novas.</p>
+              {% endif %}
+            </div>
+          </aside>
+        </div>
+        <form method="POST" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="logout" type="submit">Sair</button>
+        </form>
+      </div>
     </header>
     {% if info_message %}
       <div class="msg ok">{{ info_message }}</div>
+    {% endif %}
+    {% if not diagnostico_concluido %}
+      <div class="msg warn">
+        <strong>Perfil incompleto:</strong> voce ainda nao fez o Diagnostico de Perfil TRX.
+        <a href="/diagnostico-de-perfil-trx">Clique aqui para fazer agora</a> e completar seu perfil.
+      </div>
     {% endif %}
 
     <section class="grid">
@@ -1328,5 +1553,45 @@
       })();
     </script>
   {% endif %}
+  <script>
+    (function(){
+      const wrap = document.getElementById("notifWrap");
+      const toggle = document.getElementById("notifToggleBtn");
+      const panel = document.getElementById("notifPanel");
+      if (!wrap || !toggle || !panel) return;
+
+      function openPanel(){
+        panel.classList.add("open");
+        panel.setAttribute("aria-hidden", "false");
+        toggle.setAttribute("aria-expanded", "true");
+      }
+
+      function closePanel(){
+        panel.classList.remove("open");
+        panel.setAttribute("aria-hidden", "true");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+
+      toggle.addEventListener("click", function(){
+        if (panel.classList.contains("open")) {
+          closePanel();
+        } else {
+          openPanel();
+        }
+      });
+
+      document.addEventListener("click", function(event){
+        if (!wrap.contains(event.target)) {
+          closePanel();
+        }
+      });
+
+      document.addEventListener("keydown", function(event){
+        if (event.key === "Escape") {
+          closePanel();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
