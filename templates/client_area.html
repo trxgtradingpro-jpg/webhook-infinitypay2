@@ -258,20 +258,37 @@
       justify-content:space-between;
       align-items:flex-end;
       flex-wrap:wrap;
+      border:1px solid rgba(74,163,255,.24);
+      border-radius:14px;
+      padding:10px;
+      background:linear-gradient(180deg, rgba(18,28,44,.55), rgba(10,18,32,.45));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
     }
     .chart-config-row .chart-window-controls{
       margin-top:0;
       flex:1 1 460px;
     }
+    .chart-editable-note{
+      margin:0 0 8px;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color:#b8dcff;
+      text-transform:uppercase;
+    }
     .chart-contract-control{
       display:grid;
       gap:6px;
       min-width:220px;
+      padding:8px 10px;
+      border:1px solid rgba(35,176,11,.30);
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(12,26,22,.56), rgba(8,18,16,.42));
     }
     .chart-contract-control label{
       font-size:12px;
       font-weight:900;
-      color:#b9c8e8;
+      color:#d7ecff;
       letter-spacing:.2px;
       text-transform:uppercase;
     }
@@ -282,60 +299,66 @@
       flex-wrap:wrap;
     }
     .chart-contract-input{
-      width:96px;
-      border:1px solid var(--line2);
-      border-radius:10px;
-      background:rgba(255,255,255,.04);
-      color:#e9f3ff;
-      padding:7px 10px;
-      font-size:14px;
+      width:104px;
+      border:1px solid rgba(74,163,255,.58);
+      border-radius:11px;
+      background:linear-gradient(180deg, rgba(9,18,33,.95), rgba(7,14,25,.95));
+      color:#f2f8ff;
+      padding:8px 10px;
+      font-size:18px;
       font-weight:900;
       outline:none;
-      transition:.16s border-color, .16s box-shadow, .16s filter;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 18px rgba(0,0,0,.24);
+      transition:.16s border-color, .16s box-shadow, .16s filter, .16s transform;
     }
     .chart-contract-input:hover{
-      filter:brightness(1.06);
+      filter:brightness(1.08);
+      transform:translateY(-1px);
     }
     .chart-contract-input:focus{
-      border-color:rgba(35,176,11,.62);
-      box-shadow:0 0 0 2px rgba(35,176,11,.20);
+      border-color:rgba(35,176,11,.78);
+      box-shadow:0 0 0 2px rgba(35,176,11,.22), 0 10px 20px rgba(20,97,72,.28);
+      transform:translateY(0);
     }
     .chart-contract-input[disabled]{
       opacity:.65;
       cursor:not-allowed;
     }
     .chart-contract-limit{
-      border:1px solid rgba(35,176,11,.42);
+      border:1px solid rgba(35,176,11,.52);
       border-radius:999px;
       padding:6px 10px;
-      background:rgba(35,176,11,.14);
-      color:#b9ffd3;
+      background:rgba(35,176,11,.22);
+      color:#d9ffe8;
       font-size:11px;
       font-weight:900;
       letter-spacing:.2px;
       text-transform:uppercase;
     }
     .chart-mode-btn{
-      border:1px solid var(--line2);
+      border:1px solid rgba(74,163,255,.58);
       border-radius:999px;
-      background:rgba(255,255,255,.04);
-      color:#e9f3ff;
-      padding:7px 11px;
-      font-size:12px;
+      background:linear-gradient(180deg, rgba(17,34,60,.96), rgba(12,23,42,.96));
+      color:#f0f6ff;
+      padding:9px 15px;
+      font-size:13px;
       font-weight:900;
       letter-spacing:.2px;
       cursor:pointer;
-      transition:.16s transform, .16s filter, .16s border-color;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 8px 18px rgba(0,0,0,.25);
+      transition:.16s transform, .16s filter, .16s border-color, .16s box-shadow;
     }
     .chart-mode-btn:hover{
-      transform:translateY(-1px);
-      filter:brightness(1.06);
-      border-color:rgba(74,163,255,.62);
+      transform:translateY(-2px);
+      filter:brightness(1.08);
+      border-color:rgba(120,210,255,.78);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 12px 22px rgba(24,86,158,.28);
     }
     .chart-mode-btn.is-active{
-      border-color:rgba(35,176,11,.58);
-      background:rgba(35,176,11,.18);
-      color:#b9ffd3;
+      border-color:rgba(35,176,11,.74);
+      background:linear-gradient(180deg, rgba(22,77,52,.90), rgba(15,53,36,.92));
+      color:#c9ffd8;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 12px 24px rgba(20,97,72,.32);
     }
     .pill{
       border:1px solid var(--line2);
@@ -672,6 +695,7 @@
           <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
           <span class="pill">Saldo total no CSV: <strong id="csvTotalValueText">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
         </div>
+        <p class="chart-editable-note">Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
         <div class="chart-config-row">
           {% if capital_chart.window_modes %}
           <div class="chart-window-controls">
