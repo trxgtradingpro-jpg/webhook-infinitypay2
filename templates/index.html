@@ -276,24 +276,7 @@
       opacity:0;
       transition: opacity .28s ease;
     }
-    .hero-video-wait{
-      position:absolute;
-      inset:0;
-      display:grid;
-      place-items:center;
-      padding:16px;
-      text-align:center;
-      color: rgba(235,246,255,.82);
-      font-weight:900;
-      font-size:13px;
-      letter-spacing:.2px;
-      background:
-        radial-gradient(700px 250px at 50% 0%, rgba(35,176,11,.16), transparent 60%),
-        linear-gradient(180deg, rgba(8,12,20,.95), rgba(4,6,12,.95));
-      transition: opacity .28s ease;
-    }
     .hero-video.is-ready iframe{ opacity:1; }
-    .hero-video.is-ready .hero-video-wait{ opacity:0; pointer-events:none; }
     @media (max-width: 700px){
       .logo-box{
         width:min(520px, 94vw);
@@ -1769,7 +1752,6 @@
       <div class="logo-wrap">
         <div class="logo-box">
           <div class="hero-video" id="heroVideo" data-video-id="19bR-OLADRU" data-loaded="0">
-            <div class="hero-video-wait">Video oficial iniciando em alguns segundos...</div>
             <iframe
               id="heroVideoFrame"
               title="TRX PRO video oficial"
@@ -2554,21 +2536,19 @@
         videoWrap.classList.add("is-ready");
       }, { once: true });
 
-      setTimeout(() => {
-        if (videoWrap.dataset.loaded === "1") return;
+      if (videoWrap.dataset.loaded === "1") return;
 
-        const params = new URLSearchParams({
-          autoplay: "1",
-          mute: "1",
-          playsinline: "1",
-          rel: "0",
-          modestbranding: "1",
-          controls: "1"
-        });
+      const params = new URLSearchParams({
+        autoplay: "1",
+        mute: "1",
+        playsinline: "1",
+        rel: "0",
+        modestbranding: "1",
+        controls: "1"
+      });
 
-        frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
-        videoWrap.dataset.loaded = "1";
-      }, 3000);
+      frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
+      videoWrap.dataset.loaded = "1";
     }
 
     function setupContentProtection(){
