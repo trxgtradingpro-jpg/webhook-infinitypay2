@@ -211,6 +211,15 @@
       letter-spacing:-.3px;
       font-weight:900;
     }
+    .ic{
+      display:inline-flex;
+      width:1.12em;
+      align-items:center;
+      justify-content:center;
+      margin-right:6px;
+      filter:drop-shadow(0 2px 6px rgba(0,0,0,.30));
+      vertical-align:-1px;
+    }
     .line{
       margin:7px 0;
       color:#dbe7ff;
@@ -663,6 +672,9 @@
       letter-spacing:.2px;
       text-transform:uppercase;
     }
+    .upsell-cta .ic{
+      margin-right:5px;
+    }
     .upsell-note{
       margin-top:10px;
       color:var(--muted2);
@@ -682,7 +694,7 @@
   <main class="wrap">
     <header class="top">
       <div>
-        <h1 class="title">Minha Conta</h1>
+        <h1 class="title"><span class="ic" aria-hidden="true">👤</span>Minha Conta</h1>
         <p class="subtitle">Bem-vindo, {{ conta_nome or 'Cliente' }}.</p>
       </div>
       <form method="POST" action="/logout">
@@ -696,23 +708,23 @@
 
     <section class="grid">
       <article class="card">
-        <h2>Dados do cliente</h2>
-        <p class="line"><span>Nome:</span> {{ conta_nome or '-' }}</p>
-        <p class="line"><span>E-mail:</span> {{ email }}</p>
-        <p class="line"><span>Telefone:</span> {{ conta.telefone or '-' }}</p>
-        <p class="line"><span>Conta criada:</span> {{ conta.created_at.strftime("%d/%m/%Y %H:%M") if conta.created_at else '-' }}</p>
+        <h2><span class="ic" aria-hidden="true">🧾</span>Dados do cliente</h2>
+        <p class="line"><span>🪪 Nome:</span> {{ conta_nome or '-' }}</p>
+        <p class="line"><span>✉️ E-mail:</span> {{ email }}</p>
+        <p class="line"><span>📞 Telefone:</span> {{ conta.telefone or '-' }}</p>
+        <p class="line"><span>🗓️ Conta criada:</span> {{ conta.created_at.strftime("%d/%m/%Y %H:%M") if conta.created_at else '-' }}</p>
       </article>
 
       <article class="card">
-        <h2>Status dos planos</h2>
+        <h2><span class="ic" aria-hidden="true">📊</span>Status dos planos</h2>
         <div class="kpi">
-          <span class="pill">Total liberado: {{ pedidos|length }}</span>
-          <span class="pill ok">Ativos: {{ ativos|length }}</span>
-          <span class="pill warn">Expirados: {{ (pedidos|length) - (ativos|length) }}</span>
+          <span class="pill">📦 Total liberado: {{ pedidos|length }}</span>
+          <span class="pill ok">✅ Ativos: {{ ativos|length }}</span>
+          <span class="pill warn">⏳ Expirados: {{ (pedidos|length) - (ativos|length) }}</span>
         </div>
         {% if ultimo_pedido %}
-          <p class="line" style="margin-top:10px;"><span>Plano mais recente:</span> <strong>{{ ultimo_pedido.plano_nome }}</strong></p>
-          <p class="line"><span>Expira em:</span> {{ ultimo_pedido.expira_em_fmt }}</p>
+          <p class="line" style="margin-top:10px;"><span>🏷️ Plano mais recente:</span> <strong>{{ ultimo_pedido.plano_nome }}</strong></p>
+          <p class="line"><span>⌛ Expira em:</span> {{ ultimo_pedido.expira_em_fmt }}</p>
         {% else %}
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
         {% endif %}
@@ -720,24 +732,24 @@
     </section>
 
     <section class="card">
-      <h2>Crescimento do capital</h2>
+      <h2><span class="ic" aria-hidden="true">📈</span>Crescimento do capital</h2>
       {% if capital_chart and capital_chart.available %}
-        <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
-        <p class="line"><span>Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
-        <p class="line"><span>Periodo do CSV:</span> {{ capital_chart.start_date }} ate {{ capital_chart.csv_end_date }}</p>
+        <p class="line"><span>🏷️ Plano:</span> {{ capital_chart.plan_name }}</p>
+        <p class="line"><span>🗓️ Periodo do plano:</span> {{ capital_chart.start_date }} ate {{ capital_chart.end_date }}</p>
+        <p class="line"><span>🧮 Periodo do CSV:</span> {{ capital_chart.start_date }} ate {{ capital_chart.csv_end_date }}</p>
         {% if capital_chart.csv_value_mode == "points" %}
-        <p class="line"><span>Conversao:</span> 1 ponto = R$ {{ "{:,.2f}".format(capital_chart.csv_brl_per_point).replace(",", "X").replace(".", ",").replace("X", ".") }} (1 contrato)</p>
+        <p class="line"><span>🔁 Conversao:</span> 1 ponto = R$ {{ "{:,.2f}".format(capital_chart.csv_brl_per_point).replace(",", "X").replace(".", ",").replace("X", ".") }} (1 contrato)</p>
         {% endif %}
-        <p class="line"><span>Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
+        <p class="line"><span>🪟 Janela exibida:</span> <strong id="windowRangeText">{{ capital_chart.window_start_date or capital_chart.start_date }} ate {{ capital_chart.window_end_date or capital_chart.end_date }}</strong></p>
         <div class="kpi" style="margin-top:8px;">
-          <span class="pill">Dias do plano: {{ capital_chart.plan_days }}</span>
-          <span class="pill">Dias no CSV: {{ capital_chart.csv_last_day }}</span>
-          <span class="pill ok">Dia atualizado: {{ capital_chart.current_day }}</span>
-          <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
-          <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
-          <span class="pill total-emphasis">Saldo total no CSV: <strong id="csvTotalValueText" data-current-value="{{ capital_chart.csv_total_value }}">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
+          <span class="pill">📆 Dias do plano: {{ capital_chart.plan_days }}</span>
+          <span class="pill">🧾 Dias no CSV: {{ capital_chart.csv_last_day }}</span>
+          <span class="pill ok">✅ Dia atualizado: {{ capital_chart.current_day }}</span>
+          <span class="pill">🎛️ Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
+          <span class="pill">💰 Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
+          <span class="pill total-emphasis">🏦 Saldo total no CSV: <strong id="csvTotalValueText" data-current-value="{{ capital_chart.csv_total_value }}">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
         </div>
-        <p class="chart-editable-note">Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
+        <p class="chart-editable-note">🛠️ Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
         <div class="chart-config-row">
           {% if capital_chart.window_modes %}
           <div class="chart-window-controls">
@@ -747,13 +759,13 @@
               class="chart-mode-btn {{ 'is-active' if mode_id == (capital_chart.default_window_mode or 'forward30') else '' }}"
               data-chart-mode="{{ mode_id }}"
             >
-              {{ mode.title }}
+              {% if mode_id == "forward30" %}📈 {% elif mode_id == "back30" %}⏮️ {% endif %}{{ mode.title }}
             </button>
             {% endfor %}
           </div>
           {% endif %}
           <div class="chart-contract-control">
-            <label for="contractCountInput">Quantidade de contratos</label>
+            <label for="contractCountInput">🎚️ Quantidade de contratos</label>
             <div class="chart-contract-input-wrap">
               <input
                 id="contractCountInput"
@@ -765,7 +777,7 @@
                 value="{{ capital_chart.contract_default or 1 }}"
                 {% if (capital_chart.contract_limit or 1) <= 1 %}disabled{% endif %}
               >
-              <span class="chart-contract-limit">Limite: {{ capital_chart.contract_limit or 1 }}</span>
+              <span class="chart-contract-limit">🔒 Limite: {{ capital_chart.contract_limit or 1 }}</span>
             </div>
           </div>
         </div>
@@ -781,7 +793,7 @@
 
     {% if upsell_plans %}
     <section class="card">
-      <h2>Evolua para um plano pago</h2>
+      <h2><span class="ic" aria-hidden="true">🚀</span>Evolua para um plano pago</h2>
       <p class="upsell-intro">
         Seu acesso gratuito esta ativo. Para liberar mais recursos e suporte completo, escolha um plano abaixo.
       </p>
@@ -797,7 +809,7 @@
             <p class="upsell-name">{{ plano.nome }}</p>
             <p class="upsell-contracts">{{ plano.contracts_text }}</p>
             <p class="upsell-price">{{ plano.preco_fmt }}<small>/mes</small></p>
-            <p class="upsell-cta">Comprar</p>
+            <p class="upsell-cta"><span class="ic" aria-hidden="true">🛒</span>Comprar</p>
           </a>
         {% endfor %}
       </div>
@@ -806,7 +818,7 @@
     {% endif %}
 
     <section class="card">
-      <h2>Historico de acessos liberados</h2>
+      <h2><span class="ic" aria-hidden="true">🗂️</span>Historico de acessos liberados</h2>
       {% if pedidos %}
         <div class="table-wrap">
           <table>
@@ -854,7 +866,7 @@
       {% endif %}
     </section>
 
-    <a class="back" href="/">Voltar para a pagina inicial</a>
+    <a class="back" href="/">⬅️ Voltar para a pagina inicial</a>
   </main>
 
   {% if capital_chart and capital_chart.available %}
