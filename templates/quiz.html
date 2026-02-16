@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz TRX | Plano Ideal</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+  <link rel="icon" href="/assets/favicon-32.png?v=2" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/assets/favicon-32.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#05070a;
+      --bg2:#060b11;
+      --text:#eef6ff;
+      --muted:rgba(238,246,255,.70);
+      --muted2:rgba(238,246,255,.52);
+      --stroke:rgba(255,255,255,.12);
+      --green:#19e39a;
+      --green2:#0db97c;
+      --card:#0e131a;
+      --card2:#0a0f14;
+      --shadow:0 24px 90px rgba(0,0,0,.55);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 620px at 18% 8%, rgba(25,227,154,.16), transparent 58%),
+        radial-gradient(900px 620px at 82% 18%, rgba(255,138,31,.11), transparent 62%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      overflow-x:hidden;
+    }
+    .grid-bg{
+      position:fixed; inset:0;
+      pointer-events:none;
+      opacity:.14;
+      background:
+        linear-gradient(to right, rgba(255,255,255,.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.08) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(circle at 50% 35%, rgba(0,0,0,1) 0%, rgba(0,0,0,.65) 55%, rgba(0,0,0,0) 88%);
+    }
+
+    .quiz-page{
+      width:min(980px, 96vw);
+      margin: 24px auto 40px;
+      position:relative;
+      z-index:1;
+    }
+    .quiz-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .back-link{
+      color:#d8e3f0;
+      text-decoration:none;
+      font-weight:800;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:12px;
+      padding:10px 14px;
+      background: rgba(255,255,255,.04);
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: var(--muted);
+      font-weight:800;
+      letter-spacing:.2px;
+      font-size:14px;
+    }
+    .brand img{
+      width:34px;
+      height:34px;
+      border-radius:8px;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,.14);
+    }
+
+    .quiz-card{
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      background:
+        radial-gradient(500px 180px at 16% 0%, rgba(25,227,154,.10), transparent 62%),
+        linear-gradient(180deg, var(--card) 0%, var(--card2) 100%);
+      box-shadow: var(--shadow);
+      padding:22px;
+    }
+    .quiz-eyebrow{
+      margin:0;
+      color:rgba(25,227,154,1);
+      font-weight:900;
+      letter-spacing:.24em;
+      font-size:11px;
+      text-transform:uppercase;
+    }
+    .quiz-title{
+      margin:10px 0 0;
+      font-weight:1000;
+      letter-spacing:-.8px;
+      line-height:1.04;
+      font-size: clamp(26px, 4.6vw, 46px);
+    }
+    .quiz-sub{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-weight:700;
+    }
+
+    .progress-wrap{
+      margin-top:18px;
+    }
+    .progress-meta{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      color:var(--muted2);
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .progress-track{
+      margin-top:8px;
+      height:10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    .progress-fill{
+      height:100%;
+      width:0%;
+      border-radius:inherit;
+      background: linear-gradient(90deg, rgba(25,227,154,1), rgba(11,191,127,1));
+      box-shadow: 0 8px 24px rgba(25,227,154,.32);
+      transition: width .24s ease;
+    }
+
+    .quiz-screen{
+      margin-top:18px;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .quiz-screen.swap-out{
+      opacity:0;
+      transform:translateX(9px);
+    }
+    .quiz-screen.swap-in{
+      opacity:0;
+      transform:translateX(-9px);
+    }
+
+    .question-title{
+      margin:0;
+      font-size: clamp(22px, 3.5vw, 34px);
+      font-weight:1000;
+      letter-spacing:-.6px;
+      line-height:1.06;
+    }
+    .question-sub{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-weight:700;
+      line-height:1.4;
+    }
+
+    .answers{
+      margin-top:16px;
+      display:grid;
+      gap:11px;
+    }
+    .answer-btn{
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:14px;
+      background: rgba(255,255,255,.04);
+      color:#ecf6ff;
+      padding:14px 16px;
+      text-align:left;
+      font-weight:800;
+      font-size:16px;
+      cursor:pointer;
+      transition: transform .14s ease, filter .14s ease, border-color .14s ease, background .14s ease;
+    }
+    .answer-btn:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+      border-color: rgba(25,227,154,.54);
+      background: rgba(25,227,154,.08);
+    }
+    .answer-btn:active{
+      transform: translateY(0) scale(.995);
+    }
+
+    .quiz-nav{
+      margin-top:14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .ghost-btn{
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:12px;
+      background: rgba(255,255,255,.03);
+      color:#dce8f5;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .hint{
+      color:var(--muted2);
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .result-card{
+      border:1px solid rgba(25,227,154,.36);
+      border-radius:16px;
+      background: rgba(25,227,154,.08);
+      padding:16px;
+    }
+    .result-label{
+      margin:0;
+      color:#bdf7e1;
+      font-size:12px;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      font-weight:900;
+    }
+    .result-plan{
+      margin:8px 0 0;
+      font-size: clamp(36px, 7vw, 62px);
+      line-height:1;
+      font-weight:1000;
+      letter-spacing:-1px;
+      color:#43edbf;
+    }
+    .result-desc{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-weight:700;
+    }
+    .next-level{
+      margin-top:10px;
+      color:#ffdb95;
+      font-weight:800;
+      font-size:14px;
+    }
+
+    .reasons{
+      margin:14px 0 0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap:8px;
+    }
+    .reasons li{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      background: rgba(255,255,255,.03);
+      padding:10px 12px;
+      color:#e7f3ff;
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .result-actions{
+      margin-top:16px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .cta-primary{
+      border:0;
+      border-radius:12px;
+      padding:12px 16px;
+      font-weight:1000;
+      letter-spacing:.2px;
+      cursor:pointer;
+      background: linear-gradient(180deg, rgba(25,227,154,1), rgba(11,191,127,1));
+      color:#04271a;
+      box-shadow: 0 14px 36px rgba(25,227,154,.26);
+    }
+    .cta-secondary{
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:12px;
+      padding:12px 16px;
+      font-weight:900;
+      cursor:pointer;
+      color:#f0f6ff;
+      background: rgba(255,255,255,.05);
+    }
+    .result-footer{
+      margin-top:12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .result-link{
+      text-decoration:none;
+      color:#dce8f5;
+      font-weight:800;
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:10px;
+      padding:9px 12px;
+      background: rgba(255,255,255,.04);
+    }
+
+    @media (max-width: 640px){
+      .quiz-page{ margin-top:16px; }
+      .quiz-card{ padding:16px; border-radius:18px; }
+      .answer-btn{ font-size:15px; padding:13px 14px; }
+      .progress-meta{ font-size:12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <main class="quiz-page">
+    <div class="quiz-top">
+      <a class="back-link" href="/">← Voltar para os planos</a>
+      <div class="brand">
+        <img src="/assets/logo2.png" alt="TRX" />
+        <span>TRX PRO | Quiz de recomendacao</span>
+      </div>
+    </div>
+
+    <section class="quiz-card">
+      <p class="quiz-eyebrow">TRX QUIZ</p>
+      <h1 class="quiz-title">Descubra automaticamente o plano TRX ideal para voce</h1>
+      <p class="quiz-sub">Fluxo rapido de 6 perguntas com recomendacao objetiva no final.</p>
+
+      <div class="progress-wrap">
+        <div class="progress-meta">
+          <span id="progressText">1/6 · ~2 min</span>
+          <span id="progressStep">Pergunta 1 de 6</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="quiz-screen" id="quizScreen"></div>
+    </section>
+  </main>
+
+  <script>
+    const QUIZ_CONFIG = {
+      approxTime: "~2 min",
+      storageKey: "trx_quiz_state_v1",
+      plans: {
+        gratis: { name: "GRATIS", checkout: "https://webhook-infinitypay.onrender.com/checkout/trx-gratis", contracts: "Teste limitado" },
+        bronze: { name: "BRONZE", checkout: "https://webhook-infinitypay.onrender.com/checkout/trx-bronze", contracts: "1 contrato" },
+        prata: { name: "PRATA", checkout: "https://webhook-infinitypay.onrender.com/checkout/trx-prata", contracts: "1-5 contratos" },
+        gold: { name: "GOLD", checkout: "https://webhook-infinitypay.onrender.com/checkout/trx-gold", contracts: "1-20 contratos" },
+        black: { name: "BLACK", checkout: "https://webhook-infinitypay.onrender.com/checkout/trx-black", contracts: "1-300 contratos" }
+      },
+      planOrder: ["gratis", "bronze", "prata", "gold", "black"],
+      contractAnchors: {
+        one: "bronze",
+        two_five: "prata",
+        six_twenty: "gold",
+        twenty_one_plus: "black"
+      },
+      questions: [
+        {
+          id: "level",
+          title: "Q1 — Qual seu nivel hoje?",
+          subtitle: "Seu nivel ajuda a calibrar potencia e simplicidade no inicio.",
+          options: [
+            { value: "never", label: "Nunca operei" },
+            { value: "beginner", label: "Iniciante" },
+            { value: "intermediate", label: "Intermediario" },
+            { value: "advanced", label: "Avancado" }
+          ]
+        },
+        {
+          id: "goal",
+          title: "Q2 — Voce quer o TRX pra…",
+          subtitle: "Escolha o objetivo que mais representa seu momento.",
+          options: [
+            { value: "test", label: "Testar e ver como funciona" },
+            { value: "consistency", label: "Operar com consistencia (sem exagero)" },
+            { value: "scale", label: "Escalar resultado (mais forca)" },
+            { value: "unsure", label: "Ainda nao sei" }
+          ]
+        },
+        {
+          id: "contracts",
+          title: "Q3 — Quantos contratos voce pretende usar na maioria do tempo?",
+          subtitle: "Essa e a ancora principal da recomendacao.",
+          options: [
+            { value: "one", label: "1 contrato" },
+            { value: "two_five", label: "2 a 5 contratos" },
+            { value: "six_twenty", label: "6 a 20 contratos" },
+            { value: "twenty_one_plus", label: "21+ contratos" },
+            { value: "unsure", label: "Ainda nao sei" }
+          ]
+        },
+        {
+          id: "risk",
+          title: "Q4 — Seu perfil de risco e mais…",
+          subtitle: "Essa resposta evita recomendar um plano acima do conforto atual.",
+          options: [
+            { value: "conservative", label: "Conservador" },
+            { value: "moderate", label: "Moderado" },
+            { value: "aggressive", label: "Agressivo" }
+          ]
+        },
+        {
+          id: "time",
+          title: "Q5 — Quanto tempo por dia voce consegue acompanhar?",
+          subtitle: "Quanto menos tempo, mais importante comecar de forma simples.",
+          options: [
+            { value: "very_little", label: "Quase nada (quero o mais simples possivel)" },
+            { value: "half_hour", label: "30-60 min por dia" },
+            { value: "routine_experience", label: "Tenho rotina e experiencia" }
+          ]
+        },
+        {
+          id: "start_mode",
+          title: "Q6 — Voce quer comecar por…",
+          subtitle: "Ultimo passo para definir o melhor caminho agora.",
+          options: [
+            { value: "free_first", label: "Teste grátis primeiro" },
+            { value: "direct_best", label: "Entrar no melhor plano pra mim direto" }
+          ]
+        }
+      ]
+    };
+
+    const state = {
+      step: 0,
+      answers: {}
+    };
+
+    const progressText = document.getElementById("progressText");
+    const progressStep = document.getElementById("progressStep");
+    const progressFill = document.getElementById("progressFill");
+    const quizScreen = document.getElementById("quizScreen");
+
+    function planName(planId) {
+      return QUIZ_CONFIG.plans[planId]?.name || "PLANO";
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(QUIZ_CONFIG.storageKey, JSON.stringify(state));
+      } catch (e) {
+      }
+    }
+
+    function clearState() {
+      try {
+        localStorage.removeItem(QUIZ_CONFIG.storageKey);
+      } catch (e) {
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(QUIZ_CONFIG.storageKey);
+        if (!raw) return false;
+        const saved = JSON.parse(raw);
+        if (typeof saved !== "object" || saved === null) return false;
+        if (typeof saved.step !== "number" || typeof saved.answers !== "object") return false;
+
+        const total = QUIZ_CONFIG.questions.length;
+        state.step = Math.max(0, Math.min(saved.step, total));
+        state.answers = saved.answers || {};
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function updateProgress(isResult = false) {
+      const total = QUIZ_CONFIG.questions.length;
+      if (isResult) {
+        progressText.textContent = `Resultado · ${total}/${total} · ${QUIZ_CONFIG.approxTime}`;
+        progressStep.textContent = "Recomendacao final";
+        progressFill.style.width = "100%";
+        return;
+      }
+
+      const current = state.step + 1;
+      const pct = Math.max(0, Math.min(100, (state.step / total) * 100));
+      progressText.textContent = `${current}/${total} · ${QUIZ_CONFIG.approxTime}`;
+      progressStep.textContent = `Pergunta ${current} de ${total}`;
+      progressFill.style.width = `${pct}%`;
+    }
+
+    function animateSwap(renderFn) {
+      quizScreen.classList.add("swap-out");
+      setTimeout(() => {
+        renderFn();
+        quizScreen.classList.remove("swap-out");
+        quizScreen.classList.add("swap-in");
+        requestAnimationFrame(() => {
+          quizScreen.classList.remove("swap-in");
+        });
+      }, 170);
+    }
+
+    function questionByStep(step) {
+      return QUIZ_CONFIG.questions[step];
+    }
+
+    function buildQuestionView() {
+      const q = questionByStep(state.step);
+      if (!q) return;
+
+      updateProgress(false);
+
+      const wrap = document.createElement("div");
+
+      const title = document.createElement("h2");
+      title.className = "question-title";
+      title.textContent = q.title;
+      wrap.appendChild(title);
+
+      const sub = document.createElement("p");
+      sub.className = "question-sub";
+      sub.textContent = q.subtitle;
+      wrap.appendChild(sub);
+
+      const answers = document.createElement("div");
+      answers.className = "answers";
+
+      q.options.forEach((opt) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "answer-btn";
+        btn.textContent = opt.label;
+
+        btn.addEventListener("click", () => {
+          state.answers[q.id] = opt.value;
+          saveState();
+
+          const isLast = state.step >= QUIZ_CONFIG.questions.length - 1;
+          if (isLast) {
+            animateSwap(renderResultView);
+          } else {
+            state.step += 1;
+            saveState();
+            animateSwap(buildQuestionView);
+          }
+        });
+
+        answers.appendChild(btn);
+      });
+
+      wrap.appendChild(answers);
+
+      const nav = document.createElement("div");
+      nav.className = "quiz-nav";
+
+      const left = document.createElement("div");
+      if (state.step > 0) {
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "ghost-btn";
+        back.textContent = "← Voltar pergunta";
+        back.addEventListener("click", () => {
+          state.step -= 1;
+          saveState();
+          animateSwap(buildQuestionView);
+        });
+        left.appendChild(back);
+      }
+
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = "Dica: responda rapido e siga a recomendacao para comecar.";
+
+      nav.appendChild(left);
+      nav.appendChild(hint);
+      wrap.appendChild(nav);
+
+      quizScreen.innerHTML = "";
+      quizScreen.appendChild(wrap);
+    }
+
+    function recommendWhenContractsUnknown(a) {
+      if (a.level === "never" || a.risk === "conservative") {
+        return a.start_mode === "free_first" ? "gratis" : "bronze";
+      }
+
+      if (a.level === "advanced" && a.risk === "aggressive" && a.goal === "scale") {
+        return "black";
+      }
+
+      if ((a.level === "intermediate" || a.level === "advanced") && a.goal === "scale") {
+        return "gold";
+      }
+
+      if (a.level === "beginner" && a.risk === "moderate") {
+        return "prata";
+      }
+
+      return "prata";
+    }
+
+    function getRecommendation(answers) {
+      let recommended;
+      let nextLevel = null;
+      let anchorPlan = null;
+      const reasons = [];
+
+      if (answers.contracts && answers.contracts !== "unsure") {
+        anchorPlan = QUIZ_CONFIG.contractAnchors[answers.contracts];
+        recommended = anchorPlan;
+        reasons.push(`Com base na sua faixa de contratos, o plano ${planName(recommended)} fica no nivel certo para operar sem distorcer risco.`);
+      } else {
+        recommended = recommendWhenContractsUnknown(answers);
+        reasons.push(`Como voce ainda esta definindo volume de contratos, o plano ${planName(recommended)} equilibra entrada rapida e seguranca.`);
+      }
+
+      const originalPlan = recommended;
+      const mustDowngrade =
+        (originalPlan === "gold" || originalPlan === "black") &&
+        (answers.level === "never" || answers.risk === "conservative" || answers.time === "very_little");
+
+      if (mustDowngrade) {
+        const idx = QUIZ_CONFIG.planOrder.indexOf(originalPlan);
+        recommended = QUIZ_CONFIG.planOrder[Math.max(0, idx - 1)];
+        nextLevel = originalPlan;
+        reasons.push(`Para evitar arrependimento no inicio, recomendamos ${planName(recommended)} agora e ${planName(nextLevel)} como proximo nivel.`);
+      }
+
+      if (reasons.length < 2) {
+        if (answers.goal === "scale") {
+          reasons.push("Seu objetivo de escala pede uma estrutura com mais forca e folga operacional.");
+        } else if (answers.goal === "consistency") {
+          reasons.push("Seu foco em consistencia favorece uma configuracao equilibrada e repetivel.");
+        } else if (answers.goal === "test") {
+          reasons.push("Seu momento de validacao indica um caminho de menor atrito para comecar com clareza.");
+        } else {
+          reasons.push("A recomendacao final considera risco, disponibilidade de tempo e potencial de evolucao.");
+        }
+      }
+
+      const showFreeSecondary = answers.start_mode === "free_first" && recommended !== "gratis";
+
+      return {
+        recommended,
+        nextLevel,
+        reasons: reasons.slice(0, 2),
+        showFreeSecondary
+      };
+    }
+
+    function renderResultView() {
+      updateProgress(true);
+      state.step = QUIZ_CONFIG.questions.length;
+      saveState();
+
+      const result = getRecommendation(state.answers);
+      const plan = QUIZ_CONFIG.plans[result.recommended];
+      const freePlan = QUIZ_CONFIG.plans.gratis;
+
+      const wrap = document.createElement("div");
+
+      const card = document.createElement("div");
+      card.className = "result-card";
+      card.innerHTML = `
+        <p class="result-label">Plano recomendado</p>
+        <h2 class="result-plan">${plan.name}</h2>
+        <p class="result-desc">${plan.contracts}</p>
+        ${result.nextLevel ? `<p class="next-level">Proximo nivel sugerido: ${planName(result.nextLevel)}</p>` : ""}
+      `;
+      wrap.appendChild(card);
+
+      const reasons = document.createElement("ul");
+      reasons.className = "reasons";
+      reasons.innerHTML = `
+        <li>• ${result.reasons[0]}</li>
+        <li>• ${result.reasons[1]}</li>
+      `;
+      wrap.appendChild(reasons);
+
+      const actions = document.createElement("div");
+      actions.className = "result-actions";
+
+      const primary = document.createElement("button");
+      primary.type = "button";
+      primary.className = "cta-primary";
+      primary.textContent = `ATIVAR ${plan.name} AGORA`;
+      primary.addEventListener("click", () => {
+        window.location.href = plan.checkout;
+      });
+      actions.appendChild(primary);
+
+      if (result.showFreeSecondary) {
+        const secondary = document.createElement("button");
+        secondary.type = "button";
+        secondary.className = "cta-secondary";
+        secondary.textContent = "Quero testar antes (grátis)";
+        secondary.addEventListener("click", () => {
+          window.location.href = freePlan.checkout;
+        });
+        actions.appendChild(secondary);
+      }
+
+      wrap.appendChild(actions);
+
+      const footer = document.createElement("div");
+      footer.className = "result-footer";
+      footer.innerHTML = `
+        <button class="ghost-btn" type="button" id="restartQuizBtn">Refazer quiz</button>
+        <a class="result-link" href="/">Voltar para os planos</a>
+      `;
+      wrap.appendChild(footer);
+
+      quizScreen.innerHTML = "";
+      quizScreen.appendChild(wrap);
+
+      const restart = document.getElementById("restartQuizBtn");
+      if (restart) {
+        restart.addEventListener("click", () => {
+          state.step = 0;
+          state.answers = {};
+          clearState();
+          animateSwap(buildQuestionView);
+        });
+      }
+    }
+
+    function startQuiz() {
+      loadState();
+      const total = QUIZ_CONFIG.questions.length;
+
+      if (state.step >= total && Object.keys(state.answers).length >= total) {
+        renderResultView();
+      } else {
+        state.step = Math.max(0, Math.min(state.step, total - 1));
+        buildQuestionView();
+      }
+    }
+
+    startQuiz();
+  </script>
+</body>
+</html>

@@ -566,6 +566,11 @@ def home():
     return render_template("index.html")
 
 
+@app.route("/quiz")
+def quiz():
+    return render_template("quiz.html")
+
+
 @app.route("/checkout/<plano>")
 def checkout(plano):
     registrar_usuario_online()
