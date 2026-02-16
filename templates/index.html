@@ -27,8 +27,8 @@
       --shadow: 0 26px 90px rgba(0,0,0,.60);
       --radius:22px;
 
-      --green:#bcff00;
-      --green2:#88bf00;
+      --green:#23b00b;
+      --green2:#1d8f09;
       --red:#ff3a3a;
 
       --orange:#ff8a1f;
@@ -48,11 +48,34 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--text);
       background:
-        radial-gradient(1100px 650px at 20% 8%, rgba(188,255,0,.18), transparent 58%),
+        radial-gradient(1100px 650px at 20% 8%, rgba(35,176,11,.18), transparent 58%),
         radial-gradient(900px 600px at 80% 18%, rgba(255,138,31,.12), transparent 62%),
         radial-gradient(900px 700px at 60% 86%, rgba(168,85,247,.10), transparent 60%),
         linear-gradient(180deg, var(--bg) 0%, var(--bg2) 50%, var(--bg) 100%);
       overflow-x:hidden;
+    }
+    html.protect-mode,
+    body.protect-mode{
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+    body.protect-mode img{
+      -webkit-user-drag:none;
+      user-drag:none;
+    }
+    @media print{
+      body *{
+        display:none !important;
+      }
+      body::before{
+        content:"Impressão desativada nesta página.";
+        display:block;
+        padding:24px;
+        color:#fff;
+        font-weight:900;
+        text-align:center;
+      }
     }
 
     /* Fundo grid + vinheta */
@@ -120,9 +143,9 @@
     .btn:hover{transform: translateY(-1px); filter: brightness(1.06);}
     .btn:active{transform: translateY(0px) scale(.99);}
     .btn.green{
-      background: linear-gradient(180deg, rgba(188,255,0,1), rgba(136,191,0,1));
+      background: linear-gradient(180deg, rgba(35,176,11,1), rgba(29,143,9,1));
       color:#03100b;
-      box-shadow: 0 18px 46px rgba(188,255,0,.18);
+      box-shadow: 0 18px 46px rgba(35,176,11,.18);
     }
     .btn.green:before{
       content:"";
@@ -170,7 +193,7 @@
     .logo-box:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(520px 220px at 50% 25%, rgba(188,255,0,.18), transparent 62%);
+      background: radial-gradient(520px 220px at 50% 25%, rgba(35,176,11,.18), transparent 62%);
       pointer-events:none;
     }
     .logo-box img{
@@ -196,18 +219,18 @@
       width: fit-content;
       padding: 12px 18px;
       border-radius: 14px;
-      border: 2px solid rgba(188,255,0,.55);
-      color: rgba(188,255,0,1);
-      background: rgba(188,255,0,.08);
+      border: 2px solid rgba(35,176,11,.55);
+      color: rgba(35,176,11,1);
+      background: rgba(35,176,11,.08);
       font-weight: 900;
       display:flex;
       align-items:center;
       gap:10px;
-      box-shadow: 0 18px 55px rgba(188,255,0,.10);
+      box-shadow: 0 18px 55px rgba(35,176,11,.10);
     }
     .live-pill .live-dot{
-      width:10px;height:10px;border-radius:999px;background:rgba(188,255,0,1);
-      box-shadow: 0 0 18px rgba(188,255,0,.60);
+      width:10px;height:10px;border-radius:999px;background:rgba(35,176,11,1);
+      box-shadow: 0 0 18px rgba(35,176,11,.60);
     }
 
     .headline{
@@ -219,7 +242,7 @@
       text-transform: uppercase;
     }
     .headline .r{color: var(--red)}
-    .headline .g{color: rgba(188,255,0,.85)}
+    .headline .g{color: rgba(35,176,11,.85)}
     .headline .w{color:#fff}
     .headline .big{font-size: clamp(56px, 10.8vw, 164px)}
     .sub{
@@ -241,7 +264,7 @@
       background: linear-gradient(120deg, #ffffff 0%, #defee7 30%, #ffffff 60%, #dff6ff 100%);
       color: #041a12;
       border: 1px solid rgba(255,255,255,.94);
-      box-shadow: 0 18px 50px rgba(188,255,0,.24), 0 10px 30px rgba(0,0,0,.26);
+      box-shadow: 0 18px 50px rgba(35,176,11,.24), 0 10px 30px rgba(0,0,0,.26);
       overflow: hidden;
       position: relative;
       animation: quizBtnFloat 2.8s ease-in-out infinite, quizBtnGlow 2.8s ease-in-out infinite;
@@ -266,10 +289,10 @@
     }
     @keyframes quizBtnGlow{
       0%,100%{
-        box-shadow: 0 14px 44px rgba(188,255,0,.17), 0 10px 24px rgba(0,0,0,.24);
+        box-shadow: 0 14px 44px rgba(35,176,11,.17), 0 10px 24px rgba(0,0,0,.24);
       }
       50%{
-        box-shadow: 0 22px 62px rgba(188,255,0,.36), 0 14px 38px rgba(0,0,0,.28);
+        box-shadow: 0 22px 62px rgba(35,176,11,.36), 0 14px 38px rgba(0,0,0,.28);
       }
     }
     @keyframes quizBtnFloat{
@@ -291,8 +314,8 @@
       flex-wrap:wrap;
       padding: 14px 14px;
       border-radius: 14px;
-      border: 1px solid rgba(188,255,0,.26);
-      background: linear-gradient(90deg, rgba(188,255,0,.10), rgba(74,163,255,.06));
+      border: 1px solid rgba(35,176,11,.26);
+      background: linear-gradient(90deg, rgba(35,176,11,.10), rgba(74,163,255,.06));
       box-shadow: 0 18px 54px rgba(0,0,0,.24);
     }
     .quiz-strip .label{
@@ -327,7 +350,7 @@
       margin: 18px auto 0;
       width:min(980px, 96vw);
       border-radius: 18px;
-      border: 2px solid rgba(188,255,0,.32);
+      border: 2px solid rgba(35,176,11,.32);
       background: rgba(8,14,12,.55);
       box-shadow: 0 20px 95px rgba(0,0,0,.55);
       overflow:hidden;
@@ -336,7 +359,7 @@
     .chart:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(700px 250px at 50% 0%, rgba(188,255,0,.12), transparent 60%);
+      background: radial-gradient(700px 250px at 50% 0%, rgba(35,176,11,.12), transparent 60%);
       pointer-events:none;
     }
     .chart-head{
@@ -351,7 +374,7 @@
       position:relative;
       z-index:1;
     }
-    .chart img{width:100%; display:block; position:relative; z-index:1;}
+    .chart img{width:100%; display:block; position:relative; z-index:1; cursor: zoom-in;}
 
     .metrics{
       display:grid;
@@ -412,7 +435,7 @@
     .feat:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(360px 120px at 10% 0%, rgba(188,255,0,.12), transparent 60%);
+      background: radial-gradient(360px 120px at 10% 0%, rgba(35,176,11,.12), transparent 60%);
       opacity:.9;
       pointer-events:none;
     }
@@ -438,13 +461,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(760px 220px at 20% 0%, rgba(188,255,0,.14), transparent 62%);
+      background: radial-gradient(760px 220px at 20% 0%, rgba(35,176,11,.14), transparent 62%);
       pointer-events:none;
     }
     .proof-pill{
       margin: 0 auto 10px;
-      border: 2px solid rgba(188,255,0,.40);
-      background: rgba(188,255,0,.10);
+      border: 2px solid rgba(35,176,11,.40);
+      background: rgba(35,176,11,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -676,7 +699,7 @@
     }
     .report-track::-webkit-scrollbar-thumb{
       border-radius: 999px;
-      background: linear-gradient(90deg, rgba(188,255,0,.75), rgba(74,163,255,.85));
+      background: linear-gradient(90deg, rgba(35,176,11,.75), rgba(74,163,255,.85));
     }
     .report-card{
       scroll-snap-align: start;
@@ -687,13 +710,13 @@
       overflow: hidden;
       transition: .2s transform, .2s filter, .2s border-color;
     }
-    .report-card.pos{ border-color: rgba(188,255,0,.58); }
+    .report-card.pos{ border-color: rgba(35,176,11,.58); }
     .report-card.neg{ border-color: rgba(255,106,106,.58); }
     .report-card.neutral{ border-color: rgba(200,214,236,.46); }
     .report-card:hover{
       transform: translateY(-3px);
       filter: brightness(1.03);
-      border-color: rgba(188,255,0,.55);
+      border-color: rgba(35,176,11,.55);
     }
     .report-image{
       position: relative;
@@ -704,8 +727,8 @@
       cursor: zoom-in;
     }
     .report-card.pos .report-image{
-      border-color: rgba(188,255,0,.82);
-      box-shadow: inset 0 0 0 1px rgba(188,255,0,.32), 0 0 24px rgba(188,255,0,.20);
+      border-color: rgba(35,176,11,.82);
+      box-shadow: inset 0 0 0 1px rgba(35,176,11,.32), 0 0 24px rgba(35,176,11,.20);
     }
     .report-card.neg .report-image{
       border-color: rgba(255,106,106,.86);
@@ -754,7 +777,7 @@
     }
     .report-gain.pos{
       color: #032016;
-      background: linear-gradient(180deg, #d4ff4d, #9dca00);
+      background: linear-gradient(180deg, #23b00b, #1d8f09);
     }
     .report-gain.neg{
       color: #fff;
@@ -774,7 +797,7 @@
     .report-cumulative strong{
       font-size: 16px;
     }
-    .report-cumulative.pos strong{ color: #d4ff4d; }
+    .report-cumulative.pos strong{ color: #23b00b; }
     .report-cumulative.neg strong{ color: #ff7c7c; }
     .report-cumulative.neutral strong{ color: #dce4ef; }
     .monthly-note{
@@ -803,7 +826,7 @@
       width: min(1220px, 96vw);
       max-height: 92vh;
       border-radius: 18px;
-      border: 1px solid rgba(188,255,0,.36);
+      border: 1px solid rgba(35,176,11,.36);
       background: linear-gradient(180deg, rgba(8,12,16,.95), rgba(4,8,10,.96));
       box-shadow: 0 28px 90px rgba(0,0,0,.62);
       overflow: hidden;
@@ -879,13 +902,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(740px 220px at 80% 0%, rgba(188,255,0,.12), transparent 62%);
+      background: radial-gradient(740px 220px at 80% 0%, rgba(35,176,11,.12), transparent 62%);
       pointer-events:none;
     }
     .how-pill{
       margin: 0 auto 10px;
-      border: 2px solid rgba(188,255,0,.34);
-      background: rgba(188,255,0,.10);
+      border: 2px solid rgba(35,176,11,.34);
+      background: rgba(35,176,11,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -914,8 +937,8 @@
       place-items:center;
       font-weight: 1000;
       color: #03150f;
-      background: linear-gradient(180deg, #d4ff4d, #9dca00);
-      box-shadow: 0 8px 20px rgba(188,255,0,.22);
+      background: linear-gradient(180deg, #23b00b, #1d8f09);
+      box-shadow: 0 8px 20px rgba(35,176,11,.22);
     }
     .how-step h3{
       margin: 10px 0 0;
@@ -948,13 +971,13 @@
       content:"";
       position:absolute;
       inset:-2px;
-      background: radial-gradient(600px 220px at 20% 0%, rgba(188,255,0,.15), transparent 62%);
+      background: radial-gradient(600px 220px at 20% 0%, rgba(35,176,11,.15), transparent 62%);
       pointer-events:none;
     }
     .free-pill{
       margin: 0 auto 8px;
-      border: 2px solid rgba(188,255,0,.40);
-      background: rgba(188,255,0,.10);
+      border: 2px solid rgba(35,176,11,.40);
+      background: rgba(35,176,11,.10);
       color: #9ff9d5;
       position: relative;
       z-index: 1;
@@ -1100,7 +1123,7 @@
       font-size: clamp(28px, 3.8vw, 56px);
     }
     .title .accent-orange{color: var(--orange);}
-    .title .accent-green{color: rgba(188,255,0,.85);}
+    .title .accent-green{color: rgba(35,176,11,.85);}
     .subtitle{
       text-align:center;
       margin: 10px auto 0;
@@ -1179,7 +1202,7 @@
     .bitem:before{
       content:"";
       position:absolute; inset:-2px;
-      background: radial-gradient(460px 140px at 10% 0%, rgba(188,255,0,.10), transparent 62%);
+      background: radial-gradient(460px 140px at 10% 0%, rgba(35,176,11,.10), transparent 62%);
       opacity:.8;
       pointer-events:none;
     }
@@ -1187,13 +1210,13 @@
       width: 40px; height:40px;
       border-radius: 12px;
       display:grid; place-items:center;
-      background: rgba(188,255,0,.12);
-      border: 1px solid rgba(188,255,0,.22);
+      background: rgba(35,176,11,.12);
+      border: 1px solid rgba(35,176,11,.22);
       flex: 0 0 auto;
       margin-top:2px;
       font-weight:1000;
-      color: rgba(188,255,0,1);
-      box-shadow: 0 12px 30px rgba(188,255,0,.10);
+      color: rgba(35,176,11,1);
+      box-shadow: 0 12px 30px rgba(35,176,11,.10);
       position:relative;
       z-index:1;
     }
@@ -1214,7 +1237,7 @@
       text-align:center;
       box-shadow: 0 18px 60px rgba(0,0,0,.25);
     }
-    .important b{color:#fff;}
+    .important b{color: var(--red);}
 
     /* ======= PLANOS (REFERENCIA) ======= */
     section.plans{
@@ -1230,7 +1253,7 @@
       width:min(1040px, 95vw);
       height:340px;
       border-radius:999px;
-      background: radial-gradient(circle, rgba(188,255,0,.26) 0%, rgba(188,255,0,.10) 45%, rgba(188,255,0,0) 76%);
+      background: radial-gradient(circle, rgba(35,176,11,.26) 0%, rgba(35,176,11,.10) 45%, rgba(35,176,11,0) 76%);
       filter: blur(6px);
       pointer-events:none;
       z-index:0;
@@ -1618,14 +1641,23 @@
       <!-- Curva -->
       <div class="chart">
         <div class="chart-head">📊 Curva de capital anual</div>
-        <img src="assets/curva.png" alt="Curva de capital" onerror="this.style.opacity=.45; this.alt='Coloque assets/curva.png';">
+        <img
+          id="capitalCurveImg"
+          src="assets/curva.png"
+          alt="Curva de capital"
+          data-month="CURVA ANUAL"
+          data-period="Período: 08/02/2025 a 08/02/2026"
+          data-gain="Resultado líquido: R$ 78.210,00"
+          data-cumulative="R$ 78.210,00"
+          onerror="this.style.opacity=.45; this.alt='Coloque assets/curva.png';"
+        >
         <div class="metrics">
           <div class="metric">
-            <div class="v green">R$ 75,91k</div>
+            <div class="v green">R$ 78,21k</div>
             <div class="l">Resultado líquido (12m)</div>
           </div>
           <div class="metric">
-            <div class="v yellow">45,03%</div>
+            <div class="v yellow">45,28%</div>
             <div class="l">Taxa de acerto (no relatório)</div>
           </div>
           <div class="metric">
@@ -1702,20 +1734,20 @@
       <div class="proof-shell">
         <div class="pill proof-pill">PROVA E TRANSPAR&Ecirc;NCIA | 10 CONTRATOS</div>
         <h2 class="proof-title">Dados reais para decidir com seguran&ccedil;a e sem promessa vazia</h2>
-        <p class="proof-sub">TRX_GOLD | M5 | Per&iacute;odo: 08/02/2025 a 16/02/2026 | Slippage: 0 | Ajustes: Todos</p>
+        <p class="proof-sub">TRX_GOLD | M5 | Per&iacute;odo: 08/02/2025 a 08/02/2026 | Slippage: 0 | Ajustes: Todos</p>
 
         <div class="proof-kpis">
           <article class="proof-kpi">
             <div class="k-label">Resultado l&iacute;quido (12m)</div>
-            <div class="k-value pos">R$ 75.910,00</div>
+            <div class="k-value pos">R$ 78.210,00</div>
           </article>
           <article class="proof-kpi">
             <div class="k-label">Retorno em 12m</div>
-            <div class="k-value pos">19,99%</div>
+            <div class="k-value pos">20,80%</div>
           </article>
           <article class="proof-kpi">
             <div class="k-label">Fator de lucro (PF)</div>
-            <div class="k-value neutral">1,18</div>
+            <div class="k-value neutral">1,19</div>
           </article>
           <article class="proof-kpi">
             <div class="k-label">M&aacute;x. contratos testados</div>
@@ -1723,11 +1755,11 @@
           </article>
           <article class="proof-kpi">
             <div class="k-label">Taxa de acerto (no relat&oacute;rio)</div>
-            <div class="k-value neutral">45,03%</div>
+            <div class="k-value neutral">45,28%</div>
           </article>
           <article class="proof-kpi">
             <div class="k-label">Drawdown m&aacute;ximo</div>
-            <div class="k-value warn">12,90%</div>
+            <div class="k-value warn">12,52%</div>
           </article>
         </div>
         <p class="proof-micro">O diferencial n&atilde;o &eacute; acertar sempre: &eacute; manter assimetria 2:1 e proteger capital quando o trade confirma.</p>
@@ -1747,8 +1779,8 @@
           <article class="proof-card">
             <h3>Leitura direta do relat&oacute;rio anual</h3>
             <ul class="proof-list">
-              <li>Drawdown m&aacute;ximo (topo-fundo): 12,90%</li>
-              <li>Drawdown m&aacute;x. trade a trade: 9,48%</li>
+              <li>Drawdown m&aacute;ximo (topo-fundo): 12,52%</li>
+              <li>Drawdown m&aacute;x. trade a trade: 9,21%</li>
               <li>Maior ganho por opera&ccedil;&atilde;o: R$ 1.200,00</li>
               <li>Maior perda por opera&ccedil;&atilde;o: R$ -600,00</li>
               <li>Janela operacional: das 09h &agrave;s 12h.</li>
@@ -1819,7 +1851,7 @@
         Abra sua conta na nossa corretora parceira e receba benefícios exclusivos
       </div>
       <div class="important">
-        <b>Importante:</b> Você pode operar o TRX PRO em qualquer corretora. Os benefícios acima são exclusivos da parceria.
+        <b>Importante:</b> Você pode operar o TRX PRO em qualquer corretora. Os benefícios abaixo são exclusivos da parceria.
       </div>
 
       <div class="bonus-grid">
@@ -2100,7 +2132,7 @@
       const modalImg = document.getElementById("reportModalImg");
       const modalTitle = document.getElementById("reportModalTitle");
       const closeBtn = document.getElementById("reportModalClose");
-      if (!modal || !modalImg || !modalTitle || !closeBtn || !track) return;
+      if (!modal || !modalImg || !modalTitle || !closeBtn) return;
 
       const closeModal = () => {
         modal.classList.remove("is-open");
@@ -2134,14 +2166,26 @@
         modal.dataset.bound = "1";
       }
 
-      track.querySelectorAll(".report-image img").forEach((imgEl) => {
+      function bindZoomTarget(imgEl){
+        if (!imgEl) return;
+        if (imgEl.dataset.zoomBound === "1") return;
         imgEl.onclick = () => openModal(imgEl);
-      });
+        imgEl.dataset.zoomBound = "1";
+      }
+
+      if (track){
+        track.querySelectorAll(".report-image img").forEach((imgEl) => {
+          bindZoomTarget(imgEl);
+        });
+      }
+
+      bindZoomTarget(document.getElementById("capitalCurveImg"));
     }
 
     function renderMonthlyReports(items){
       const track = document.getElementById("reportTrack");
       if (!track) return;
+      setupReportModal(track);
 
       if (!items.length){
         track.innerHTML = `
@@ -2185,7 +2229,6 @@
       const cards = Array.from(track.querySelectorAll(".report-card"));
       const monthlySection = document.getElementById("relatorios");
       let sectionVisible = false;
-      setupReportModal(track);
 
       function scrollToIndex(index, smooth = true){
         if (!cards.length) return;
@@ -2307,6 +2350,49 @@
       targets.forEach((target) => observer.observe(target));
     }
 
+    function setupContentProtection(){
+      document.documentElement.classList.add("protect-mode");
+      document.body.classList.add("protect-mode");
+
+      const cancelDefault = (event) => event.preventDefault();
+      ["contextmenu", "copy", "cut", "paste", "selectstart", "dragstart"].forEach((eventName) => {
+        document.addEventListener(eventName, cancelDefault);
+      });
+
+      document.addEventListener("keydown", (event) => {
+        const key = (event.key || "").toLowerCase();
+        const ctrlOrMeta = event.ctrlKey || event.metaKey;
+
+        if (event.key === "PrintScreen"){
+          event.preventDefault();
+          if (navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText("");
+          }
+        }
+
+        if (event.key === "F12"){
+          event.preventDefault();
+        }
+
+        if (ctrlOrMeta && ["c", "x", "u", "s", "p", "a"].includes(key)){
+          event.preventDefault();
+        }
+
+        if (event.ctrlKey && event.shiftKey && ["i", "j", "c", "k", "s"].includes(key)){
+          event.preventDefault();
+        }
+      }, true);
+
+      window.addEventListener("beforeprint", () => {
+        document.body.classList.add("print-blocked");
+      });
+
+      window.addEventListener("afterprint", () => {
+        document.body.classList.remove("print-blocked");
+      });
+    }
+
+    setupContentProtection();
     loadMonthlyReports();
     setupReveal();
 
@@ -2389,4 +2475,5 @@
 
 </body>
 </html>
+
 
