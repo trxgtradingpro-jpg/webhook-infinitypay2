@@ -50,6 +50,7 @@ from database import (
     buscar_user_plan_stats,
     listar_eventos_analytics,
     backfill_analytics_from_orders,
+    registrar_lead_upgrade_cliente,
     registrar_whatsapp_auto_agendamento,
     marcar_whatsapp_auto_enviado,
     registrar_falha_whatsapp_auto,
@@ -1783,6 +1784,10 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"get_cliente_email_status:{ip}", limite=80, janela_segundos=60):
             return jsonify({"ok": False, "error": "rate_limited"}), 429
 
+    if method == "POST" and path == "/api/client/lead-upgrade-click":
+        if excedeu_rate_limit(f"post_cliente_lead_upgrade:{ip}", limite=50, janela_segundos=60):
+            return jsonify({"ok": False, "error": "rate_limited"}), 429
+
     if method == "POST" and path == "/login/recuperar-senha":
         if excedeu_rate_limit(f"post_cliente_recover:{ip}", limite=8, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -2045,6 +2050,76 @@ def api_cliente_email_status():
     })
 
 
+@app.route("/api/client/lead-upgrade-click", methods=["POST"])
+def api_cliente_lead_upgrade_click():
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    token = (
+        request.headers.get(CSRF_HEADER_NAME)
+        or payload.get("csrf_token")
+        or request.form.get("csrf_token")
+        or ""
+    ).strip()
+    if not validar_csrf_token(token):
+        return jsonify({"ok": False, "error": "csrf_invalid"}), 403
+
+    target_plan = (payload.get("target_plan") or "").strip().lower()
+    source = (payload.get("source") or "client_area_upsell").strip()[:80]
+    if target_plan not in PLANOS or int(PLANOS[target_plan].get("preco") or 0) <= 0:
+        return jsonify({"ok": False, "error": "invalid_target_plan"}), 400
+
+    pedidos = listar_pedidos_pagos_por_email(email, limite=30)
+    plano_origem = None
+    order_id_origem = None
+    affiliate_slug = ""
+    checkout_slug = target_plan
+
+    for pedido in pedidos:
+        plano_id = (pedido.get("plano") or "").strip().lower()
+        if plano_id not in PLANOS:
+            continue
+        if int(PLANOS[plano_id].get("preco") or 0) > 0:
+            continue
+        exp = montar_expiracao_pedido(pedido)
+        if not exp or not exp.get("ativo"):
+            continue
+
+        plano_origem = plano_id
+        order_id_origem = pedido.get("order_id")
+        affiliate_candidato = normalizar_slug_afiliado(pedido.get("affiliate_slug") or "")
+        if slug_afiliado_valido(affiliate_candidato):
+            affiliate_slug = affiliate_candidato
+        checkout_slug = montar_plano_checkout(target_plan, affiliate_slug or None)
+        break
+
+    if not plano_origem:
+        return jsonify({
+            "ok": False,
+            "error": "free_plan_not_active",
+            "message": "Upsell disponivel apenas para conta com plano gratuito ativo."
+        }), 400
+
+    registrar_lead_upgrade_cliente(
+        email=email,
+        order_id=order_id_origem,
+        current_plan=plano_origem,
+        target_plan=target_plan,
+        source=source or "client_area_upsell",
+        affiliate_slug=affiliate_slug,
+        checkout_slug=checkout_slug,
+        ip_address=obter_ip_request() or (request.remote_addr or ""),
+        user_agent=(request.headers.get("User-Agent") or "")[:300]
+    )
+
+    return jsonify({
+        "ok": True,
+        "checkout_slug": checkout_slug
+    })
+
+
 @app.route("/login", methods=["GET", "POST"])
 def cliente_login():
     if cliente_logado():
@@ -2298,6 +2373,44 @@ def cliente_area():
         pedido_curva = pedidos[0]
     capital_chart = montar_curva_capital_plano(pedido_curva)
 
+    plano_gratis_ativo = None
+    pedido_gratis_ativo = None
+    for pedido in pedidos:
+        plano_id = (pedido.get("plano") or "").strip().lower()
+        if plano_id not in PLANOS:
+            continue
+        if int(PLANOS[plano_id].get("preco") or 0) > 0:
+            continue
+        exp = montar_expiracao_pedido(pedido)
+        if not exp or not exp.get("ativo"):
+            continue
+        plano_gratis_ativo = plano_id
+        pedido_gratis_ativo = pedido
+        break
+
+    upsell_plans = []
+    if plano_gratis_ativo:
+        affiliate_slug_upsell = ""
+        if pedido_gratis_ativo:
+            affiliate_candidato = normalizar_slug_afiliado(pedido_gratis_ativo.get("affiliate_slug") or "")
+            if slug_afiliado_valido(affiliate_candidato):
+                affiliate_slug_upsell = affiliate_candidato
+
+        for plano_id in ("trx-bronze", "trx-prata", "trx-gold", "trx-black"):
+            plano_info = PLANOS.get(plano_id, {})
+            preco_centavos = int(plano_info.get("preco") or 0)
+            if preco_centavos <= 0:
+                continue
+            checkout_slug = montar_plano_checkout(plano_id, affiliate_slug_upsell or None)
+            upsell_plans.append({
+                "plano_id": plano_id,
+                "nome": plano_info.get("nome", plano_id),
+                "preco_centavos": preco_centavos,
+                "preco_fmt": fmt_brl_from_centavos(preco_centavos),
+                "checkout_slug": checkout_slug,
+                "recommended": plano_id == "trx-prata"
+            })
+
     return render_template(
         "client_area.html",
         csrf_token=gerar_csrf_token(),
@@ -2308,7 +2421,8 @@ def cliente_area():
         capital_chart=capital_chart,
         pedidos=pedidos_view,
         ativos=ativos,
-        ultimo_pedido=ultimo_pedido
+        ultimo_pedido=ultimo_pedido,
+        upsell_plans=upsell_plans
     )
 
 

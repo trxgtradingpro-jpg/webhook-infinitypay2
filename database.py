@@ -106,6 +106,25 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_user_key ON quiz_submissions(user_key)")
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS client_upgrade_leads (
+            id BIGSERIAL PRIMARY KEY,
+            email TEXT NOT NULL,
+            order_id TEXT,
+            current_plan TEXT,
+            target_plan TEXT NOT NULL,
+            source TEXT,
+            affiliate_slug TEXT,
+            checkout_slug TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_client_upgrade_leads_email ON client_upgrade_leads(email)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_client_upgrade_leads_created_at ON client_upgrade_leads(created_at DESC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_client_upgrade_leads_target_plan ON client_upgrade_leads(target_plan)")
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS affiliates (
             id BIGSERIAL PRIMARY KEY,
             slug TEXT UNIQUE NOT NULL,
@@ -959,6 +978,64 @@ def listar_eventos_analytics(start_date=None, end_date=None, plano=None):
 
     return eventos
 
+
+
+def registrar_lead_upgrade_cliente(
+    email,
+    target_plan,
+    current_plan=None,
+    source=None,
+    order_id=None,
+    affiliate_slug=None,
+    checkout_slug=None,
+    ip_address=None,
+    user_agent=None
+):
+    email_norm = _normalizar_email_interno(email)
+    target_plan_norm = (target_plan or "").strip().lower()[:60]
+    current_plan_norm = (current_plan or "").strip().lower()[:60]
+    source_norm = (source or "client_area").strip()[:120]
+    order_id_norm = (order_id or "").strip()[:120] or None
+    affiliate_slug_norm = (affiliate_slug or "").strip().lower()[:80] or None
+    checkout_slug_norm = (checkout_slug or "").strip().lower()[:120] or None
+    ip_norm = (ip_address or "").strip()[:80] or None
+    user_agent_norm = (user_agent or "").strip()[:300] or None
+
+    if not email_norm or not target_plan_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO client_upgrade_leads (
+            email,
+            order_id,
+            current_plan,
+            target_plan,
+            source,
+            affiliate_slug,
+            checkout_slug,
+            ip_address,
+            user_agent
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        email_norm,
+        order_id_norm,
+        current_plan_norm or None,
+        target_plan_norm,
+        source_norm,
+        affiliate_slug_norm,
+        checkout_slug_norm,
+        ip_norm,
+        user_agent_norm
+    ))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido
 
 
 def registrar_whatsapp_auto_agendamento(order_id, delay_minutes=5):

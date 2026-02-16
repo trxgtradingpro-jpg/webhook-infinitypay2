@@ -194,6 +194,85 @@
       font-size:13px;
       font-weight:700;
     }
+    .upsell-intro{
+      margin:0;
+      color:#dbe7ff;
+      font-size:14px;
+      line-height:1.5;
+    }
+    .upsell-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .upsell-card{
+      display:block;
+      border:1px solid #2a3d66;
+      border-radius:12px;
+      padding:12px;
+      text-decoration:none;
+      background:linear-gradient(180deg, rgba(11,20,40,.96), rgba(8,14,30,.98));
+      color:#ecf3ff;
+      transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+      box-shadow:0 8px 30px rgba(0,0,0,.22);
+    }
+    .upsell-card:hover{
+      transform:translateY(-2px);
+      border-color:#4ea4ff;
+      box-shadow:0 10px 26px rgba(25,86,160,.35);
+    }
+    .upsell-card.recommended{
+      border-color:rgba(34,197,94,.55);
+      background:linear-gradient(180deg, rgba(17,33,55,.96), rgba(10,18,34,.98));
+      box-shadow:0 12px 32px rgba(20,97,72,.26);
+    }
+    .upsell-card .tag{
+      display:inline-block;
+      margin-bottom:8px;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:11px;
+      font-weight:900;
+      background:rgba(56,189,248,.14);
+      border:1px solid rgba(56,189,248,.4);
+      color:#bdeaff;
+    }
+    .upsell-card.recommended .tag{
+      background:rgba(34,197,94,.16);
+      border-color:rgba(34,197,94,.45);
+      color:#bbf7d0;
+    }
+    .upsell-name{
+      margin:0 0 6px;
+      font-size:17px;
+      font-weight:900;
+      letter-spacing:-.2px;
+    }
+    .upsell-price{
+      margin:0;
+      font-size:22px;
+      font-weight:900;
+      color:#ecf2ff;
+    }
+    .upsell-price small{
+      font-size:12px;
+      color:#aac0e8;
+      font-weight:700;
+      margin-left:4px;
+    }
+    .upsell-cta{
+      margin-top:10px;
+      font-size:12px;
+      font-weight:900;
+      color:#86efac;
+      letter-spacing:.2px;
+    }
+    .upsell-note{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
   </style>
 </head>
 <body>
@@ -236,6 +315,31 @@
         {% endif %}
       </article>
     </section>
+
+    {% if upsell_plans %}
+    <section class="card">
+      <h2>Evolua para um plano pago</h2>
+      <p class="upsell-intro">
+        Seu acesso gratuito esta ativo. Para liberar mais recursos e suporte completo, escolha um plano abaixo.
+      </p>
+      <div class="upsell-grid">
+        {% for plano in upsell_plans %}
+          <a
+            class="upsell-card js-upsell-link {{ 'recommended' if plano.recommended else '' }}"
+            href="/checkout/{{ plano.checkout_slug }}"
+            data-upgrade-plan="{{ plano.plano_id }}"
+            data-upgrade-source="client_area_free_upsell"
+          >
+            <span class="tag">{{ 'Mais escolhido' if plano.recommended else 'Upgrade' }}</span>
+            <p class="upsell-name">{{ plano.nome }}</p>
+            <p class="upsell-price">{{ plano.preco_fmt }}<small>/mes</small></p>
+            <p class="upsell-cta">Clique para ir ao checkout</p>
+          </a>
+        {% endfor %}
+      </div>
+      <p class="upsell-note">Ao clicar, voce sera direcionado para o checkout do plano selecionado.</p>
+    </section>
+    {% endif %}
 
     <section class="card">
       <h2>Crescimento do capital</h2>
@@ -436,6 +540,72 @@
             }
           },
           plugins: [crosshairPlugin]
+        });
+      })();
+    </script>
+  {% endif %}
+
+  {% if upsell_plans %}
+    <script>
+      (function(){
+        const links = document.querySelectorAll(".js-upsell-link[data-upgrade-plan]");
+        if (!links.length) return;
+
+        const csrfToken = "{{ csrf_token }}";
+        const endpoint = "/api/client/lead-upgrade-click";
+
+        function registrarLead(targetPlan, source){
+          return fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken
+            },
+            credentials: "same-origin",
+            keepalive: true,
+            body: JSON.stringify({
+              target_plan: targetPlan,
+              source: source || "client_area_free_upsell"
+            })
+          });
+        }
+
+        links.forEach((link) => {
+          link.addEventListener("click", function(event){
+            const targetPlan = link.getAttribute("data-upgrade-plan") || "";
+            const source = link.getAttribute("data-upgrade-source") || "client_area_free_upsell";
+            const href = link.getAttribute("href") || "/";
+
+            if (!targetPlan) return;
+
+            if (
+              event.defaultPrevented ||
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            ) {
+              registrarLead(targetPlan, source).catch(() => null);
+              return;
+            }
+
+            event.preventDefault();
+            let redirected = false;
+            const goCheckout = function(){
+              if (redirected) return;
+              redirected = true;
+              window.location.href = href;
+            };
+
+            const fallback = setTimeout(goCheckout, 220);
+            registrarLead(targetPlan, source)
+              .catch(() => null)
+              .finally(() => {
+                clearTimeout(fallback);
+                goCheckout();
+              });
+          });
         });
       })();
     </script>
