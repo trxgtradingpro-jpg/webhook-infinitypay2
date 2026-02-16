@@ -1688,7 +1688,7 @@ def serve_assets(filename):
 
 @app.route("/favicon.ico")
 def favicon():
-    return send_from_directory("assets", "logo2.png")
+    return send_from_directory("assets/favicons", "favicon.ico")
 
 
 @app.route("/")
