@@ -446,6 +446,347 @@
     .feat strong{font-weight:1000; display:block; position:relative}
     .feat span{color: var(--muted2); font-weight:800; font-size: 13px; display:block; margin-top:6px; position:relative}
 
+    /* Prova e confianca */
+    section.proof{
+      padding: 10px 0 12px;
+    }
+    .proof-shell{
+      width:min(1040px, 96vw);
+      margin: 0 auto;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(8,13,18,.88), rgba(6,9,14,.92));
+      box-shadow: 0 28px 90px rgba(0,0,0,.45);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .proof-shell:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(760px 220px at 20% 0%, rgba(25,227,154,.14), transparent 62%);
+      pointer-events:none;
+    }
+    .proof-pill{
+      margin: 0 auto 10px;
+      border: 2px solid rgba(25,227,154,.40);
+      background: rgba(25,227,154,.10);
+      color: #9ff9d5;
+      position: relative;
+      z-index: 1;
+    }
+    .proof-title{
+      margin: 0 auto;
+      width:min(900px, 96vw);
+      text-align:center;
+      font-size: clamp(24px, 4vw, 46px);
+      line-height: 1.04;
+      letter-spacing: -.8px;
+      font-weight: 1000;
+      position: relative;
+      z-index: 1;
+    }
+    .proof-sub{
+      margin: 10px auto 0;
+      width:min(930px, 96vw);
+      text-align:center;
+      color: var(--muted2);
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
+    .proof-kpis{
+      margin: 16px auto 0;
+      width:100%;
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 1120px){ .proof-kpis{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 620px){ .proof-kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .proof-kpi{
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      padding: 12px 10px;
+      text-align: center;
+      box-shadow: 0 14px 40px rgba(0,0,0,.22);
+      transition: .18s transform, .18s filter;
+    }
+    .proof-kpi:hover{
+      transform: translateY(-2px);
+      filter: brightness(1.04);
+    }
+    .proof-kpi .k-label{
+      font-size: 11px;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: rgba(228,239,250,.64);
+    }
+    .proof-kpi .k-value{
+      margin-top: 6px;
+      font-size: clamp(22px, 2.3vw, 30px);
+      letter-spacing: -.4px;
+      font-weight: 1000;
+    }
+    .proof-kpi .k-value.pos{ color: #3eedb0; }
+    .proof-kpi .k-value.neutral{ color: #d5dceb; }
+    .proof-kpi .k-value.warn{ color: #ffd36b; }
+
+    .proof-grid{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 980px){ .proof-grid{ grid-template-columns: 1fr; } }
+    .proof-card{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      padding: 14px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.25);
+    }
+    .proof-card h3{
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -.2px;
+    }
+    .proof-card p{
+      margin: 9px 0 0;
+      color: rgba(228,239,250,.74);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+    .proof-tags{
+      margin-top: 10px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .proof-tags span{
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.16);
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+      color: rgba(236,245,255,.88);
+      background: rgba(255,255,255,.04);
+    }
+    .proof-list{
+      margin: 10px 0 0;
+      padding-left: 18px;
+      display:grid;
+      gap: 8px;
+      color: rgba(228,239,250,.74);
+      font-weight: 700;
+    }
+    .proof-actions{
+      margin-top: 12px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .proof-disclaimer{
+      margin-top: 10px;
+      font-size: 12px;
+      color: rgba(228,239,250,.56);
+      font-weight: 800;
+    }
+
+    /* Relatorios mensais */
+    section.monthly{
+      padding: 8px 0 16px;
+    }
+    .monthly-shell{
+      width:min(1040px, 96vw);
+      margin: 0 auto;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(8,12,20,.90), rgba(6,8,13,.94));
+      box-shadow: 0 28px 90px rgba(0,0,0,.48);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .monthly-shell:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: radial-gradient(900px 260px at 80% 0%, rgba(74,163,255,.14), transparent 62%);
+      pointer-events:none;
+    }
+    .monthly-head{
+      display:flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 760px){ .monthly-head{ align-items: stretch; flex-direction: column; } }
+    .monthly-pill{
+      margin: 0 0 8px;
+      border: 2px solid rgba(74,163,255,.36);
+      background: rgba(74,163,255,.12);
+      color: #b5ddff;
+    }
+    .monthly-title{
+      margin: 0;
+      font-size: clamp(24px, 4vw, 42px);
+      line-height: 1.04;
+      letter-spacing: -.8px;
+      font-weight: 1000;
+    }
+    .monthly-sub{
+      margin: 8px 0 0;
+      color: var(--muted2);
+      font-weight: 800;
+    }
+    .monthly-nav{
+      display:flex;
+      gap: 8px;
+    }
+    .report-nav{
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.05);
+      color: #ecf3ff;
+      font-weight: 1000;
+      font-size: 22px;
+      cursor: pointer;
+      transition: .16s transform, .16s filter;
+    }
+    .report-nav:hover{
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+    .report-track{
+      margin-top: 14px;
+      display:grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(260px, 318px);
+      gap: 12px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      padding: 4px 2px 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .report-track::-webkit-scrollbar{
+      height: 10px;
+    }
+    .report-track::-webkit-scrollbar-track{
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+    }
+    .report-track::-webkit-scrollbar-thumb{
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(25,227,154,.75), rgba(74,163,255,.85));
+    }
+    .report-card{
+      scroll-snap-align: start;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.22);
+      box-shadow: 0 16px 42px rgba(0,0,0,.30);
+      overflow: hidden;
+      transition: .2s transform, .2s filter, .2s border-color;
+    }
+    .report-card:hover{
+      transform: translateY(-3px);
+      filter: brightness(1.03);
+      border-color: rgba(25,227,154,.55);
+    }
+    .report-image{
+      position: relative;
+      height: 182px;
+      background: #0a0f17;
+      overflow: hidden;
+    }
+    .report-image img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+    }
+    .report-image:after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(3,6,10,.00), rgba(3,6,10,.48));
+      pointer-events:none;
+    }
+    .report-body{
+      padding: 12px;
+    }
+    .report-month{
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.2px;
+      font-weight: 1000;
+    }
+    .report-period{
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(228,239,250,.62);
+      font-weight: 800;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+    }
+    .report-gain{
+      margin-top: 10px;
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 1000;
+      letter-spacing: .3px;
+      font-size: 18px;
+    }
+    .report-gain.pos{
+      color: #032016;
+      background: linear-gradient(180deg, #3df0b3, #20ce90);
+    }
+    .report-gain.neg{
+      color: #fff;
+      background: linear-gradient(180deg, #ff6a6a, #f03f3f);
+    }
+    .report-gain.neutral{
+      color: #0b1322;
+      background: linear-gradient(180deg, #dce4ef, #b7c3d6);
+    }
+    .monthly-note{
+      margin: 10px 4px 0;
+      color: rgba(228,239,250,.58);
+      font-weight: 800;
+      font-size: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .reveal-up{
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    .reveal-up.is-visible{
+      animation: revealUp .55s ease forwards;
+    }
+    @keyframes revealUp{
+      to{
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* Bonus */
     section.bonus{
       padding: 44px 0 10px;
@@ -1039,6 +1380,91 @@
     </div>
   </header>
 
+  <section class="proof reveal-up" id="prova">
+    <div class="container">
+      <div class="proof-shell">
+        <div class="pill proof-pill">RESULTADO AUDITAVEL | 12 MESES</div>
+        <h2 class="proof-title">Transparencia total para gerar confianca antes da compra</h2>
+        <p class="proof-sub">Estrategia TRX_GOLD | M5 | Periodo 16/02/2025 a 16/02/2026 | Slippage: 0 | Ajustes: Todos</p>
+
+        <div class="proof-kpis">
+          <article class="proof-kpi">
+            <div class="k-label">Lucro Liquido</div>
+            <div class="k-value pos">R$ 7.027,00</div>
+          </article>
+          <article class="proof-kpi">
+            <div class="k-label">Retorno 12m</div>
+            <div class="k-value pos">18,51%</div>
+          </article>
+          <article class="proof-kpi">
+            <div class="k-label">Fator de Lucro</div>
+            <div class="k-value neutral">1,17</div>
+          </article>
+          <article class="proof-kpi">
+            <div class="k-label">Operacoes</div>
+            <div class="k-value neutral">1.295</div>
+          </article>
+          <article class="proof-kpi">
+            <div class="k-label">Win Rate</div>
+            <div class="k-value neutral">44,94%</div>
+          </article>
+          <article class="proof-kpi">
+            <div class="k-label">Drawdown Max.</div>
+            <div class="k-value warn">13,93%</div>
+          </article>
+        </div>
+
+        <div class="proof-grid">
+          <article class="proof-card">
+            <h3>Leitura correta desse resultado anual</h3>
+            <p>Mesmo com taxa de acerto abaixo de 50%, o sistema continua lucrativo por causa da relacao media de ganho x perda de 1,42 e expectativa positiva por operacao (R$ 5,43).</p>
+            <p>Isso reduz a dependencia de acertar toda hora e aumenta a consistencia para quem segue o plano com disciplina.</p>
+            <div class="proof-tags">
+              <span>Expectativa positiva</span>
+              <span>Risco controlado</span>
+              <span>Metodo replicavel</span>
+            </div>
+          </article>
+
+          <article class="proof-card">
+            <h3>Confianca e autoridade para decidir</h3>
+            <ul class="proof-list">
+              <li>Lucro bruto: R$ 49.517,00 | Prejuizo bruto: R$ -42.490,00</li>
+              <li>Maior ganho por operacao: R$ 120,00 | Maior perda: R$ -60,00</li>
+              <li>Declinio maximo topo-fundo: R$ -979,00 (13,93%)</li>
+              <li>Capital indicado no relatorio: R$ 37.965,00</li>
+            </ul>
+            <div class="proof-actions">
+              <a class="btn quiz-btn" href="/quiz">Ver meu plano ideal (30seg)</a>
+              <a class="btn ghost" href="#planos">Ver planos agora</a>
+            </div>
+            <p class="proof-disclaimer">Trading envolve risco. Resultados passados nao garantem resultados futuros.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="monthly reveal-up" id="relatorios">
+    <div class="container">
+      <div class="monthly-shell">
+        <div class="monthly-head">
+          <div>
+            <div class="pill monthly-pill">RELATORIOS MENSAIS</div>
+            <h2 class="monthly-title">Evolucao mensal do robo: role e veja mes a mes</h2>
+            <p class="monthly-sub">12 imagens em barra de rolagem horizontal. Atualize apenas os arquivos de imagem e valores para refletir seus numeros reais.</p>
+          </div>
+          <div class="monthly-nav">
+            <button id="reportPrev" class="report-nav" type="button" aria-label="Mes anterior">&#10094;</button>
+            <button id="reportNext" class="report-nav" type="button" aria-label="Proximo mes">&#10095;</button>
+          </div>
+        </div>
+        <div id="reportTrack" class="report-track" aria-label="Relatorios mensais"></div>
+        <p class="monthly-note">No celular, arraste para o lado. No desktop, use os botoes ou a roda do mouse para navegar.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- BONUS -->
   <section class="bonus" id="bonus">
     <div class="container">
@@ -1293,6 +1719,93 @@
       black:  "https://webhook-infinitypay.onrender.com/checkout/trx-black"
     };
 
+    const MONTHLY_REPORTS = [
+      { month: "FEV/2025", periodStart: "16/02/2025", periodEnd: "15/03/2025", gain: "R$ +0,00", image: "/assets/relatorios/01-fev-2025.jpg" },
+      { month: "MAR/2025", periodStart: "16/03/2025", periodEnd: "15/04/2025", gain: "R$ +0,00", image: "/assets/relatorios/02-mar-2025.jpg" },
+      { month: "ABR/2025", periodStart: "16/04/2025", periodEnd: "15/05/2025", gain: "R$ +0,00", image: "/assets/relatorios/03-abr-2025.jpg" },
+      { month: "MAI/2025", periodStart: "16/05/2025", periodEnd: "15/06/2025", gain: "R$ +0,00", image: "/assets/relatorios/04-mai-2025.jpg" },
+      { month: "JUN/2025", periodStart: "16/06/2025", periodEnd: "15/07/2025", gain: "R$ +0,00", image: "/assets/relatorios/05-jun-2025.jpg" },
+      { month: "JUL/2025", periodStart: "16/07/2025", periodEnd: "15/08/2025", gain: "R$ +0,00", image: "/assets/relatorios/06-jul-2025.jpg" },
+      { month: "AGO/2025", periodStart: "16/08/2025", periodEnd: "15/09/2025", gain: "R$ +0,00", image: "/assets/relatorios/07-ago-2025.jpg" },
+      { month: "SET/2025", periodStart: "16/09/2025", periodEnd: "15/10/2025", gain: "R$ +0,00", image: "/assets/relatorios/08-set-2025.jpg" },
+      { month: "OUT/2025", periodStart: "16/10/2025", periodEnd: "15/11/2025", gain: "R$ +0,00", image: "/assets/relatorios/09-out-2025.jpg" },
+      { month: "NOV/2025", periodStart: "16/11/2025", periodEnd: "15/12/2025", gain: "R$ +0,00", image: "/assets/relatorios/10-nov-2025.jpg" },
+      { month: "DEZ/2025", periodStart: "16/12/2025", periodEnd: "15/01/2026", gain: "R$ +0,00", image: "/assets/relatorios/11-dez-2025.jpg" },
+      { month: "JAN/FEV 2026", periodStart: "16/01/2026", periodEnd: "16/02/2026", gain: "R$ +0,00", image: "/assets/relatorios/12-fev-2026.jpg" }
+    ];
+
+    function gainClass(value){
+      const normalized = (value || "")
+        .replace(/\s/g, "")
+        .replace("R$", "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+      const parsed = Number(normalized);
+
+      if (!Number.isFinite(parsed)) return "neutral";
+      if (parsed > 0) return "pos";
+      if (parsed < 0) return "neg";
+      return "neutral";
+    }
+
+    function renderMonthlyReports(){
+      const track = document.getElementById("reportTrack");
+      if (!track) return;
+
+      track.innerHTML = MONTHLY_REPORTS.map((item) => `
+        <article class="report-card">
+          <div class="report-image">
+            <img
+              src="${item.image}"
+              alt="Relatorio mensal ${item.month}"
+              loading="lazy"
+              onerror="this.style.opacity=.28; this.alt='Adicione a imagem do relatorio mensal em ' + this.src;"
+            >
+          </div>
+          <div class="report-body">
+            <h3 class="report-month">${item.month}</h3>
+            <p class="report-period">${item.periodStart} ate ${item.periodEnd}</p>
+            <span class="report-gain ${gainClass(item.gain)}">${item.gain}</span>
+          </div>
+        </article>
+      `).join("");
+
+      const scrollStep = () => Math.max(280, Math.round(track.clientWidth * 0.75));
+      const prev = document.getElementById("reportPrev");
+      const next = document.getElementById("reportNext");
+
+      if (prev) prev.addEventListener("click", () => {
+        track.scrollBy({ left: -scrollStep(), behavior: "smooth" });
+      });
+      if (next) next.addEventListener("click", () => {
+        track.scrollBy({ left: scrollStep(), behavior: "smooth" });
+      });
+
+      track.addEventListener("wheel", (event) => {
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+        event.preventDefault();
+        track.scrollBy({ left: event.deltaY, behavior: "auto" });
+      }, { passive: false });
+    }
+
+    function setupReveal(){
+      const targets = document.querySelectorAll(".reveal-up");
+      if (!targets.length) return;
+
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.18 });
+
+      targets.forEach((target) => observer.observe(target));
+    }
+
+    renderMonthlyReports();
+    setupReveal();
+
     function goCheckout(plan){
       const url = CHECKOUT[plan] || CHECKOUT.gold;
       window.location.href = url;
@@ -1380,4 +1893,3 @@
 
 </body>
 </html>
-
