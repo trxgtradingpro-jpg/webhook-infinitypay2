@@ -383,6 +383,48 @@
     .pill strong{
       color:#f2f8ff;
     }
+    .pill.total-emphasis{
+      position:relative;
+      overflow:hidden;
+      border-color:rgba(35,176,11,.78);
+      background:linear-gradient(180deg, rgba(19,84,54,.46), rgba(10,42,29,.48));
+      color:#d8ffe9;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 10px 24px rgba(20,97,72,.28);
+      animation: totalPillPulse 2.2s ease-in-out infinite;
+    }
+    .pill.total-emphasis::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:radial-gradient(160px 52px at 18% 0%, rgba(133,255,204,.28), transparent 70%);
+      pointer-events:none;
+    }
+    .pill.total-emphasis strong{
+      position:relative;
+      z-index:1;
+      display:inline-block;
+      color:#effff6;
+      font-size:13px;
+      letter-spacing:.15px;
+      transition:transform .28s ease, filter .28s ease;
+    }
+    .pill.total-emphasis strong.is-pulsing{
+      transform:scale(1.05);
+      filter:brightness(1.08);
+    }
+    @keyframes totalPillPulse{
+      0%,100%{
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 10px 24px rgba(20,97,72,.26);
+      }
+      50%{
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 14px 30px rgba(20,97,72,.40);
+      }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .pill.total-emphasis{
+        animation:none;
+      }
+    }
     .pill.bad{
       border-color:rgba(255,58,58,.52);
       background:rgba(255,58,58,.14);
@@ -693,7 +735,7 @@
           <span class="pill ok">Dia atualizado: {{ capital_chart.current_day }}</span>
           <span class="pill">Contratos no grafico: <strong id="contractsSelected">{{ capital_chart.contract_default or 1 }}</strong> / {{ capital_chart.contract_limit or 1 }}</span>
           <span class="pill">Valor atual: <strong id="currentValueText">R$ {{ "{:,.2f}".format(capital_chart.current_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
-          <span class="pill">Saldo total no CSV: <strong id="csvTotalValueText">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
+          <span class="pill total-emphasis">Saldo total no CSV: <strong id="csvTotalValueText" data-current-value="{{ capital_chart.csv_total_value }}">R$ {{ "{:,.2f}".format(capital_chart.csv_total_value).replace(",", "X").replace(".", ",").replace("X", ".") }}</strong></span>
         </div>
         <p class="chart-editable-note">Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
         <div class="chart-config-row">
@@ -860,6 +902,7 @@
         const contractInput = document.getElementById("contractCountInput");
         const contractLimit = Math.max(1, Number.parseInt(payload.contract_limit || 1, 10) || 1);
         const axisPaddingBase = Math.max(0, Number(payload.axis_padding_base || 100));
+        const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         let activeContracts = Math.max(1, Math.min(
           contractLimit,
           Number.parseInt(payload.contract_default || 1, 10) || 1
@@ -933,6 +976,41 @@
           return countVisibleValues(values) <= 1 ? 4 : 0;
         }
 
+        function animateCurrencyValue(targetEl, fromValue, toValue) {
+          if (!targetEl) return;
+          const nextValue = Number.isFinite(toValue) ? toValue : 0;
+          const startValue = Number.isFinite(fromValue) ? fromValue : nextValue;
+
+          if (prefersReducedMotion || Math.abs(nextValue - startValue) < 0.01) {
+            targetEl.textContent = fmtBRL.format(nextValue);
+            targetEl.dataset.currentValue = String(nextValue);
+            targetEl.classList.remove("is-pulsing");
+            return;
+          }
+
+          const duration = 560;
+          const startedAt = performance.now();
+          targetEl.classList.add("is-pulsing");
+
+          function step(now) {
+            const progress = Math.min(1, (now - startedAt) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const value = startValue + ((nextValue - startValue) * eased);
+            targetEl.textContent = fmtBRL.format(value);
+
+            if (progress < 1) {
+              requestAnimationFrame(step);
+              return;
+            }
+
+            targetEl.textContent = fmtBRL.format(nextValue);
+            targetEl.dataset.currentValue = String(nextValue);
+            setTimeout(() => targetEl.classList.remove("is-pulsing"), 180);
+          }
+
+          requestAnimationFrame(step);
+        }
+
         function refreshContractIndicators() {
           if (contractsSelectedEl) {
             contractsSelectedEl.textContent = String(activeContracts);
@@ -943,7 +1021,8 @@
           }
           if (csvTotalValueTextEl) {
             const csvTotalValue = (Number(payload.csv_total_value) || 0) * activeContracts;
-            csvTotalValueTextEl.textContent = fmtBRL.format(csvTotalValue);
+            const previousValue = Number(csvTotalValueTextEl.dataset.currentValue);
+            animateCurrencyValue(csvTotalValueTextEl, previousValue, csvTotalValue);
           }
           if (contractInput) {
             contractInput.value = String(activeContracts);
