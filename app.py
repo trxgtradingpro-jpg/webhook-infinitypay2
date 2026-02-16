@@ -67,6 +67,7 @@ from database import (
     incrementar_tentativa_codigo_cliente,
     limpar_codigo_cliente,
     confirmar_senha_conta_cliente,
+    forcar_reset_senha_conta_cliente,
     atualizar_ultimo_login_conta_cliente,
     listar_pedidos_pagos_por_email,
     buscar_ultimo_pedido_pago_por_email,
@@ -853,6 +854,62 @@ def provisionar_conta_cliente_por_email(email):
     return bool(criado)
 
 
+def verificar_status_email_cliente(email):
+    email = normalizar_email(email)
+    if not EMAIL_RE.fullmatch(email):
+        return {
+            "valid": False,
+            "exists": False,
+            "status": "invalid",
+        }
+
+    conta = buscar_conta_cliente_por_email(email)
+    if conta:
+        return {
+            "valid": True,
+            "exists": True,
+            "status": "account",
+        }
+
+    ultimo = buscar_ultimo_pedido_pago_por_email(email)
+    if ultimo:
+        return {
+            "valid": True,
+            "exists": True,
+            "status": "paid_order",
+        }
+
+    return {
+        "valid": True,
+        "exists": False,
+        "status": "not_found",
+    }
+
+
+def iniciar_recuperacao_senha_cliente(email):
+    email = normalizar_email(email)
+    if not EMAIL_RE.fullmatch(email):
+        return False
+
+    conta = buscar_conta_cliente_por_email(email)
+    if not conta:
+        return False
+
+    senha_temporaria = gerar_senha_temporaria()
+    senha_hash = generate_password_hash(senha_temporaria)
+    ok_reset = forcar_reset_senha_conta_cliente(email, senha_hash)
+    if not ok_reset:
+        return False
+
+    nome = descriptografar_texto_cliente(conta.get("nome"))
+    enviar_email_primeiro_acesso_cliente(
+        destinatario=email,
+        nome=nome,
+        senha_temporaria=senha_temporaria
+    )
+    return True
+
+
 def montar_expiracao_pedido(order):
     criado = order.get("created_at")
     plano = (order.get("plano") or "").strip().lower()
@@ -1448,6 +1505,14 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"post_cliente_login:{ip}", limite=12, janela_segundos=60):
             return "Muitas tentativas de login. Aguarde alguns segundos.", 429
 
+    if method == "GET" and path == "/api/client/email-status":
+        if excedeu_rate_limit(f"get_cliente_email_status:{ip}", limite=80, janela_segundos=60):
+            return jsonify({"ok": False, "error": "rate_limited"}), 429
+
+    if method == "POST" and path == "/login/recuperar-senha":
+        if excedeu_rate_limit(f"post_cliente_recover:{ip}", limite=8, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
+
     if method == "POST" and path == "/login/primeiro-acesso":
         if excedeu_rate_limit(f"post_cliente_primeiro_acesso:{ip}", limite=10, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -1623,6 +1688,36 @@ def contato():
     return render_template("contato.html")
 
 
+@app.route("/api/client/email-status")
+def api_cliente_email_status():
+    email = normalizar_email(request.args.get("email") or "")
+    status = verificar_status_email_cliente(email)
+    if not status["valid"]:
+        return jsonify({
+            "ok": True,
+            "valid": False,
+            "exists": False,
+            "status": "invalid",
+            "message": "Digite um e-mail valido."
+        })
+
+    if status["exists"]:
+        if status["status"] == "paid_order":
+            mensagem = "E-mail encontrado. Vamos preparar seu acesso no primeiro login."
+        else:
+            mensagem = "E-mail encontrado no banco."
+    else:
+        mensagem = "Este e-mail nao existe no banco."
+
+    return jsonify({
+        "ok": True,
+        "valid": True,
+        "exists": bool(status["exists"]),
+        "status": status["status"],
+        "message": mensagem,
+    })
+
+
 @app.route("/login", methods=["GET", "POST"])
 def cliente_login():
     if cliente_logado():
@@ -1651,7 +1746,7 @@ def cliente_login():
                 if criado:
                     info = "Criamos sua conta e enviamos a senha temporaria para seu e-mail."
                 else:
-                    erro = "Email ou senha invalidos."
+                    erro = "Este e-mail nao existe no banco."
             else:
                 senha_hash = (conta.get("password_hash") or "").strip()
                 if not senha_hash:
@@ -1690,6 +1785,51 @@ def cliente_login():
         info=info,
         email=email_form,
         remember_checked=remember_checked
+    )
+
+
+@app.route("/login/recuperar-senha", methods=["GET", "POST"])
+def cliente_recuperar_senha():
+    if cliente_logado():
+        return redirect("/minha-conta")
+
+    erro = ""
+    info = (request.args.get("info") or "").strip()
+    email_form = normalizar_email(request.args.get("email") or "")
+
+    if request.method == "POST":
+        token = (request.form.get("csrf_token") or "").strip()
+        if not validar_csrf_token(token):
+            return "Falha de validacao CSRF.", 403
+
+        email_form = normalizar_email(request.form.get("email") or "")
+        if not EMAIL_RE.fullmatch(email_form):
+            erro = "Informe um e-mail valido."
+        else:
+            enviado = False
+            try:
+                ok = iniciar_recuperacao_senha_cliente(email_form)
+                if ok:
+                    enviado = True
+                    info = "Enviamos uma senha temporaria para seu e-mail."
+                else:
+                    provisionado = provisionar_conta_cliente_por_email(email_form)
+                    if provisionado:
+                        enviado = True
+                        info = "Criamos sua conta e enviamos a senha temporaria para seu e-mail."
+            except Exception as exc:
+                print(f"[CLIENTE] Falha ao recuperar senha para {email_form}: {exc}", flush=True)
+                erro = "Nao foi possivel processar agora. Tente novamente em instantes."
+
+            if not enviado and not erro:
+                erro = "Este e-mail nao existe no banco."
+
+    return render_template(
+        "client_recover_password.html",
+        csrf_token=gerar_csrf_token(),
+        erro=erro,
+        info=info,
+        email=email_form
     )
 
 

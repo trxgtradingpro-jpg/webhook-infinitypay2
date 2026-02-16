@@ -1234,6 +1234,33 @@ def confirmar_senha_conta_cliente(email, password_hash):
     return ok
 
 
+def forcar_reset_senha_conta_cliente(email, password_hash):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE customer_accounts
+        SET password_hash = %s,
+            first_access_required = TRUE,
+            pending_password_hash = NULL,
+            verification_code_hash = NULL,
+            verification_expires_at = NULL,
+            verification_attempts = 0,
+            remember_token_hash = NULL,
+            remember_expires_at = NULL,
+            updated_at = NOW()
+        WHERE email = %s
+    """, ((password_hash or "").strip() or None, email_norm))
+    ok = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return ok
+
+
 def atualizar_ultimo_login_conta_cliente(email):
     email_norm = _normalizar_email_interno(email)
     if not email_norm:
