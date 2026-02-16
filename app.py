@@ -44,6 +44,7 @@ from database import (
     incrementar_whatsapp_enviado,
     excluir_order,
     excluir_duplicados_por_dados,
+    excluir_duplicados_gratis_mesmo_dia,
     registrar_evento_compra_analytics,
     buscar_user_plan_stats,
     listar_eventos_analytics,
@@ -2262,6 +2263,17 @@ def comprar():
             )
 
             marcar_order_processada(order_id)
+            try:
+                removidos = excluir_duplicados_gratis_mesmo_dia(order_id, email)
+                if removidos > 0:
+                    print(
+                        f"[DUPLICADOS] Removidos {removidos} pedido(s) gratis duplicado(s) "
+                        f"para {email} no mesmo dia.",
+                        flush=True
+                    )
+            except Exception as exc:
+                print(f"[DUPLICADOS] Falha ao limpar duplicados gratis ({order_id}): {exc}", flush=True)
+
             order_pago = buscar_order_por_id(order_id)
             try:
                 garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)

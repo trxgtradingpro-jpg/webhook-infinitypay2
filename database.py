@@ -564,6 +564,38 @@ def excluir_duplicados_por_dados(order_id_referencia, nome, email, telefone):
     return removidos
 
 
+def excluir_duplicados_gratis_mesmo_dia(order_id_referencia, email):
+    order_id_ref = (order_id_referencia or "").strip()
+    email_norm = _normalizar_email_interno(email)
+    if not order_id_ref or not email_norm:
+        return 0
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        WITH ref AS (
+            SELECT DATE(created_at) AS dia
+            FROM orders
+            WHERE order_id = %s
+            LIMIT 1
+        )
+        DELETE FROM orders o
+        USING ref
+        WHERE o.order_id <> %s
+          AND o.plano = 'trx-gratis'
+          AND o.status = 'PAGO'
+          AND LOWER(COALESCE(TRIM(o.email), '')) = LOWER(COALESCE(TRIM(%s), ''))
+          AND DATE(o.created_at) = ref.dia
+    """, (order_id_ref, order_id_ref, email_norm))
+
+    removidos = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+    return removidos
+
+
 # ======================================================
 # AFILIADOS
 # ======================================================
