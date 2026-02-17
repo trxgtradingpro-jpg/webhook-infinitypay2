@@ -596,6 +596,161 @@
     .summary-item .s-value.info{
       color:#9de8d9;
     }
+    .onboarding-card{
+      display:grid;
+      gap:12px;
+    }
+    .onboarding-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .onboarding-head h2{
+      margin:0;
+    }
+    .onboarding-progress-meta{
+      margin:0;
+      color:rgba(220,232,247,.78);
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.1px;
+    }
+    .onboarding-copy{
+      margin:0;
+      color:rgba(220,232,247,.72);
+      font-size:14px;
+      line-height:1.45;
+      font-weight:700;
+    }
+    .onboarding-progress-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .onboarding-progress-bar{
+      position:relative;
+      flex:1 1 auto;
+      height:12px;
+      border-radius:999px;
+      border:1px solid rgba(74,163,255,.34);
+      background:rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    .onboarding-progress-fill{
+      position:absolute;
+      inset:0 auto 0 0;
+      width:0%;
+      border-radius:inherit;
+      background:linear-gradient(90deg, rgba(35,176,11,.92), rgba(74,163,255,.86));
+      box-shadow:0 8px 20px rgba(35,176,11,.26);
+      transition:width .2s ease;
+    }
+    .onboarding-progress-percent{
+      min-width:50px;
+      text-align:right;
+      color:#e8f3ff;
+      font-size:13px;
+      font-weight:1000;
+      letter-spacing:.2px;
+    }
+    .onboarding-checklist{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:8px;
+    }
+    .onboarding-item{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      border:1px solid rgba(178,204,235,.22);
+      border-radius:12px;
+      background:rgba(255,255,255,.03);
+      padding:10px 11px;
+      transition:.16s border-color, .16s background, .16s transform;
+    }
+    .onboarding-item:hover{
+      border-color:rgba(35,176,11,.44);
+      transform:translateY(-1px);
+    }
+    .onboarding-item input{
+      margin-top:2px;
+      width:16px;
+      height:16px;
+      accent-color:#23b00b;
+      flex:0 0 auto;
+    }
+    .onboarding-item span{
+      color:#e6f1ff;
+      font-size:14px;
+      line-height:1.4;
+      font-weight:800;
+    }
+    .onboarding-item.is-done{
+      border-color:rgba(35,176,11,.48);
+      background:linear-gradient(180deg, rgba(35,176,11,.12), rgba(29,143,9,.10));
+    }
+    .onboarding-item.is-done span{
+      color:#ccffe0;
+    }
+    .onboarding-status{
+      margin:0;
+      color:rgba(208,225,246,.74);
+      font-size:13px;
+      line-height:1.4;
+      font-weight:800;
+    }
+    .onboarding-save-msg{
+      margin:0;
+      min-height:18px;
+      color:#9ff8c5;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.1px;
+    }
+    .onboarding-save-msg.is-error{
+      color:#ffb4b4;
+    }
+    @media (max-width: 860px){
+      .onboarding-checklist{
+        grid-template-columns:1fr;
+      }
+    }
+    html[data-theme="light"] .onboarding-progress-meta{
+      color:#334155 !important;
+    }
+    html[data-theme="light"] .onboarding-copy{
+      color:#334155 !important;
+    }
+    html[data-theme="light"] .onboarding-progress-bar{
+      border-color:rgba(15,23,42,.20) !important;
+      background:rgba(15,23,42,.09) !important;
+    }
+    html[data-theme="light"] .onboarding-progress-percent{
+      color:#0f172a !important;
+    }
+    html[data-theme="light"] .onboarding-item{
+      border-color:rgba(15,23,42,.18) !important;
+      background:rgba(15,23,42,.04) !important;
+      box-shadow:none !important;
+    }
+    html[data-theme="light"] .onboarding-item.is-done{
+      border-color:rgba(22,163,74,.44) !important;
+      background:rgba(22,163,74,.12) !important;
+    }
+    html[data-theme="light"] .onboarding-item span{
+      color:#0f172a !important;
+    }
+    html[data-theme="light"] .onboarding-status{
+      color:#334155 !important;
+    }
+    html[data-theme="light"] .onboarding-save-msg{
+      color:#166534 !important;
+    }
+    html[data-theme="light"] .onboarding-save-msg.is-error{
+      color:#b91c1c !important;
+    }
     html[data-theme="light"] .summary-item{
       background:rgba(15,23,42,.04) !important;
       border-color:rgba(15,23,42,.18) !important;
@@ -1479,6 +1634,30 @@
     </nav>
 
     <section class="grid section-anchor" id="resumo">
+      <article class="card card-wide onboarding-card" id="onboardingChecklistCard">
+        <div class="onboarding-head">
+          <h2>Checklist de ativacao</h2>
+          <p id="onboardingProgressMeta" class="onboarding-progress-meta">{{ onboarding_progress.done_count }}/{{ onboarding_progress.total_steps }} etapas concluidas</p>
+        </div>
+        <p class="onboarding-copy">Marque cada etapa conforme voce avanca no processo de liberacao e configuracao.</p>
+        <div class="onboarding-progress-row">
+          <div class="onboarding-progress-bar" aria-hidden="true">
+            <span id="onboardingProgressFill" class="onboarding-progress-fill" style="width: {{ onboarding_progress.percent }}%;"></span>
+          </div>
+          <span id="onboardingProgressPercent" class="onboarding-progress-percent">{{ onboarding_progress.percent }}%</span>
+        </div>
+        <div class="onboarding-checklist" id="onboardingChecklist">
+          {% for step in onboarding_progress.steps %}
+            <label class="onboarding-item {{ 'is-done' if step.checked else '' }}">
+              <input type="checkbox" class="onboarding-checkbox" data-step-key="{{ step.key }}" {% if step.checked %}checked{% endif %}>
+              <span>{{ step.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <p id="onboardingStatusText" class="onboarding-status"></p>
+        <p id="onboardingSaveMsg" class="onboarding-save-msg" aria-live="polite"></p>
+      </article>
+
       <article class="card">
         <h2>Dados do cliente</h2>
         <p class="line"><span>Nome:</span> {{ conta_nome or '-' }}</p>
@@ -2442,6 +2621,119 @@
           setLabel("Falhou");
         }
       });
+    })();
+  </script>
+  <script>
+    (function setupOnboardingChecklist(){
+      const card = document.getElementById("onboardingChecklistCard");
+      if (!card) return;
+
+      const checkboxes = Array.from(card.querySelectorAll(".onboarding-checkbox[data-step-key]"));
+      const progressMetaEl = document.getElementById("onboardingProgressMeta");
+      const progressFillEl = document.getElementById("onboardingProgressFill");
+      const progressPercentEl = document.getElementById("onboardingProgressPercent");
+      const statusEl = document.getElementById("onboardingStatusText");
+      const saveMsgEl = document.getElementById("onboardingSaveMsg");
+      if (!checkboxes.length || !progressMetaEl || !progressFillEl || !progressPercentEl || !statusEl || !saveMsgEl) return;
+
+      const endpoint = "/api/client/onboarding-progress";
+      const csrfToken = "{{ csrf_token }}";
+      let saveTimer = null;
+      let saveSeq = 0;
+
+      function getPayload(){
+        const payload = {};
+        checkboxes.forEach((checkbox) => {
+          const stepKey = (checkbox.getAttribute("data-step-key") || "").trim();
+          if (!stepKey) return;
+          payload[stepKey] = Boolean(checkbox.checked);
+        });
+        return payload;
+      }
+
+      function getStatusMessage(doneCount, totalSteps){
+        if (doneCount <= 0) return "Comece marcando o acesso ao e-mail para iniciar seu progresso.";
+        if (doneCount >= totalSteps) return "Checklist concluido. Seu acesso ja esta pronto para operacao.";
+        return "Voce esta em " + doneCount + " de " + totalSteps + " etapas. Continue para concluir a ativacao.";
+      }
+
+      function render(payload){
+        let doneCount = 0;
+        let totalSteps = 0;
+
+        checkboxes.forEach((checkbox) => {
+          const stepKey = (checkbox.getAttribute("data-step-key") || "").trim();
+          const checked = Boolean(payload[stepKey]);
+          checkbox.checked = checked;
+          totalSteps += 1;
+          if (checked) doneCount += 1;
+
+          const item = checkbox.closest(".onboarding-item");
+          if (item) {
+            item.classList.toggle("is-done", checked);
+          }
+        });
+
+        const percent = totalSteps ? Math.round((doneCount * 100) / totalSteps) : 0;
+        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluidas";
+        progressFillEl.style.width = percent + "%";
+        progressPercentEl.textContent = percent + "%";
+        statusEl.textContent = getStatusMessage(doneCount, totalSteps);
+      }
+
+      function setSaveMessage(message, isError){
+        saveMsgEl.textContent = message || "";
+        saveMsgEl.classList.toggle("is-error", Boolean(isError));
+      }
+
+      async function saveProgress(){
+        const localPayload = getPayload();
+        const seq = ++saveSeq;
+        setSaveMessage("Salvando progresso...", false);
+
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              steps: localPayload
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+
+          if (seq !== saveSeq) return;
+          if (!response.ok || !data.ok) {
+            throw new Error("save_failed");
+          }
+
+          const savedSteps = (data && typeof data.steps === "object" && data.steps) ? data.steps : localPayload;
+          render(savedSteps);
+          setSaveMessage("Progresso salvo com sucesso.", false);
+          setTimeout(() => {
+            if (saveMsgEl.textContent === "Progresso salvo com sucesso.") {
+              setSaveMessage("", false);
+            }
+          }, 1300);
+        } catch (_) {
+          if (seq !== saveSeq) return;
+          render(localPayload);
+          setSaveMessage("Falha ao salvar. Tente novamente.", true);
+        }
+      }
+
+      checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          render(getPayload());
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(saveProgress, 220);
+        });
+      });
+
+      render(getPayload());
     })();
   </script>
   <script>

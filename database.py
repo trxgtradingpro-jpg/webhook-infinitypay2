@@ -222,6 +222,20 @@ def init_db():
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_email ON customer_accounts(email)")
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS customer_onboarding_progress (
+            email TEXT PRIMARY KEY,
+            email_accessed BOOLEAN NOT NULL DEFAULT FALSE,
+            tool_downloaded BOOLEAN NOT NULL DEFAULT FALSE,
+            zip_extracted BOOLEAN NOT NULL DEFAULT FALSE,
+            tool_installed BOOLEAN NOT NULL DEFAULT FALSE,
+            robot_activated BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_onboarding_progress_updated_at ON customer_onboarding_progress(updated_at DESC)")
+
     # 🔥 MIGRATIONS SEGURAS
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS nome TEXT")
     cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS telefone TEXT")
@@ -253,6 +267,14 @@ def init_db():
     cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
     cur.execute("ALTER TABLE customer_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_remember_token_hash ON customer_accounts(remember_token_hash)")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS email_accessed BOOLEAN NOT NULL DEFAULT FALSE")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS tool_downloaded BOOLEAN NOT NULL DEFAULT FALSE")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS zip_extracted BOOLEAN NOT NULL DEFAULT FALSE")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS tool_installed BOOLEAN NOT NULL DEFAULT FALSE")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS robot_activated BOOLEAN NOT NULL DEFAULT FALSE")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("ALTER TABLE customer_onboarding_progress ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_onboarding_progress_updated_at ON customer_onboarding_progress(updated_at DESC)")
     cur.execute("ALTER TABLE quiz_submissions ADD COLUMN IF NOT EXISTS account_email TEXT")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_account_email ON quiz_submissions(account_email)")
     cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS affiliate_nome TEXT")
@@ -2015,6 +2037,95 @@ def buscar_conta_cliente_por_remember_hash(token_hash):
         "created_at": row[12],
         "updated_at": row[13],
     }
+
+
+def buscar_onboarding_progresso_cliente(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT email_accessed, tool_downloaded, zip_extracted, tool_installed, robot_activated,
+               created_at, updated_at
+        FROM customer_onboarding_progress
+        WHERE email = %s
+        LIMIT 1
+    """, (email_norm,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return {
+            "email": email_norm,
+            "email_accessed": False,
+            "tool_downloaded": False,
+            "zip_extracted": False,
+            "tool_installed": False,
+            "robot_activated": False,
+            "created_at": None,
+            "updated_at": None,
+        }
+
+    return {
+        "email": email_norm,
+        "email_accessed": bool(row[0]),
+        "tool_downloaded": bool(row[1]),
+        "zip_extracted": bool(row[2]),
+        "tool_installed": bool(row[3]),
+        "robot_activated": bool(row[4]),
+        "created_at": row[5],
+        "updated_at": row[6],
+    }
+
+
+def salvar_onboarding_progresso_cliente(email, progresso):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return None
+
+    data = progresso or {}
+    email_accessed = bool(data.get("email_accessed"))
+    tool_downloaded = bool(data.get("tool_downloaded"))
+    zip_extracted = bool(data.get("zip_extracted"))
+    tool_installed = bool(data.get("tool_installed"))
+    robot_activated = bool(data.get("robot_activated"))
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO customer_onboarding_progress (
+            email,
+            email_accessed,
+            tool_downloaded,
+            zip_extracted,
+            tool_installed,
+            robot_activated,
+            created_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+        ON CONFLICT (email) DO UPDATE
+        SET email_accessed = EXCLUDED.email_accessed,
+            tool_downloaded = EXCLUDED.tool_downloaded,
+            zip_extracted = EXCLUDED.zip_extracted,
+            tool_installed = EXCLUDED.tool_installed,
+            robot_activated = EXCLUDED.robot_activated,
+            updated_at = NOW()
+    """, (
+        email_norm,
+        email_accessed,
+        tool_downloaded,
+        zip_extracted,
+        tool_installed,
+        robot_activated,
+    ))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return buscar_onboarding_progresso_cliente(email_norm)
 
 
 def listar_pedidos_pagos_por_email(email, limite=20):

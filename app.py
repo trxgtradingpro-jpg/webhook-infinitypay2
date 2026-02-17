@@ -82,6 +82,8 @@ from database import (
     listar_pedidos_pagos_por_email,
     listar_pedidos_acesso_por_email,
     buscar_ultimo_pedido_pago_por_email,
+    buscar_onboarding_progresso_cliente,
+    salvar_onboarding_progresso_cliente,
     salvar_remember_token_cliente,
     limpar_remember_token_cliente,
     buscar_conta_cliente_por_remember_hash,
@@ -325,6 +327,14 @@ RESERVED_AFFILIATE_SLUGS = {
     "static"
 }
 
+ONBOARDING_PROGRESS_STEPS = (
+    ("email_accessed", "Consegui acessar o e-mail enviado"),
+    ("tool_downloaded", "Ja baixei a ferramenta"),
+    ("zip_extracted", "Ja descompactei com a senha"),
+    ("tool_installed", "Ja instalei a ferramenta"),
+    ("robot_activated", "Ja consegui ativar o robo"),
+)
+
 
 def normalizar_slug_afiliado(valor):
     slug = re.sub(r"[^a-z0-9-]", "-", (valor or "").strip().lower())
@@ -336,6 +346,53 @@ def slug_afiliado_valido(slug):
     if not slug:
         return False
     return AFFILIATE_SLUG_RE.fullmatch(slug) is not None and slug not in RESERVED_AFFILIATE_SLUGS
+
+
+def _parse_bool_payload(valor):
+    if isinstance(valor, bool):
+        return valor
+    if isinstance(valor, (int, float)):
+        return valor != 0
+    if isinstance(valor, str):
+        valor_norm = valor.strip().lower()
+        if valor_norm in {"1", "true", "sim", "yes", "on"}:
+            return True
+        if valor_norm in {"0", "false", "nao", "no", "off", ""}:
+            return False
+    return False
+
+
+def normalizar_payload_onboarding(payload):
+    data = payload if isinstance(payload, dict) else {}
+    nested_steps = data.get("steps")
+    source = nested_steps if isinstance(nested_steps, dict) else data
+    normalizado = {}
+    for chave, _ in ONBOARDING_PROGRESS_STEPS:
+        normalizado[chave] = _parse_bool_payload(source.get(chave))
+    return normalizado
+
+
+def montar_progresso_onboarding_cliente(email):
+    salvo = buscar_onboarding_progresso_cliente(email) or {}
+    steps = []
+    for chave, label in ONBOARDING_PROGRESS_STEPS:
+        steps.append({
+            "key": chave,
+            "label": label,
+            "checked": bool(salvo.get(chave))
+        })
+
+    total_steps = len(steps)
+    done_count = sum(1 for step in steps if step["checked"])
+    percent = int(round((done_count * 100) / total_steps)) if total_steps else 0
+
+    return {
+        "steps": steps,
+        "done_count": done_count,
+        "total_steps": total_steps,
+        "percent": percent,
+        "updated_at": salvo.get("updated_at"),
+    }
 
 
 def montar_plano_checkout(plano_base, affiliate_slug=None):
@@ -2799,6 +2856,42 @@ def api_cliente_lead_upgrade_click():
     })
 
 
+@app.route("/api/client/onboarding-progress", methods=["POST"])
+def api_cliente_onboarding_progress():
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    payload_raw = request.get_json(silent=True)
+    payload = payload_raw if isinstance(payload_raw, dict) else {}
+    token = (
+        request.headers.get(CSRF_HEADER_NAME)
+        or payload.get("csrf_token")
+        or request.form.get("csrf_token")
+        or ""
+    ).strip()
+    if not validar_csrf_token(token):
+        return jsonify({"ok": False, "error": "csrf_invalid"}), 403
+
+    progresso_payload = normalizar_payload_onboarding(payload)
+    salvo = salvar_onboarding_progresso_cliente(email, progresso_payload)
+    if not salvo:
+        return jsonify({"ok": False, "error": "save_failed"}), 500
+
+    progresso = montar_progresso_onboarding_cliente(email)
+    steps_payload = {item["key"]: bool(item["checked"]) for item in progresso["steps"]}
+
+    return jsonify({
+        "ok": True,
+        "steps": steps_payload,
+        "progress": {
+            "done_count": progresso["done_count"],
+            "total_steps": progresso["total_steps"],
+            "percent": progresso["percent"],
+        }
+    })
+
+
 @app.route("/login", methods=["GET", "POST"])
 def cliente_login():
     if cliente_logado():
@@ -3304,6 +3397,7 @@ def cliente_area():
         account_email=email,
         user_key=quiz_user_key
     )
+    onboarding_progress = montar_progresso_onboarding_cliente(email)
 
     pedidos = listar_pedidos_acesso_por_email(email, limite=30)
     pedidos_view = []
@@ -3472,6 +3566,7 @@ def cliente_area():
         ativos=ativos,
         ultimo_pedido=ultimo_pedido,
         upsell_plans=upsell_plans,
+        onboarding_progress=onboarding_progress,
         afiliado_cliente=afiliado_cliente_view,
         affiliate_copy_ready=affiliate_copy_ready,
         affiliate_copy_pending_steps=affiliate_copy_pending_steps,
