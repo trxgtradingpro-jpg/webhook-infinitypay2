@@ -23,6 +23,7 @@ function getClientAreaConfig(){
 
         const csrfToken = String(getClientAreaConfig().csrfToken || "");
         const endpoint = "/api/client/lead-upgrade-click";
+        const funnelEndpoint = "/api/funnel/track";
 
         function registrarLead(targetPlan, source){
           return fetch(endpoint, {
@@ -36,6 +37,25 @@ function getClientAreaConfig(){
             body: JSON.stringify({
               target_plan: targetPlan,
               source: source || "client_area_free_upsell"
+            })
+          });
+        }
+
+        function registrarFunnelCta(targetPlan, source, href){
+          return fetch(funnelEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            keepalive: true,
+            body: JSON.stringify({
+              event_name: "cta_click",
+              cta_id: "client_area_upgrade",
+              source: source || "client_area_free_upsell",
+              plan: targetPlan || "",
+              checkout_slug: (targetPlan || "").trim().toLowerCase(),
+              destination: href || ""
             })
           });
         }
@@ -57,6 +77,7 @@ function getClientAreaConfig(){
               event.altKey
             ) {
               registrarLead(targetPlan, source).catch(() => null);
+              registrarFunnelCta(targetPlan, source, href).catch(() => null);
               return;
             }
 
@@ -69,8 +90,10 @@ function getClientAreaConfig(){
             };
 
             const fallback = setTimeout(goCheckout, 220);
-            registrarLead(targetPlan, source)
-              .catch(() => null)
+            Promise.allSettled([
+              registrarLead(targetPlan, source),
+              registrarFunnelCta(targetPlan, source, href)
+            ])
               .finally(() => {
                 clearTimeout(fallback);
                 goCheckout();

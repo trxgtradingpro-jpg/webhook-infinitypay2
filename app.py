@@ -54,8 +54,11 @@ from database import (
     excluir_duplicados_por_dados,
     excluir_duplicados_gratis_mesmo_dia,
     registrar_evento_compra_analytics,
+    registrar_evento_funil_analytics,
     buscar_user_plan_stats,
     listar_eventos_analytics,
+    listar_eventos_funil_analytics,
+    buscar_primeiro_evento_funil_usuario,
     backfill_analytics_from_orders,
     registrar_lead_upgrade_cliente,
     registrar_whatsapp_auto_agendamento,
@@ -2962,6 +2965,215 @@ def carregar_eventos_analytics_filtrados(start=None, end=None, plano='all'):
     return listar_eventos_analytics(start_date=start_dt, end_date=end_dt, plano=plano)
 
 
+FUNNEL_STAGE_VISIT = "visit"
+FUNNEL_STAGE_CTA_CLICK = "cta_click"
+FUNNEL_STAGE_CHECKOUT_VIEW = "checkout_view"
+FUNNEL_STAGE_CHECKOUT_SUBMIT = "checkout_submit"
+FUNNEL_STAGE_PAYMENT_CONFIRMED = "payment_confirmed"
+FUNNEL_STAGE_ACTIVATION = "activation"
+FUNNEL_STAGE_RETENTION = "retention"
+FUNNEL_ALLOWED_STAGES = (
+    FUNNEL_STAGE_VISIT,
+    FUNNEL_STAGE_CTA_CLICK,
+    FUNNEL_STAGE_CHECKOUT_VIEW,
+    FUNNEL_STAGE_CHECKOUT_SUBMIT,
+    FUNNEL_STAGE_PAYMENT_CONFIRMED,
+    FUNNEL_STAGE_ACTIVATION,
+    FUNNEL_STAGE_RETENTION,
+)
+FUNNEL_STAGE_ORDER = (
+    FUNNEL_STAGE_VISIT,
+    FUNNEL_STAGE_CTA_CLICK,
+    FUNNEL_STAGE_CHECKOUT_SUBMIT,
+    FUNNEL_STAGE_PAYMENT_CONFIRMED,
+    FUNNEL_STAGE_ACTIVATION,
+    FUNNEL_STAGE_RETENTION,
+)
+FUNNEL_PUBLIC_TRACKABLE_EVENTS = {FUNNEL_STAGE_CTA_CLICK}
+FUNNEL_VISITOR_SESSION_KEY = "funnel_visitor_key"
+FUNNEL_SESSION_SESSION_KEY = "funnel_session_key"
+FUNNEL_SESSION_TS_KEY = "funnel_session_ts"
+FUNNEL_SESSION_TTL_SECONDS = int(os.environ.get("FUNNEL_SESSION_TTL_SECONDS", "1800"))
+
+
+def _normalizar_texto_funil(valor, max_len=120, lower=False):
+    texto = (valor or "").strip()
+    if not texto:
+        return ""
+    if lower:
+        texto = texto.lower()
+    return texto[:max_len]
+
+
+def obter_contexto_funil():
+    now_epoch = int(time.time())
+
+    visitor_key = _normalizar_texto_funil(session.get(FUNNEL_VISITOR_SESSION_KEY), max_len=120)
+    if not visitor_key:
+        visitor_key = f"v_{uuid.uuid4().hex[:24]}"
+        session[FUNNEL_VISITOR_SESSION_KEY] = visitor_key
+
+    session_key = _normalizar_texto_funil(session.get(FUNNEL_SESSION_SESSION_KEY), max_len=120)
+    last_ts_raw = session.get(FUNNEL_SESSION_TS_KEY)
+    try:
+        last_ts = int(last_ts_raw)
+    except (TypeError, ValueError):
+        last_ts = 0
+
+    if not session_key or (now_epoch - last_ts) > max(300, FUNNEL_SESSION_TTL_SECONDS):
+        session_key = f"s_{uuid.uuid4().hex[:24]}"
+        session[FUNNEL_SESSION_SESSION_KEY] = session_key
+
+    session[FUNNEL_SESSION_TS_KEY] = now_epoch
+
+    return {
+        "visitor_key": visitor_key,
+        "session_key": session_key,
+        "source_path": _normalizar_texto_funil(request.path, max_len=220),
+        "referrer": _normalizar_texto_funil(request.headers.get("Referer"), max_len=320),
+        "utm_source": _normalizar_texto_funil(request.args.get("utm_source"), max_len=120),
+        "utm_medium": _normalizar_texto_funil(request.args.get("utm_medium"), max_len=120),
+        "utm_campaign": _normalizar_texto_funil(request.args.get("utm_campaign"), max_len=120),
+        "utm_content": _normalizar_texto_funil(request.args.get("utm_content"), max_len=120),
+        "utm_term": _normalizar_texto_funil(request.args.get("utm_term"), max_len=120),
+    }
+
+
+def montar_dedupe_funil(*parts):
+    itens = []
+    for part in parts:
+        trecho = _normalizar_texto_funil(part, max_len=180)
+        if trecho:
+            itens.append(trecho)
+    if not itens:
+        return ""
+    base = "|".join(itens)
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def registrar_evento_funil(
+    stage,
+    event_name=None,
+    dedupe_key=None,
+    user_key=None,
+    order_id=None,
+    plano=None,
+    checkout_slug=None,
+    affiliate_slug=None,
+    source_path=None,
+    referrer=None,
+    utm_source=None,
+    utm_medium=None,
+    utm_campaign=None,
+    utm_content=None,
+    utm_term=None,
+    meta=None,
+    created_at=None,
+    funnel_context=None
+):
+    stage_norm = _normalizar_texto_funil(stage, max_len=40, lower=True)
+    if stage_norm not in FUNNEL_ALLOWED_STAGES:
+        return False
+
+    context = funnel_context or obter_contexto_funil()
+    user_key_norm = _normalizar_texto_funil(user_key, max_len=160, lower=True)
+    if not user_key_norm:
+        user_key_norm = _normalizar_texto_funil(session.get(CLIENT_SESSION_EMAIL_KEY), max_len=160, lower=True)
+
+    affiliate_slug_norm = _normalizar_texto_funil(affiliate_slug, max_len=80, lower=True)
+    if not affiliate_slug_norm:
+        affiliate_slug_norm = _normalizar_texto_funil(session.get("affiliate_slug"), max_len=80, lower=True)
+
+    return registrar_evento_funil_analytics(
+        stage=stage_norm,
+        event_name=_normalizar_texto_funil(event_name or stage_norm, max_len=80, lower=True),
+        visitor_key=context.get("visitor_key"),
+        session_key=context.get("session_key"),
+        user_key=user_key_norm,
+        order_id=_normalizar_texto_funil(order_id, max_len=120),
+        plano=_normalizar_texto_funil(plano, max_len=60, lower=True),
+        checkout_slug=_normalizar_texto_funil(checkout_slug, max_len=120, lower=True),
+        affiliate_slug=affiliate_slug_norm,
+        source_path=_normalizar_texto_funil(source_path or context.get("source_path"), max_len=220),
+        referrer=_normalizar_texto_funil(referrer or context.get("referrer"), max_len=320),
+        utm_source=_normalizar_texto_funil(utm_source or context.get("utm_source"), max_len=120),
+        utm_medium=_normalizar_texto_funil(utm_medium or context.get("utm_medium"), max_len=120),
+        utm_campaign=_normalizar_texto_funil(utm_campaign or context.get("utm_campaign"), max_len=120),
+        utm_content=_normalizar_texto_funil(utm_content or context.get("utm_content"), max_len=120),
+        utm_term=_normalizar_texto_funil(utm_term or context.get("utm_term"), max_len=120),
+        dedupe_key=_normalizar_texto_funil(dedupe_key, max_len=160),
+        meta=meta if isinstance(meta, dict) else {},
+        created_at=created_at
+    )
+
+
+def carregar_eventos_funil_analytics_filtrados(start=None, end=None, stage='all'):
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time()) if end else None
+    return listar_eventos_funil_analytics(start_date=start_dt, end_date=end_dt, stage=stage)
+
+
+def identificar_entidade_funil(evento):
+    for campo in ("user_key", "visitor_key", "session_key", "order_id"):
+        valor = _normalizar_texto_funil((evento or {}).get(campo), max_len=180, lower=(campo in {"user_key"}))
+        if valor:
+            return valor
+    return ""
+
+
+def montar_resumo_funil(eventos):
+    stage_entities = {stage: set() for stage in FUNNEL_STAGE_ORDER}
+    stage_events = {stage: 0 for stage in FUNNEL_ALLOWED_STAGES}
+    pagamentos_por_plano = defaultdict(int)
+    cta_por_id = defaultdict(int)
+
+    for evento in eventos:
+        stage = _normalizar_texto_funil((evento or {}).get("stage"), max_len=40, lower=True)
+        if stage not in stage_events:
+            continue
+
+        stage_events[stage] += 1
+        entidade = identificar_entidade_funil(evento)
+        if entidade and stage in stage_entities:
+            stage_entities[stage].add(entidade)
+
+        if stage == FUNNEL_STAGE_PAYMENT_CONFIRMED:
+            plano = _normalizar_texto_funil((evento or {}).get("plano"), max_len=60, lower=True) or "desconhecido"
+            pagamentos_por_plano[plano] += 1
+
+        if stage == FUNNEL_STAGE_CTA_CLICK:
+            meta = (evento or {}).get("meta") or {}
+            cta_id = _normalizar_texto_funil(meta.get("cta_id"), max_len=100, lower=True) or "cta_sem_id"
+            cta_por_id[cta_id] += 1
+
+    stage_counts = {stage: len(stage_entities[stage]) for stage in FUNNEL_STAGE_ORDER}
+
+    conversions = []
+    for idx in range(len(FUNNEL_STAGE_ORDER) - 1):
+        from_stage = FUNNEL_STAGE_ORDER[idx]
+        to_stage = FUNNEL_STAGE_ORDER[idx + 1]
+        from_count = stage_counts.get(from_stage, 0)
+        to_count = stage_counts.get(to_stage, 0)
+        rate = round((to_count / from_count) * 100, 2) if from_count > 0 else 0.0
+        conversions.append({
+            "from": from_stage,
+            "to": to_stage,
+            "from_count": from_count,
+            "to_count": to_count,
+            "rate_percent": rate,
+            "drop_off": max(0, from_count - to_count),
+        })
+
+    return {
+        "stage_order": list(FUNNEL_STAGE_ORDER),
+        "stage_counts": stage_counts,
+        "stage_events": stage_events,
+        "conversions": conversions,
+        "payments_by_plan": dict(sorted(pagamentos_por_plano.items())),
+        "cta_by_id": dict(sorted(cta_por_id.items(), key=lambda item: item[1], reverse=True)[:12]),
+    }
+
+
 def identificador_online_request():
     return f"{request.remote_addr}:{request.headers.get('User-Agent', '')[:40]}"
 
@@ -3285,6 +3497,10 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"post_cliente_lead_upgrade:{ip}", limite=50, janela_segundos=60):
             return jsonify({"ok": False, "error": "rate_limited"}), 429
 
+    if method == "POST" and path == "/api/funnel/track":
+        if excedeu_rate_limit(f"post_funnel_track:{ip}", limite=240, janela_segundos=60):
+            return jsonify({"ok": False, "error": "rate_limited"}), 429
+
     if method == "POST" and path == "/minha-conta/afiliados/ativar":
         if excedeu_rate_limit(f"post_cliente_afiliado_ativar:{ip}", limite=10, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -3525,6 +3741,22 @@ def favicon():
 @app.route("/")
 def home():
     afiliado = carregar_afiliado_contexto()
+    funnel_context = obter_contexto_funil()
+    registrar_evento_funil(
+        stage=FUNNEL_STAGE_VISIT,
+        event_name="landing_visit",
+        affiliate_slug=(afiliado or {}).get("slug"),
+        dedupe_key=montar_dedupe_funil(
+            "visit",
+            funnel_context.get("visitor_key"),
+            request.path,
+            agora_utc().date().isoformat()
+        ),
+        meta={
+            "surface": "index"
+        },
+        funnel_context=funnel_context
+    )
     return render_template(
         "index.html",
         affiliate=afiliado,
@@ -3586,6 +3818,19 @@ def checkout_sucesso(order_id):
 
     if status_pago:
         email = normalizar_email(order.get("email") or "")
+        registrar_evento_funil(
+            stage=FUNNEL_STAGE_PAYMENT_CONFIRMED,
+            event_name="payment_confirmed_success_page",
+            user_key=obter_user_key(order),
+            order_id=order_id,
+            plano=plano_id,
+            checkout_slug=(order.get("checkout_slug") or plano_id),
+            affiliate_slug=(order.get("affiliate_slug") or ""),
+            dedupe_key=montar_dedupe_funil("payment_confirmed", order_id),
+            meta={
+                "source": "success_page"
+            }
+        )
         if EMAIL_RE.fullmatch(email):
             try:
                 garantir_conta_cliente_para_order(order, enviar_email_credenciais=False)
@@ -3762,6 +4007,17 @@ def api_cliente_onboarding_progress():
 
     progresso = montar_progresso_onboarding_cliente(email)
     steps_payload = {item["key"]: bool(item["checked"]) for item in progresso["steps"]}
+    if int(progresso.get("percent") or 0) >= 100:
+        registrar_evento_funil(
+            stage=FUNNEL_STAGE_ACTIVATION,
+            event_name="onboarding_completed",
+            user_key=email,
+            dedupe_key=montar_dedupe_funil("activation", email),
+            meta={
+                "source": "client_onboarding",
+                "total_steps": int(progresso.get("total_steps") or 0),
+            }
+        )
 
     return jsonify({
         "ok": True,
@@ -4320,6 +4576,25 @@ def cliente_area():
     )
     onboarding_progress = montar_progresso_onboarding_cliente(email)
 
+    ativacao_inicial = buscar_primeiro_evento_funil_usuario(email, stage=FUNNEL_STAGE_ACTIVATION)
+    if ativacao_inicial:
+        try:
+            agora = agora_utc()
+            ativacao_utc = ativacao_inicial if ativacao_inicial.tzinfo else ativacao_inicial.replace(tzinfo=timezone.utc)
+            dias_desde_ativacao = (agora - ativacao_utc).days
+            if dias_desde_ativacao >= 1:
+                registrar_evento_funil(
+                    stage=FUNNEL_STAGE_RETENTION,
+                    event_name="client_area_return",
+                    user_key=email,
+                    dedupe_key=montar_dedupe_funil("retention", email, agora.date().isoformat()),
+                    meta={
+                        "days_since_activation": dias_desde_ativacao
+                    }
+                )
+        except Exception:
+            pass
+
     pedidos = listar_pedidos_acesso_por_email(email, limite=30)
     pedidos_view = []
     for pedido in pedidos:
@@ -4506,6 +4781,22 @@ def landing_afiliado(affiliate_slug):
         return "P\u00e1gina n\u00e3o encontrada", 404
 
     session["affiliate_slug"] = afiliado["slug"]
+    funnel_context = obter_contexto_funil()
+    registrar_evento_funil(
+        stage=FUNNEL_STAGE_VISIT,
+        event_name="landing_visit_affiliate",
+        affiliate_slug=afiliado.get("slug"),
+        dedupe_key=montar_dedupe_funil(
+            "visit_aff",
+            funnel_context.get("visitor_key"),
+            request.path,
+            agora_utc().date().isoformat()
+        ),
+        meta={
+            "surface": "affiliate_landing"
+        },
+        funnel_context=funnel_context
+    )
 
     return render_template(
         "index.html",
@@ -4551,6 +4842,49 @@ def api_reports_monthly():
         "ok": True,
         "reports": reports
     })
+
+
+@app.route("/api/funnel/track", methods=["POST"])
+def api_funnel_track():
+    if not _origem_confiavel_request():
+        return jsonify({"ok": False, "error": "origin_not_allowed"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid_payload"}), 400
+
+    event_name = _normalizar_texto_funil(
+        payload.get("event_name") or payload.get("stage"),
+        max_len=40,
+        lower=True
+    )
+    if event_name not in FUNNEL_PUBLIC_TRACKABLE_EVENTS:
+        return jsonify({"ok": False, "error": "event_not_allowed"}), 400
+
+    raw_meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    meta = dict(raw_meta)
+    cta_id = _normalizar_texto_funil(payload.get("cta_id"), max_len=100, lower=True)
+    destination = _normalizar_texto_funil(payload.get("destination"), max_len=220)
+    source = _normalizar_texto_funil(payload.get("source"), max_len=120, lower=True)
+    plan = _normalizar_texto_funil(payload.get("plan"), max_len=60, lower=True)
+    checkout_slug = _normalizar_texto_funil(payload.get("checkout_slug"), max_len=120, lower=True)
+
+    if cta_id:
+        meta["cta_id"] = cta_id
+    if destination:
+        meta["destination"] = destination
+    if source:
+        meta["source"] = source
+
+    tracked = registrar_evento_funil(
+        stage=FUNNEL_STAGE_CTA_CLICK,
+        event_name=event_name,
+        plano=plan,
+        checkout_slug=checkout_slug,
+        dedupe_key=_normalizar_texto_funil(payload.get("dedupe_key"), max_len=160),
+        meta=meta
+    )
+    return jsonify({"ok": True, "tracked": bool(tracked)})
 
 
 @app.route("/api/quiz/submit", methods=["POST"])
@@ -4615,6 +4949,25 @@ def checkout(plano):
         if not afiliado:
             return "Afiliado inv\u00e1lido", 404
         session["affiliate_slug"] = afiliado["slug"]
+
+    funnel_context = obter_contexto_funil()
+    registrar_evento_funil(
+        stage=FUNNEL_STAGE_CHECKOUT_VIEW,
+        event_name="checkout_view",
+        plano=plano_base,
+        checkout_slug=plano,
+        affiliate_slug=(afiliado or {}).get("slug"),
+        dedupe_key=montar_dedupe_funil(
+            "checkout_view",
+            funnel_context.get("visitor_key"),
+            plano,
+            agora_utc().date().isoformat()
+        ),
+        meta={
+            "is_free_plan": bool(PLANOS[plano_base]["preco"] <= 0)
+        },
+        funnel_context=funnel_context
+    )
 
     return render_template(
         "checkout.html",
@@ -4689,6 +5042,20 @@ def comprar():
         affiliate_email=(afiliado_atribuido or {}).get("email") or None,
         affiliate_telefone=(afiliado_atribuido or {}).get("telefone") or None,
     )
+    registrar_evento_funil(
+        stage=FUNNEL_STAGE_CHECKOUT_SUBMIT,
+        event_name="checkout_submit",
+        user_key=email,
+        order_id=order_id,
+        plano=plano_id,
+        checkout_slug=plano_checkout or plano_id,
+        affiliate_slug=(afiliado_atribuido or {}).get("slug"),
+        dedupe_key=montar_dedupe_funil("checkout_submit", order_id),
+        meta={
+            "is_free_plan": bool(int(PLANOS.get(plano_id, {}).get("preco") or 0) <= 0),
+            "direct_upgrade": bool(compra_evolucao_direta),
+        }
+    )
 
     plano_info = PLANOS[plano_id]
 
@@ -4727,6 +5094,20 @@ def comprar():
                 print(f"[DUPLICADOS] Falha ao limpar duplicados gratis ({order_id}): {exc}", flush=True)
 
             order_pago = buscar_order_por_id(order_id)
+            order_pago = order_pago or {"order_id": order_id, "plano": plano_id}
+            registrar_evento_funil(
+                stage=FUNNEL_STAGE_PAYMENT_CONFIRMED,
+                event_name="payment_confirmed_free",
+                user_key=obter_user_key(order_pago),
+                order_id=order_id,
+                plano=plano_id,
+                checkout_slug=plano_checkout or plano_id,
+                affiliate_slug=(order_pago or {}).get("affiliate_slug") or "",
+                dedupe_key=montar_dedupe_funil("payment_confirmed", order_id),
+                meta={
+                    "source": "checkout_free"
+                }
+            )
             try:
                 garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
             except Exception as exc:
@@ -4850,6 +5231,22 @@ def webhook():
         marcar_order_processada(order_id)
         marcar_transacao_processada(transaction_nsu)
         order_pago = buscar_order_por_id(order_id)
+        order_pago = order_pago or {"order_id": order_id, "plano": plano_id}
+        registrar_evento_funil(
+            stage=FUNNEL_STAGE_PAYMENT_CONFIRMED,
+            event_name="payment_confirmed_webhook",
+            user_key=obter_user_key(order_pago),
+            order_id=order_id,
+            plano=plano_id,
+            checkout_slug=(order_pago or {}).get("checkout_slug") or plano_id,
+            affiliate_slug=(order_pago or {}).get("affiliate_slug") or "",
+            dedupe_key=montar_dedupe_funil("payment_confirmed", order_id),
+            meta={
+                "source": "webhook",
+                "transaction_nsu": transaction_nsu,
+                "paid_amount": paid_amount,
+            }
+        )
         try:
             garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
         except Exception as exc:
@@ -5411,6 +5808,32 @@ def api_analytics_summary():
         "daily_paid_orders": para_lista(daily_paid_orders),
         "daily_free_orders": para_lista(daily_free_orders),
         "daily_by_plan": {plano: para_lista(serie) for plano, serie in daily_by_plan.items()}
+    })
+
+
+@app.route("/api/analytics/funnel-summary")
+def api_analytics_funnel_summary():
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    try:
+        start = parse_iso_date(request.args.get("start"))
+    except Exception:
+        return jsonify({"error": "start inv\u00e1lido (YYYY-MM-DD)"}), 400
+
+    try:
+        end = parse_iso_date(request.args.get("end"))
+    except Exception:
+        return jsonify({"error": "end inv\u00e1lido (YYYY-MM-DD)"}), 400
+
+    if start and end and end < start:
+        return jsonify({"error": "end deve ser maior/igual a start"}), 400
+
+    eventos = carregar_eventos_funil_analytics_filtrados(start=start, end=end, stage="all")
+    resumo = montar_resumo_funil(eventos)
+    return jsonify({
+        "total_events": len(eventos),
+        **resumo
     })
 
 

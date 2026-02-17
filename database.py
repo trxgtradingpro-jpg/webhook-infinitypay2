@@ -96,6 +96,36 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_events_plano ON analytics_purchase_events(plano)")
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS analytics_funnel_events (
+            id BIGSERIAL PRIMARY KEY,
+            stage TEXT NOT NULL,
+            event_name TEXT NOT NULL,
+            visitor_key TEXT,
+            session_key TEXT,
+            user_key TEXT,
+            order_id TEXT,
+            plano TEXT,
+            checkout_slug TEXT,
+            affiliate_slug TEXT,
+            source_path TEXT,
+            referrer TEXT,
+            utm_source TEXT,
+            utm_medium TEXT,
+            utm_campaign TEXT,
+            utm_content TEXT,
+            utm_term TEXT,
+            dedupe_key TEXT,
+            meta JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_funnel_stage ON analytics_funnel_events(stage)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_funnel_created_at ON analytics_funnel_events(created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_funnel_user_key ON analytics_funnel_events(user_key)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_analytics_funnel_order_id ON analytics_funnel_events(order_id)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_analytics_funnel_dedupe_key ON analytics_funnel_events(dedupe_key)")
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS quiz_submissions (
             id BIGSERIAL PRIMARY KEY,
             submission_id TEXT UNIQUE NOT NULL,
@@ -1600,6 +1630,196 @@ def registrar_evento_compra_analytics(order_id, user_key, plano, is_paid, amount
     return inserido
 
 
+def registrar_evento_funil_analytics(
+    stage,
+    event_name=None,
+    visitor_key=None,
+    session_key=None,
+    user_key=None,
+    order_id=None,
+    plano=None,
+    checkout_slug=None,
+    affiliate_slug=None,
+    source_path=None,
+    referrer=None,
+    utm_source=None,
+    utm_medium=None,
+    utm_campaign=None,
+    utm_content=None,
+    utm_term=None,
+    dedupe_key=None,
+    meta=None,
+    created_at=None
+):
+    stage_norm = (stage or "").strip().lower()[:40]
+    if not stage_norm:
+        return False
+
+    event_norm = (event_name or stage_norm).strip().lower()[:80] or stage_norm
+    payload_meta = meta if isinstance(meta, dict) else {}
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO analytics_funnel_events (
+            stage,
+            event_name,
+            visitor_key,
+            session_key,
+            user_key,
+            order_id,
+            plano,
+            checkout_slug,
+            affiliate_slug,
+            source_path,
+            referrer,
+            utm_source,
+            utm_medium,
+            utm_campaign,
+            utm_content,
+            utm_term,
+            dedupe_key,
+            meta,
+            created_at
+        )
+        VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, COALESCE(%s, NOW())
+        )
+        ON CONFLICT (dedupe_key) DO NOTHING
+    """, (
+        stage_norm,
+        event_norm,
+        (visitor_key or "").strip()[:120] or None,
+        (session_key or "").strip()[:120] or None,
+        (user_key or "").strip().lower()[:160] or None,
+        (order_id or "").strip()[:120] or None,
+        (plano or "").strip().lower()[:60] or None,
+        (checkout_slug or "").strip().lower()[:120] or None,
+        (affiliate_slug or "").strip().lower()[:80] or None,
+        (source_path or "").strip()[:220] or None,
+        (referrer or "").strip()[:320] or None,
+        (utm_source or "").strip()[:120] or None,
+        (utm_medium or "").strip()[:120] or None,
+        (utm_campaign or "").strip()[:120] or None,
+        (utm_content or "").strip()[:120] or None,
+        (utm_term or "").strip()[:120] or None,
+        (dedupe_key or "").strip()[:160] or None,
+        json.dumps(payload_meta, ensure_ascii=False),
+        created_at
+    ))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido
+
+
+def listar_eventos_funil_analytics(start_date=None, end_date=None, stage=None):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    sql = """
+        SELECT
+            stage,
+            event_name,
+            visitor_key,
+            session_key,
+            user_key,
+            order_id,
+            plano,
+            checkout_slug,
+            affiliate_slug,
+            source_path,
+            referrer,
+            utm_source,
+            utm_medium,
+            utm_campaign,
+            utm_content,
+            utm_term,
+            dedupe_key,
+            meta,
+            created_at
+        FROM analytics_funnel_events
+        WHERE 1=1
+    """
+    params = []
+
+    if start_date is not None:
+        sql += " AND created_at >= %s"
+        params.append(start_date)
+
+    if end_date is not None:
+        sql += " AND created_at < %s"
+        params.append(end_date)
+
+    if stage and stage != "all":
+        sql += " AND stage = %s"
+        params.append((stage or "").strip().lower())
+
+    sql += " ORDER BY created_at ASC"
+
+    cur.execute(sql, tuple(params))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    eventos = []
+    for r in rows:
+        eventos.append({
+            "stage": r[0],
+            "event_name": r[1],
+            "visitor_key": r[2],
+            "session_key": r[3],
+            "user_key": r[4],
+            "order_id": r[5],
+            "plano": r[6],
+            "checkout_slug": r[7],
+            "affiliate_slug": r[8],
+            "source_path": r[9],
+            "referrer": r[10],
+            "utm_source": r[11],
+            "utm_medium": r[12],
+            "utm_campaign": r[13],
+            "utm_content": r[14],
+            "utm_term": r[15],
+            "dedupe_key": r[16],
+            "meta": r[17] if isinstance(r[17], dict) else {},
+            "created_at": r[18],
+        })
+    return eventos
+
+
+def buscar_primeiro_evento_funil_usuario(user_key, stage=None):
+    user_norm = (user_key or "").strip().lower()
+    if not user_norm:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    if stage:
+        cur.execute("""
+            SELECT created_at
+            FROM analytics_funnel_events
+            WHERE user_key = %s
+              AND stage = %s
+            ORDER BY created_at ASC
+            LIMIT 1
+        """, (user_norm, (stage or "").strip().lower()))
+    else:
+        cur.execute("""
+            SELECT created_at
+            FROM analytics_funnel_events
+            WHERE user_key = %s
+            ORDER BY created_at ASC
+            LIMIT 1
+        """, (user_norm,))
+
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row[0] if row else None
 
 
 def backfill_analytics_from_orders(precos_por_plano):

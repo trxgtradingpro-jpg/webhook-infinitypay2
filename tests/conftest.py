@@ -40,6 +40,8 @@ def reset_app_state(app_module):
     app_module.OBS_COUNTERS.clear()
     app_module.OBS_INCIDENTS.clear()
     app_module.OBS_ALERT_LAST_SENT.clear()
+    app_module.registrar_evento_funil = lambda *args, **kwargs: False
+    app_module.buscar_primeiro_evento_funil_usuario = lambda *args, **kwargs: None
 
 
 @pytest.fixture()

@@ -90,6 +90,23 @@
         <div class="card"><div class="k">Total pagos</div><div class="v" id="totalPaid">0</div></div>
         <div class="card"><div class="k">Faturamento</div><div class="v" id="totalRevenue">R$ 0,00</div></div>
       </div>
+
+      <div class="row" id="funnelStageCards" style="margin-top:14px;">
+        <div class="card"><div class="k">Visita</div><div class="v" id="funnelVisit">0</div></div>
+        <div class="card"><div class="k">Clique CTA</div><div class="v" id="funnelCta">0</div></div>
+        <div class="card"><div class="k">Checkout</div><div class="v" id="funnelCheckout">0</div></div>
+        <div class="card"><div class="k">Pagamento</div><div class="v" id="funnelPayment">0</div></div>
+        <div class="card"><div class="k">Ativacao</div><div class="v" id="funnelActivation">0</div></div>
+        <div class="card"><div class="k">Retencao</div><div class="v" id="funnelRetention">0</div></div>
+      </div>
+
+      <div class="row" id="funnelRateCards" style="margin-top:10px;">
+        <div class="card"><div class="k">Visita -> CTA</div><div class="v" id="rateVisitToCta">0%</div></div>
+        <div class="card"><div class="k">CTA -> Checkout</div><div class="v" id="rateCtaToCheckout">0%</div></div>
+        <div class="card"><div class="k">Checkout -> Pagamento</div><div class="v" id="rateCheckoutToPayment">0%</div></div>
+        <div class="card"><div class="k">Pagamento -> Ativacao</div><div class="v" id="ratePaymentToActivation">0%</div></div>
+        <div class="card"><div class="k">Ativacao -> Retencao</div><div class="v" id="rateActivationToRetention">0%</div></div>
+      </div>
     </section>
 
     <section class="panel chart-wrap">
@@ -115,6 +132,39 @@
       document.getElementById('totalRevenue').textContent = formatBRL(d.revenue_total || 0);
     }
 
+    function formatPercent(value){
+      const num = Number(value || 0);
+      if (!Number.isFinite(num)) return "0%";
+      return num.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+    }
+
+    function findRate(conversions, from, to){
+      const row = (Array.isArray(conversions) ? conversions : []).find((item) => item && item.from === from && item.to === to);
+      return row ? Number(row.rate_percent || 0) : 0;
+    }
+
+    async function carregarFunil(params) {
+      const url = '/api/analytics/funnel-summary?' + new URLSearchParams(params).toString();
+      const r = await fetch(url);
+      if (!r.ok) return;
+      const d = await r.json();
+      const counts = d.stage_counts || {};
+      const conversions = d.conversions || [];
+
+      document.getElementById('funnelVisit').textContent = counts.visit || 0;
+      document.getElementById('funnelCta').textContent = counts.cta_click || 0;
+      document.getElementById('funnelCheckout').textContent = counts.checkout_submit || 0;
+      document.getElementById('funnelPayment').textContent = counts.payment_confirmed || 0;
+      document.getElementById('funnelActivation').textContent = counts.activation || 0;
+      document.getElementById('funnelRetention').textContent = counts.retention || 0;
+
+      document.getElementById('rateVisitToCta').textContent = formatPercent(findRate(conversions, 'visit', 'cta_click'));
+      document.getElementById('rateCtaToCheckout').textContent = formatPercent(findRate(conversions, 'cta_click', 'checkout_submit'));
+      document.getElementById('rateCheckoutToPayment').textContent = formatPercent(findRate(conversions, 'checkout_submit', 'payment_confirmed'));
+      document.getElementById('ratePaymentToActivation').textContent = formatPercent(findRate(conversions, 'payment_confirmed', 'activation'));
+      document.getElementById('rateActivationToRetention').textContent = formatPercent(findRate(conversions, 'activation', 'retention'));
+    }
+
     async function carregarGrafico() {
       const start = document.getElementById('start').value;
       const end = document.getElementById('noEnd').checked ? '' : document.getElementById('end').value;
@@ -126,7 +176,10 @@
       const params = { start, metric, chartType, groupBy, plan };
       if (end) params.end = end;
 
-      await carregarResumo({ start, end });
+      await Promise.all([
+        carregarResumo({ start, end }),
+        carregarFunil({ start, end })
+      ]);
 
       const url = '/api/analytics/chart?' + new URLSearchParams(params).toString();
       const resp = await fetch(url);

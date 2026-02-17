@@ -1,6 +1,7 @@
 def test_webhook_sucesso(app_module, client, monkeypatch):
     order_id = "order-123"
     transaction_nsu = "txn-abc"
+    funnel_calls = []
     order_pendente = {
         "order_id": order_id,
         "status": "PENDENTE",
@@ -33,6 +34,11 @@ def test_webhook_sucesso(app_module, client, monkeypatch):
     monkeypatch.setattr(app_module, "conceder_bonus_indicacao_pedido", lambda *args, **kwargs: None)
     monkeypatch.setattr(app_module, "registrar_compra_analytics", lambda *args, **kwargs: None)
     monkeypatch.setattr(app_module, "agendar_whatsapp_pos_pago", lambda order: None)
+    monkeypatch.setattr(
+        app_module,
+        "registrar_evento_funil",
+        lambda *args, **kwargs: funnel_calls.append({"args": args, "kwargs": kwargs}) or True
+    )
 
     response = client.post(
         "/webhook/infinitypay",
@@ -45,10 +51,13 @@ def test_webhook_sucesso(app_module, client, monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json()["msg"] == "OK"
+    assert any(
+        call.get("kwargs", {}).get("stage") == app_module.FUNNEL_STAGE_PAYMENT_CONFIRMED
+        for call in funnel_calls
+    )
 
 
 def test_webhook_nao_autorizado(app_module, client, monkeypatch):
     monkeypatch.setattr(app_module, "verificar_token_webhook", lambda: False)
     response = client.post("/webhook/infinitypay", json={"order_nsu": "x"})
     assert response.status_code == 401
-

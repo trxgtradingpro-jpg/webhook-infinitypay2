@@ -96,8 +96,8 @@
       </div>
 
       <div class="cta">
-        <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
-        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
+        <a class="btn green" href="#planos" data-funnel-cta="hero_ativar">🚀 Ativar TRX agora</a>
+        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx" data-funnel-cta="hero_diagnostico">Diagnóstico de Perfil TRX (1 min)</a>
       </div>
       <p class="cta-note">Teste grátis disponível para validar no replay, operação por operação.</p>
 
@@ -154,10 +154,10 @@
       <div class="sp"></div>
 
       <div class="cta">
-        <a class="btn green" href="#planos">
+        <a class="btn green" href="#planos" data-funnel-cta="hero_secondary_ativar">
           🚀 Ativar TRX agora
         </a>
-        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
+        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx" data-funnel-cta="hero_secondary_diagnostico">Diagnóstico de Perfil TRX (1 min)</a>
       </div>
       <p class="cta-note">Sem promessa de lucro: você testa com dados e decide com clareza.</p>
 
@@ -249,8 +249,8 @@
               <li>Janela operacional: das 09h &agrave;s 12h.</li>
             </ul>
             <div class="proof-actions">
-              <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
-              <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
+              <a class="btn green" href="#planos" data-funnel-cta="proof_ativar">🚀 Ativar TRX agora</a>
+              <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx" data-funnel-cta="proof_diagnostico">Diagnóstico de Perfil TRX (1 min)</a>
             </div>
             <p class="proof-disclaimer">Resultados passados n&atilde;o garantem resultados futuros. Operar envolve risco.</p>
           </article>
@@ -349,8 +349,8 @@
         </ul>
 
         <div class="free-cta">
-          <a class="btn green" href="#planos">🚀 Ativar TRX agora</a>
-          <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
+          <a class="btn green" href="#planos" data-funnel-cta="free_offer_ativar">🚀 Ativar TRX agora</a>
+          <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx" data-funnel-cta="free_offer_diagnostico">Diagnóstico de Perfil TRX (1 min)</a>
         </div>
         <p class="cta-note">Voc&ecirc; n&atilde;o precisa adivinhar: confira o comportamento do rob&ocirc; com seu pr&oacute;prio olhar.</p>
       </div>
@@ -431,7 +431,7 @@
 
       <div class="quiz-nudge">
         <span>Escolha pelo número de contratos. Quer ajuda? Faça o Diagnóstico de Perfil TRX (1 min).</span>
-        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
+        <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx" data-funnel-cta="plans_diagnostico">Diagnóstico de Perfil TRX (1 min)</a>
       </div>
 
       <div class="plan-stage">
@@ -620,6 +620,9 @@
 
   <script>
     window.TRX_INDEX_CONFIG = {
+      funnel: {
+        trackUrl: "/api/funnel/track"
+      },
       checkout: {
         gratis: "/checkout/trx-gratis{{ checkout_suffix|default('') }}",
         bronze: "/checkout/trx-bronze{{ checkout_suffix|default('') }}",

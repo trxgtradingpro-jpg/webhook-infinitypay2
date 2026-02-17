@@ -2,6 +2,9 @@
     const INDEX_CONFIG = (window.TRX_INDEX_CONFIG && typeof window.TRX_INDEX_CONFIG === "object")
       ? window.TRX_INDEX_CONFIG
       : {};
+    const FUNNEL_TRACK_URL = (INDEX_CONFIG.funnel && typeof INDEX_CONFIG.funnel.trackUrl === "string" && INDEX_CONFIG.funnel.trackUrl.trim())
+      ? INDEX_CONFIG.funnel.trackUrl.trim()
+      : "/api/funnel/track";
     const CHECKOUT = (INDEX_CONFIG.checkout && typeof INDEX_CONFIG.checkout === "object")
       ? INDEX_CONFIG.checkout
       : {
@@ -11,6 +14,65 @@
         gold:   "/checkout/trx-gold",
         black:  "/checkout/trx-black"
       };
+
+    function guessCheckoutSlugFromUrl(url){
+      const href = String(url || "").trim();
+      const marker = "/checkout/";
+      const idx = href.indexOf(marker);
+      if (idx < 0) return "";
+      const tail = href.slice(idx + marker.length);
+      if (!tail) return "";
+      return tail.split("?")[0].split("#")[0].trim().toLowerCase();
+    }
+
+    function enviarEventoFunnel(payload){
+      if (!FUNNEL_TRACK_URL) return;
+      const body = JSON.stringify(payload || {});
+
+      try {
+        if (navigator.sendBeacon && typeof Blob !== "undefined"){
+          const blob = new Blob([body], { type: "application/json" });
+          navigator.sendBeacon(FUNNEL_TRACK_URL, blob);
+          return;
+        }
+      } catch (_) {}
+
+      fetch(FUNNEL_TRACK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        keepalive: true,
+        body
+      }).catch(() => null);
+    }
+
+    function trackCta(payload){
+      enviarEventoFunnel({
+        event_name: "cta_click",
+        ...(payload || {})
+      });
+    }
+
+    function setupFunnelCtas(){
+      const ctas = document.querySelectorAll("[data-funnel-cta]");
+      if (!ctas.length) return;
+
+      ctas.forEach((el) => {
+        el.addEventListener("click", () => {
+          const ctaId = (el.getAttribute("data-funnel-cta") || "").trim().toLowerCase();
+          const destination = (el.getAttribute("href") || "").trim();
+          const checkoutSlug = guessCheckoutSlugFromUrl(destination);
+          trackCta({
+            cta_id: ctaId || "cta_sem_id",
+            destination,
+            checkout_slug: checkoutSlug,
+            source: "index"
+          });
+        });
+      });
+    }
 
     const REPORT_AUTO_INTERVAL_MS = 12000;
     let autoReportTimer = null;
@@ -323,9 +385,19 @@
     loadMonthlyReports();
     setupReveal();
     setupHeroVideoAutoplay();
+    setupFunnelCtas();
 
     function goCheckout(plan){
       const url = CHECKOUT[plan] || CHECKOUT.gold;
+      const planNorm = String(plan || "").trim().toLowerCase();
+      const plano = planNorm === "gratis" ? "trx-gratis" : (planNorm ? `trx-${planNorm}` : "");
+      trackCta({
+        cta_id: planNorm ? `plan_${planNorm}` : "plan_desconhecido",
+        destination: url,
+        checkout_slug: guessCheckoutSlugFromUrl(url),
+        plan: plano,
+        source: "index_plans_grid"
+      });
       window.location.href = url;
     }
 
