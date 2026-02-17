@@ -150,7 +150,7 @@
                     <button type="submit" class="btn-link">Excluir duplicados</button>
                   </form>
                 {% endif %}
-                | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-link-danger">Excluir</button></form>
+                | <form method="POST" action="/admin/pedido/{{ p.order_id }}/excluir" class="actions-inline" onsubmit="return confirm('Tem certeza que deseja excluir este usuário e todos os dados relacionados?');"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-link-danger">Excluir</button></form>
               </td>
             </tr>
           {% endfor %}

@@ -49,6 +49,7 @@ from database import (
     registrar_falha_whatsapp,
     incrementar_whatsapp_enviado,
     excluir_order,
+    excluir_usuario_completo_por_order,
     excluir_duplicados_por_dados,
     excluir_duplicados_gratis_mesmo_dia,
     registrar_evento_compra_analytics,
@@ -4697,7 +4698,9 @@ def admin_excluir_pedido(order_id):
     if not session.get("admin"):
         return redirect("/admin/login")
 
-    excluir_order(order_id)
+    resultado = excluir_usuario_completo_por_order(order_id)
+    if not resultado.get("ok"):
+        excluir_order(order_id)
     return redirect("/admin/dashboard")
 
 

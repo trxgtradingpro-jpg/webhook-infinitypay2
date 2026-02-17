@@ -785,6 +785,208 @@ def excluir_order(order_id):
     conn.close()
 
 
+def excluir_usuario_completo_por_order(order_id):
+    order_id_norm = (order_id or "").strip()[:120]
+    if not order_id_norm:
+        return {
+            "ok": False,
+            "reason": "order_id_invalido",
+            "order_ids": [],
+            "deleted": {}
+        }
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            LOWER(COALESCE(TRIM(email), '')) AS email_norm,
+            REGEXP_REPLACE(COALESCE(telefone, ''), '\\D', '', 'g') AS telefone_norm
+        FROM orders
+        WHERE order_id = %s
+        LIMIT 1
+    """, (order_id_norm,))
+
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        conn.close()
+        return {
+            "ok": False,
+            "reason": "order_nao_encontrado",
+            "order_ids": [],
+            "deleted": {}
+        }
+
+    email_norm = (row[0] or "").strip().lower()
+    telefone_norm = (row[1] or "").strip()
+
+    if email_norm:
+        cur.execute("""
+            SELECT order_id
+            FROM orders
+            WHERE LOWER(COALESCE(TRIM(email), '')) = %s
+        """, (email_norm,))
+    elif telefone_norm:
+        cur.execute("""
+            SELECT order_id
+            FROM orders
+            WHERE REGEXP_REPLACE(COALESCE(telefone, ''), '\\D', '', 'g') = %s
+        """, (telefone_norm,))
+    else:
+        cur.execute("""
+            SELECT order_id
+            FROM orders
+            WHERE order_id = %s
+        """, (order_id_norm,))
+
+    order_ids = [r[0] for r in cur.fetchall() if r and r[0]]
+    if not order_ids:
+        order_ids = [order_id_norm]
+    order_ids = list(dict.fromkeys(order_ids))
+
+    user_keys = set(order_ids)
+    if email_norm:
+        user_keys.add(email_norm)
+    elif telefone_norm:
+        user_keys.add(telefone_norm)
+
+    cur.execute("""
+        SELECT DISTINCT user_key
+        FROM analytics_purchase_events
+        WHERE order_id = ANY(%s)
+    """, (order_ids,))
+    for registro in cur.fetchall():
+        user_key = (registro[0] or "").strip()
+        if user_key:
+            user_keys.add(user_key)
+
+    user_keys_list = [k for k in user_keys if k]
+
+    transaction_nsus = set()
+    cur.execute("""
+        SELECT transaction_nsu
+        FROM analytics_purchase_events
+        WHERE order_id = ANY(%s)
+          AND transaction_nsu IS NOT NULL
+    """, (order_ids,))
+    for registro in cur.fetchall():
+        nsu = (registro[0] or "").strip()
+        if nsu:
+            transaction_nsus.add(nsu)
+
+    cur.execute("""
+        SELECT transaction_nsu
+        FROM affiliate_commissions
+        WHERE order_id = ANY(%s)
+          AND transaction_nsu IS NOT NULL
+    """, (order_ids,))
+    for registro in cur.fetchall():
+        nsu = (registro[0] or "").strip()
+        if nsu:
+            transaction_nsus.add(nsu)
+
+    transaction_nsus_list = [n for n in transaction_nsus if n]
+
+    deleted = {
+        "orders": 0,
+        "whatsapp_auto_dispatches": 0,
+        "analytics_purchase_events": 0,
+        "user_plan_stats": 0,
+        "quiz_submissions": 0,
+        "client_upgrade_leads": 0,
+        "affiliate_referrals": 0,
+        "affiliate_commissions": 0,
+        "customer_accounts": 0,
+        "customer_onboarding_progress": 0,
+        "processed_transactions": 0,
+    }
+
+    cur.execute("DELETE FROM whatsapp_auto_dispatches WHERE order_id = ANY(%s)", (order_ids,))
+    deleted["whatsapp_auto_dispatches"] += cur.rowcount
+
+    cur.execute("DELETE FROM analytics_purchase_events WHERE order_id = ANY(%s)", (order_ids,))
+    deleted["analytics_purchase_events"] += cur.rowcount
+
+    if user_keys_list:
+        cur.execute("DELETE FROM analytics_purchase_events WHERE user_key = ANY(%s)", (user_keys_list,))
+        deleted["analytics_purchase_events"] += cur.rowcount
+
+        cur.execute("DELETE FROM user_plan_stats WHERE user_key = ANY(%s)", (user_keys_list,))
+        deleted["user_plan_stats"] += cur.rowcount
+
+        cur.execute("DELETE FROM quiz_submissions WHERE user_key = ANY(%s)", (user_keys_list,))
+        deleted["quiz_submissions"] += cur.rowcount
+
+    if email_norm:
+        cur.execute("""
+            DELETE FROM client_upgrade_leads
+            WHERE LOWER(COALESCE(TRIM(email), '')) = %s
+        """, (email_norm,))
+        deleted["client_upgrade_leads"] += cur.rowcount
+
+        cur.execute("""
+            DELETE FROM affiliate_referrals
+            WHERE LOWER(COALESCE(TRIM(referred_email), '')) = %s
+        """, (email_norm,))
+        deleted["affiliate_referrals"] += cur.rowcount
+
+        cur.execute("""
+            DELETE FROM affiliate_commissions
+            WHERE LOWER(COALESCE(TRIM(referred_email), '')) = %s
+        """, (email_norm,))
+        deleted["affiliate_commissions"] += cur.rowcount
+
+        cur.execute("DELETE FROM customer_accounts WHERE email = %s", (email_norm,))
+        deleted["customer_accounts"] += cur.rowcount
+
+        cur.execute("DELETE FROM customer_onboarding_progress WHERE email = %s", (email_norm,))
+        deleted["customer_onboarding_progress"] += cur.rowcount
+
+        cur.execute("DELETE FROM quiz_submissions WHERE account_email = %s", (email_norm,))
+        deleted["quiz_submissions"] += cur.rowcount
+
+        cur.execute("""
+            DELETE FROM orders
+            WHERE LOWER(COALESCE(TRIM(email), '')) = %s
+        """, (email_norm,))
+        deleted["orders"] += cur.rowcount
+
+    if telefone_norm and not email_norm:
+        cur.execute("""
+            DELETE FROM orders
+            WHERE REGEXP_REPLACE(COALESCE(telefone, ''), '\\D', '', 'g') = %s
+        """, (telefone_norm,))
+        deleted["orders"] += cur.rowcount
+
+    cur.execute("DELETE FROM client_upgrade_leads WHERE order_id = ANY(%s)", (order_ids,))
+    deleted["client_upgrade_leads"] += cur.rowcount
+
+    cur.execute("DELETE FROM affiliate_commissions WHERE order_id = ANY(%s)", (order_ids,))
+    deleted["affiliate_commissions"] += cur.rowcount
+
+    if transaction_nsus_list:
+        cur.execute("DELETE FROM processed_transactions WHERE transaction_nsu = ANY(%s)", (transaction_nsus_list,))
+        deleted["processed_transactions"] += cur.rowcount
+
+    cur.execute("DELETE FROM orders WHERE order_id = ANY(%s)", (order_ids,))
+    deleted["orders"] += cur.rowcount
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return {
+        "ok": True,
+        "reason": "usuario_excluido",
+        "email": email_norm,
+        "telefone": telefone_norm,
+        "order_ids": order_ids,
+        "deleted": deleted,
+        "total_deleted": sum(deleted.values())
+    }
+
+
 def excluir_duplicados_por_dados(order_id_referencia, nome, email, telefone):
     conn = get_conn()
     cur = conn.cursor()
