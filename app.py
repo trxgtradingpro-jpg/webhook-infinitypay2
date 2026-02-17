@@ -80,10 +80,12 @@ from database import (
     forcar_reset_senha_conta_cliente,
     atualizar_ultimo_login_conta_cliente,
     listar_pedidos_pagos_por_email,
+    listar_pedidos_acesso_por_email,
     buscar_ultimo_pedido_pago_por_email,
     salvar_remember_token_cliente,
     limpar_remember_token_cliente,
-    buscar_conta_cliente_por_remember_hash
+    buscar_conta_cliente_por_remember_hash,
+    conceder_bonus_indicacao_mes_gratis
 )
 
 print("Ã°Å¸Å¡â‚¬ APP INICIADO", flush=True)
@@ -634,6 +636,74 @@ def registrar_comissao_pedido_afiliado(order, transaction_nsu=None):
         commission_centavos=commission_centavos,
         status="PENDENTE"
     )
+
+
+def conceder_bonus_indicacao_pedido(order):
+    if not order:
+        return False
+
+    if (order.get("status") or "").upper() != "PAGO":
+        return False
+
+    plano = (order.get("plano") or "").strip().lower()
+    if plano not in PLANOS:
+        return False
+
+    # Regra comercial: bonus de 1 mes apenas quando o indicado compra plano pago.
+    if int(PLANOS.get(plano, {}).get("preco") or 0) <= 0:
+        return False
+
+    referred_email = normalizar_email(order.get("email") or "")
+    if not EMAIL_RE.fullmatch(referred_email):
+        return False
+
+    affiliate_slug = normalizar_slug_afiliado(order.get("affiliate_slug") or "")
+    affiliate_email = normalizar_email(order.get("affiliate_email") or "")
+    affiliate_nome = normalizar_nome(order.get("affiliate_nome") or "")
+    affiliate_telefone = normalizar_telefone(order.get("affiliate_telefone") or "")
+
+    if not slug_afiliado_valido(affiliate_slug):
+        referral = buscar_indicacao_afiliado_por_email(referred_email)
+        fallback_slug = normalizar_slug_afiliado((referral or {}).get("affiliate_slug") or "")
+        if not slug_afiliado_valido(fallback_slug):
+            return False
+        affiliate_slug = fallback_slug
+        affiliate_nome = affiliate_nome or normalizar_nome((referral or {}).get("affiliate_nome") or "")
+        affiliate_email = affiliate_email or normalizar_email((referral or {}).get("affiliate_email") or "")
+        affiliate_telefone = affiliate_telefone or normalizar_telefone((referral or {}).get("affiliate_telefone") or "")
+
+    if not EMAIL_RE.fullmatch(affiliate_email):
+        afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=False)
+        affiliate_email = normalizar_email((afiliado or {}).get("email") or "")
+        affiliate_nome = affiliate_nome or normalizar_nome((afiliado or {}).get("nome") or "")
+        affiliate_telefone = affiliate_telefone or normalizar_telefone((afiliado or {}).get("telefone") or "")
+
+    if not EMAIL_RE.fullmatch(affiliate_email):
+        return False
+
+    if affiliate_eh_autoindicacao(
+        referred_email=referred_email,
+        affiliate_slug=affiliate_slug,
+        affiliate_email=affiliate_email
+    ):
+        return False
+
+    bonus_nome = affiliate_nome or f"Afiliado {affiliate_email.split('@', 1)[0]}"
+    inserido, bonus_order_id = conceder_bonus_indicacao_mes_gratis(
+        source_order_id=order.get("order_id"),
+        plano=plano,
+        email=affiliate_email,
+        nome=bonus_nome,
+        telefone=affiliate_telefone or None,
+        checkout_slug=f"bonus-indicacao-{plano}"
+    )
+    if inserido:
+        print(
+            f"[AFILIADOS] Bonus de 1 mes concedido: order={order.get('order_id')} "
+            f"-> afiliado={affiliate_email} plano={plano} bonus_order={bonus_order_id}",
+            flush=True
+        )
+    return bool(inserido)
 
 
 MESES_ROTULO = {
@@ -3235,11 +3305,13 @@ def cliente_area():
         user_key=quiz_user_key
     )
 
-    pedidos = listar_pedidos_pagos_por_email(email, limite=30)
+    pedidos = listar_pedidos_acesso_por_email(email, limite=30)
     pedidos_view = []
     for pedido in pedidos:
         plano_id = pedido.get("plano")
         plano_info = PLANOS.get(plano_id, {})
+        status_norm = (pedido.get("status") or "").strip().upper()
+        is_bonus = status_norm == "BONUS"
         exp = montar_expiracao_pedido(pedido)
         created_at_local = converter_data_para_timezone_admin(pedido.get("created_at"))
         expira_local = converter_data_para_timezone_admin(exp["expira_em"]) if exp else None
@@ -3248,7 +3320,9 @@ def cliente_area():
             "nome": pedido.get("nome") or "",
             "plano_id": plano_id,
             "plano_nome": plano_info.get("nome", plano_id or "-"),
-            "is_paid": int(plano_info.get("preco") or 0) > 0,
+            "is_paid": int(plano_info.get("preco") or 0) > 0 and not is_bonus,
+            "is_bonus": is_bonus,
+            "access_label": "Bonus indicacao" if is_bonus else ("Pago" if int(plano_info.get("preco") or 0) > 0 else "Gratuito"),
             "created_at_fmt": created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
             "expira_em_fmt": expira_local.strftime("%d/%m/%Y %H:%M") if expira_local else "-",
             "ativo": bool(exp and exp.get("ativo")),
@@ -3634,6 +3708,10 @@ def comprar():
                 registrar_comissao_pedido_afiliado(order_pago)
             except Exception as exc:
                 print(f"[AFILIADOS] Falha ao registrar comissao do pedido {order_id}: {exc}", flush=True)
+            try:
+                conceder_bonus_indicacao_pedido(order_pago)
+            except Exception as exc:
+                print(f"[AFILIADOS] Falha ao conceder bonus por indicacao {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago)
             agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
             agendar_whatsapp_pos_pago(order_pago)
@@ -3711,6 +3789,10 @@ def webhook():
                 registrar_comissao_pedido_afiliado(order_pago, transaction_nsu=transaction_nsu)
             except Exception as exc:
                 print(f"[AFILIADOS] Falha ao registrar comissao do webhook {order_id}: {exc}", flush=True)
+            try:
+                conceder_bonus_indicacao_pedido(order_pago)
+            except Exception as exc:
+                print(f"[AFILIADOS] Falha ao conceder bonus do webhook {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
             agendar_whatsapp_pos_pago(order_pago)
     except Exception as exc:

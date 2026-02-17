@@ -1574,6 +1574,7 @@
       <div class="affiliate-box">
         <ul class="affiliate-rules">
           <li><strong>Comissao fixa:</strong> {{ affiliate_commission_percent }}% do valor do plano pago adquirido pelo indicado.</li>
+          <li><strong>Bonus de indicacao:</strong> para cada compra paga valida do indicado, voce recebe 1 mes gratis do mesmo plano adquirido por ele.</li>
           <li><strong>Primeiro indicador:</strong> o primeiro afiliado que indicar um e-mail fica vinculado de forma permanente.</li>
           <li><strong>Compra futura:</strong> se esse mesmo cliente comprar novamente depois, a comissao continua para quem indicou primeiro.</li>
           <li><strong>Persistencia:</strong> os dados de indicacao e comissao ficam registrados no banco com order_id, plano, checkout, valor pago e valor da comissao.</li>
@@ -1799,7 +1800,7 @@
                 <td><code>{{ p.order_id[:8] }}...</code></td>
                 <td>
                   <strong>{{ p.plano_nome }}</strong><br>
-                  <span style="color:#9db0d4;">{{ 'Pago' if p.is_paid else 'Gratuito' }}</span>
+                  <span style="color:#9db0d4;">{{ p.access_label or ('Pago' if p.is_paid else 'Gratuito') }}</span>
                 </td>
                 <td>{{ p.created_at_fmt }}</td>
                 <td>{{ p.expira_em_fmt }}</td>

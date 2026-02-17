@@ -2055,6 +2055,98 @@ def listar_pedidos_pagos_por_email(email, limite=20):
     return pedidos
 
 
+def listar_pedidos_acesso_por_email(email, limite=20):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return []
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT order_id, plano, nome, email, telefone, status, created_at,
+               checkout_slug, affiliate_slug
+        FROM orders
+        WHERE LOWER(BTRIM(COALESCE(email, ''))) = %s
+          AND UPPER(BTRIM(COALESCE(status, ''))) IN ('PAGO', 'BONUS')
+        ORDER BY created_at DESC
+        LIMIT %s
+    """, (email_norm, int(max(1, limite))))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    pedidos = []
+    for row in rows:
+        pedidos.append({
+            "order_id": row[0],
+            "plano": row[1],
+            "nome": row[2],
+            "email": row[3],
+            "telefone": row[4],
+            "status": row[5],
+            "created_at": row[6],
+            "checkout_slug": row[7],
+            "affiliate_slug": row[8],
+        })
+
+    return pedidos
+
+
+def conceder_bonus_indicacao_mes_gratis(
+    source_order_id,
+    plano,
+    email,
+    nome=None,
+    telefone=None,
+    checkout_slug=None
+):
+    source_order_id_norm = (source_order_id or "").strip()[:120]
+    plano_norm = (plano or "").strip().lower()[:60]
+    email_norm = _normalizar_email_interno(email)
+    nome_norm = (nome or "").strip()[:120] or None
+    telefone_norm = (telefone or "").strip()[:40] or None
+
+    if not source_order_id_norm or not plano_norm or not email_norm:
+        return False, None
+
+    bonus_order_id = f"bonus-indicacao-{source_order_id_norm}"
+    if len(bonus_order_id) > 120:
+        bonus_order_id = bonus_order_id[:120]
+
+    checkout_slug_norm = (checkout_slug or f"bonus-indicacao-{plano_norm}").strip().lower()[:120]
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO orders (
+            order_id,
+            plano,
+            nome,
+            email,
+            telefone,
+            status,
+            checkout_slug,
+            created_at
+        )
+        VALUES (%s, %s, %s, %s, %s, 'BONUS', %s, NOW())
+        ON CONFLICT (order_id) DO NOTHING
+    """, (
+        bonus_order_id,
+        plano_norm,
+        nome_norm,
+        email_norm,
+        telefone_norm,
+        checkout_slug_norm
+    ))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido, bonus_order_id
+
+
 def buscar_ultimo_pedido_pago_por_email(email):
     pedidos = listar_pedidos_pagos_por_email(email, limite=1)
     if not pedidos:
