@@ -402,6 +402,133 @@
     .msg a:hover{
       filter:brightness(1.08);
     }
+    .diagnostic-prompt{
+      border:1px solid rgba(255,166,0,.46);
+      border-radius:16px;
+      padding:14px;
+      display:grid;
+      gap:10px;
+      background:linear-gradient(180deg, rgba(78,42,12,.42), rgba(56,30,8,.38));
+      box-shadow:0 14px 32px rgba(0,0,0,.22);
+    }
+    .diagnostic-prompt.is-minimized{
+      border-style:dashed;
+      padding:11px 12px;
+      background:linear-gradient(180deg, rgba(56,30,8,.34), rgba(36,22,12,.32));
+    }
+    .diagnostic-prompt.is-minimized .diagnostic-prompt-content,
+    .diagnostic-prompt.is-minimized .diagnostic-actions{
+      display:none;
+    }
+    .diagnostic-prompt-content{
+      display:grid;
+      gap:8px;
+    }
+    .diagnostic-pill{
+      margin:0;
+      width:fit-content;
+      border:1px solid rgba(255,166,0,.62);
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:11px;
+      font-weight:1000;
+      letter-spacing:.28px;
+      color:#ffe4b8;
+      background:rgba(255,166,0,.16);
+      text-transform:uppercase;
+    }
+    .diagnostic-prompt-content h2{
+      margin:0;
+      font-size:clamp(20px, 2.1vw, 30px);
+      line-height:1.05;
+      letter-spacing:-.5px;
+      font-weight:1000;
+      color:#fff1d7;
+    }
+    .diagnostic-prompt-content p{
+      margin:0;
+      font-size:14px;
+      line-height:1.42;
+      color:#ffe7c8;
+      font-weight:700;
+    }
+    .diagnostic-note{
+      color:#ffd6a0 !important;
+      font-size:13px !important;
+      font-weight:900 !important;
+    }
+    .diagnostic-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+    }
+    .diagnostic-btn{
+      border:1px solid rgba(255,255,255,.26);
+      border-radius:12px;
+      text-decoration:none;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:1000;
+      letter-spacing:.18px;
+      padding:10px 14px;
+      transition:.16s transform, .16s filter, .16s border-color;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:42px;
+    }
+    .diagnostic-btn:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.06);
+    }
+    .diagnostic-btn.primary{
+      border-color:rgba(255,166,0,.74);
+      background:linear-gradient(180deg, rgba(255,173,37,.98), rgba(245,119,17,.98));
+      color:#2a1300;
+      box-shadow:0 10px 22px rgba(245,119,17,.30), inset 0 1px 0 rgba(255,255,255,.34);
+    }
+    .diagnostic-btn.ghost{
+      background:rgba(255,255,255,.06);
+      color:#ffe6c7;
+    }
+    .diagnostic-later-msg{
+      margin:0;
+      color:#ffe6c7;
+      font-size:13px;
+      line-height:1.4;
+      font-weight:800;
+    }
+    html[data-theme="light"] .diagnostic-prompt{
+      border-color:rgba(194,65,12,.42) !important;
+      background:linear-gradient(180deg, rgba(255,231,204,.88), rgba(255,219,179,.80)) !important;
+      box-shadow:0 12px 24px rgba(15,23,42,.10) !important;
+    }
+    html[data-theme="light"] .diagnostic-prompt.is-minimized{
+      background:linear-gradient(180deg, rgba(255,237,213,.78), rgba(255,225,184,.72)) !important;
+    }
+    html[data-theme="light"] .diagnostic-pill{
+      border-color:rgba(194,65,12,.52) !important;
+      background:rgba(251,146,60,.14) !important;
+      color:#9a3412 !important;
+    }
+    html[data-theme="light"] .diagnostic-prompt-content h2{
+      color:#7c2d12 !important;
+    }
+    html[data-theme="light"] .diagnostic-prompt-content p{
+      color:#9a3412 !important;
+    }
+    html[data-theme="light"] .diagnostic-note{
+      color:#b45309 !important;
+    }
+    html[data-theme="light"] .diagnostic-btn.ghost{
+      border-color:rgba(124,45,18,.28) !important;
+      color:#7c2d12 !important;
+      background:rgba(255,255,255,.58) !important;
+    }
+    html[data-theme="light"] .diagnostic-later-msg{
+      color:#7c2d12 !important;
+    }
     .logout{
       border:1px solid rgba(255,86,86,.62);
       border-radius:14px;
@@ -1790,10 +1917,19 @@
       <div class="msg {{ info_message_level or 'ok' }}">{{ info_message }}</div>
     {% endif %}
     {% if not diagnostico_concluido %}
-      <div class="msg warn">
-        <strong>Perfil incompleto:</strong> voce ainda nao fez o Diagnostico de Perfil TRX.
-        <a href="/diagnostico-de-perfil-trx">Clique aqui para fazer agora</a> e completar seu perfil.
-      </div>
+      <section class="diagnostic-prompt" id="diagnosticPromptCard" aria-live="polite">
+        <div class="diagnostic-prompt-content">
+          <p class="diagnostic-pill">Recomendacao de plano pendente</p>
+          <h2>Falta concluir seu Diagnostico de Perfil TRX</h2>
+          <p>Esse diagnostico identifica seu perfil e recomenda o plano mais adequado para sua operacao, evitando escolhas no escuro e acelerando sua configuracao inicial.</p>
+          <p class="diagnostic-note">Leva cerca de 1 minuto e ajuda voce a comecar com mais clareza e seguranca.</p>
+        </div>
+        <div class="diagnostic-actions">
+          <a class="diagnostic-btn primary" href="/diagnostico-de-perfil-trx">Fazer diagnostico agora</a>
+          <button class="diagnostic-btn ghost" id="diagnosticLaterBtn" type="button">Mais tarde</button>
+        </div>
+        <p class="diagnostic-later-msg" id="diagnosticLaterMsg" hidden>Sem problemas. Quando voce quiser, vai ser rapidinho concluir o diagnostico.</p>
+      </section>
     {% endif %}
 
     <nav class="account-menu">
@@ -3165,6 +3301,19 @@
 
       const hashId = (window.location.hash || "").replace("#", "");
       setActiveSection(hashId || firstAvailableId);
+    })();
+  </script>
+  <script>
+    (function setupDiagnosticPrompt(){
+      const card = document.getElementById("diagnosticPromptCard");
+      const laterBtn = document.getElementById("diagnosticLaterBtn");
+      const laterMsg = document.getElementById("diagnosticLaterMsg");
+      if (!card || !laterBtn || !laterMsg) return;
+
+      laterBtn.addEventListener("click", () => {
+        card.classList.add("is-minimized");
+        laterMsg.hidden = false;
+      });
     })();
   </script>
   <script>
