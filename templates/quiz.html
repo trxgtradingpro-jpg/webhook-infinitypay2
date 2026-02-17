@@ -574,7 +574,7 @@
 
       <div class="progress-wrap">
         <div class="progress-meta">
-          <span id="progressText">1/6 · ~1min</span>
+          <span id="progressText">1/6 · ~1 min</span>
           <span id="progressStep">Pergunta 1 de 6</span>
         </div>
         <div class="progress-track">
@@ -590,14 +590,14 @@
 
   <script>
     const QUIZ_CONFIG = {
-      approxTime: "~1min",
+      approxTime: "~1 min",
       storageKey: "trx_quiz_state_v1",
       plans: {
-        gratis: { name: "GRATIS", checkout: "/checkout/trx-gratis{{ checkout_suffix|default('') }}", contracts: "Teste limitado", price: "GRATIS", theme: "plan-gratis" },
-        bronze: { name: "BRONZE", checkout: "/checkout/trx-bronze{{ checkout_suffix|default('') }}", contracts: "1 contrato", price: "R$ 197/mes", theme: "plan-bronze" },
-        prata: { name: "PRATA", checkout: "/checkout/trx-prata{{ checkout_suffix|default('') }}", contracts: "1-5 contratos", price: "R$ 247/mes", theme: "plan-prata" },
-        gold: { name: "GOLD", checkout: "/checkout/trx-gold{{ checkout_suffix|default('') }}", contracts: "1-20 contratos", price: "R$ 497/mes", theme: "plan-gold" },
-        black: { name: "BLACK", checkout: "/checkout/trx-black{{ checkout_suffix|default('') }}", contracts: "1-300 contratos", price: "R$ 697/mes", theme: "plan-black" }
+        gratis: { name: "GRÁTIS", checkout: "/checkout/trx-gratis{{ checkout_suffix|default('') }}", contracts: "Teste limitado", price: "GRÁTIS", theme: "plan-gratis" },
+        bronze: { name: "BRONZE", checkout: "/checkout/trx-bronze{{ checkout_suffix|default('') }}", contracts: "1 contrato", price: "R$ 197/mês", theme: "plan-bronze" },
+        prata:  { name: "PRATA",  checkout: "/checkout/trx-prata{{ checkout_suffix|default('') }}",  contracts: "1-5 contratos", price: "R$ 247/mês", theme: "plan-prata" },
+        gold:   { name: "GOLD",   checkout: "/checkout/trx-gold{{ checkout_suffix|default('') }}",   contracts: "1-20 contratos", price: "R$ 497/mês", theme: "plan-gold" },
+        black:  { name: "BLACK",  checkout: "/checkout/trx-black{{ checkout_suffix|default('') }}",  contracts: "1-300 contratos", price: "R$ 697/mês", theme: "plan-black" }
       },
       planOrder: ["gratis", "bronze", "prata", "gold", "black"],
       contractAnchors: {
@@ -609,13 +609,13 @@
       questions: [
         {
           id: "level",
-          title: "Q1 — Qual seu nivel hoje?",
+          title: "Q1 — Qual seu nível hoje?",
           subtitle: "Seu nível ajuda a calibrar potência e simplicidade no início.",
           options: [
             { value: "never", label: "Nunca operei" },
             { value: "beginner", label: "Iniciante" },
-            { value: "intermediate", label: "Intermediario" },
-            { value: "advanced", label: "Avancado" }
+            { value: "intermediate", label: "Intermediário" },
+            { value: "advanced", label: "Avançado" }
           ]
         },
         {
@@ -624,15 +624,15 @@
           subtitle: "Escolha o objetivo que mais representa seu momento.",
           options: [
             { value: "test", label: "Testar e ver como funciona" },
-            { value: "consistency", label: "Operar com consist&ecirc;ncia (sem exagero)" },
-            { value: "scale", label: "Escalar resultado (mais for&ccedil;a)" },
+            { value: "consistency", label: "Operar com consistência (sem exagero)" },
+            { value: "scale", label: "Escalar resultado (mais força)" },
             { value: "unsure", label: "Ainda não sei" }
           ]
         },
         {
           id: "contracts",
           title: "Q3 — Quantos contratos você pretende usar na maioria do tempo?",
-          subtitle: "Essa &eacute; a &acirc;ncora principal da recomenda&ccedil;&atilde;o.",
+          subtitle: "Essa é a âncora principal da recomendação.",
           options: [
             { value: "one", label: "1 contrato" },
             { value: "two_five", label: "2 a 5 contratos" },
@@ -643,7 +643,7 @@
         },
         {
           id: "risk",
-          title: "Q4 — Seu perfil de risco e mais…",
+          title: "Q4 — Seu perfil de risco é mais…",
           subtitle: "Essa resposta evita recomendar um plano acima do conforto atual.",
           options: [
             { value: "conservative", label: "Conservador" },
@@ -654,11 +654,11 @@
         {
           id: "time",
           title: "Q5 — Quanto tempo por dia você consegue acompanhar?",
-          subtitle: "Quanto menos tempo, mais importante come&ccedil;ar de forma simples.",
+          subtitle: "Quanto menos tempo, mais importante começar de forma simples.",
           options: [
             { value: "very_little", label: "Quase nada (quero o mais simples possível)" },
             { value: "half_hour", label: "30-60 min por dia" },
-            { value: "routine_experience", label: "Tenho rotina e experiencia" }
+            { value: "routine_experience", label: "Tenho rotina e experiência" }
           ]
         },
         {
@@ -733,7 +733,7 @@
       const total = QUIZ_CONFIG.questions.length;
       if (isResult) {
         progressText.textContent = `Resultado · ${total}/${total} · ${QUIZ_CONFIG.approxTime}`;
-        progressStep.textContent = "Recomendacao final";
+        progressStep.textContent = "Recomendação final";
         progressFill.style.width = "100%";
         return;
       }
@@ -865,7 +865,7 @@
       if (answers.contracts && answers.contracts !== "unsure") {
         anchorPlan = QUIZ_CONFIG.contractAnchors[answers.contracts];
         recommended = anchorPlan;
-        reasons.push(`Com base na sua faixa de contratos, o plano ${planName(recommended)} fica no nivel certo para operar sem distorcer risco.`);
+        reasons.push(`Com base na sua faixa de contratos, o plano ${planName(recommended)} fica no nível certo para operar sem distorcer risco.`);
       } else {
         recommended = recommendWhenContractsUnknown(answers);
         reasons.push(`Como você ainda está definindo volume de contratos, o plano ${planName(recommended)} equilibra entrada rápida e segurança.`);
@@ -894,13 +894,13 @@
 
       if (reasons.length < 2) {
         if (answers.goal === "scale") {
-          reasons.push("Seu objetivo de escala pede uma estrutura com mais for&ccedil;a e folga operacional.");
+          reasons.push("Seu objetivo de escala pede uma estrutura com mais força e folga operacional.");
         } else if (answers.goal === "consistency") {
-          reasons.push("Seu foco em consist&ecirc;ncia favorece uma configura&ccedil;&atilde;o equilibrada e repet&iacute;vel.");
+          reasons.push("Seu foco em consistência favorece uma configuração equilibrada e repetível.");
         } else if (answers.goal === "test") {
-          reasons.push("Seu momento de valida&ccedil;&atilde;o indica um caminho de menor atrito para come&ccedil;ar com clareza.");
+          reasons.push("Seu momento de validação indica um caminho de menor atrito para começar com clareza.");
         } else {
-          reasons.push("A recomenda&ccedil;&atilde;o final considera risco, disponibilidade de tempo e potencial de evolu&ccedil;&atilde;o.");
+          reasons.push("A recomendação final considera risco, disponibilidade de tempo e potencial de evolução.");
         }
       }
 
@@ -968,7 +968,7 @@
           <p class="result-contracts">${plan.contracts}</p>
           <p class="result-price">${plan.price || ""}</p>
         </div>
-        ${result.nextLevel ? `<p class="next-level">Proximo nivel sugerido: ${planName(result.nextLevel)}</p>` : ""}
+        ${result.nextLevel ? `<p class="next-level">Próximo nível sugerido: ${planName(result.nextLevel)}</p>` : ""}
         ${result.showFreeSecondary ? `<button class="cta-secondary result-free-cta" type="button" id="freeFirstResultBtn">Quero testar antes (grátis)</button>` : ""}
       `;
       wrap.appendChild(card);
@@ -1100,5 +1100,3 @@
   </script>
 </body>
 </html>
-
-
