@@ -203,6 +203,25 @@ html[data-theme="light"] .proof-tags span {
   background: rgba(15, 23, 42, 0.06) !important;
 }
 
+html[data-theme="light"] .faq-list {
+  gap: 10px !important;
+}
+
+html[data-theme="light"] .faq-item {
+  border-color: rgba(0, 0, 0, 0.34) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03) !important;
+}
+
+html[data-theme="light"] .faq-item summary {
+  color: #0f172a !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-theme="light"] .faq-item p {
+  color: #1f2937 !important;
+}
+
 html[data-theme="light"] .quiz-nudge span,
 html[data-theme="light"] .report-cumulative,
 html[data-theme="light"] .report-gain.neutral {
