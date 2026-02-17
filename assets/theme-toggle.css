@@ -59,8 +59,8 @@ html[data-theme="light"] {
   --border-soft: rgba(15, 23, 42, 0.08);
   --text-main: #0f172a;
   --text-muted: #475569;
-  --blue: #0f766e;
-  --blue-soft: #0f766e;
+  --blue: #1d4ed8;
+  --blue-soft: #2563eb;
   --shadow: 0 18px 48px rgba(15, 23, 42, 0.14);
   --theme-toggle-bg: rgba(255, 255, 255, 0.94);
   --theme-toggle-border: rgba(15, 23, 42, 0.2);
