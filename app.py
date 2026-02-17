@@ -438,6 +438,7 @@ def montar_dados_afiliado_cliente(afiliado):
     nome = normalizar_nome(afiliado.get("nome") or "")
     link_publico = montar_url_absoluta(f"/{slug}")
     terms_accepted_at = afiliado.get("terms_accepted_at")
+    link_saved_at = afiliado.get("link_saved_at")
     return {
         "slug": slug,
         "nome": nome or slug,
@@ -446,6 +447,8 @@ def montar_dados_afiliado_cliente(afiliado):
         "ativo": bool(afiliado.get("ativo")),
         "terms_accepted": bool(terms_accepted_at),
         "terms_accepted_at": terms_accepted_at,
+        "link_saved": bool(link_saved_at),
+        "link_saved_at": link_saved_at,
         "link_publico": link_publico,
     }
 
@@ -3073,8 +3076,26 @@ def cliente_editar_link_afiliado():
     if not slug_afiliado_valido(slug_novo):
         return redirect("/minha-conta?info=afiliado_slug_invalido#afiliados")
 
+    link_saved_at = afiliado_existente.get("link_saved_at")
+    link_saved_momento = datetime.now(timezone.utc)
+
     if slug_novo == slug_atual:
-        return redirect("/minha-conta?info=afiliado_link_sem_alteracao#afiliados")
+        if link_saved_at:
+            return redirect("/minha-conta?info=afiliado_link_sem_alteracao#afiliados")
+
+        confirmado = atualizar_afiliado(
+            slug_atual=slug_atual,
+            slug_novo=slug_atual,
+            nome=normalizar_nome(afiliado_existente.get("nome") or "") or f"Afiliado {email.split('@', 1)[0]}",
+            email=email,
+            telefone=normalizar_telefone(afiliado_existente.get("telefone") or "") or None,
+            ativo=bool(afiliado_existente.get("ativo")),
+            link_saved_at=link_saved_momento
+        )
+        if not confirmado:
+            return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+        return redirect("/minha-conta?info=afiliado_link_confirmado#afiliados")
 
     conflito = buscar_afiliado_por_slug(slug_novo, apenas_ativos=False)
     if conflito and normalizar_email(conflito.get("email") or "") != email:
@@ -3086,7 +3107,8 @@ def cliente_editar_link_afiliado():
         nome=normalizar_nome(afiliado_existente.get("nome") or "") or f"Afiliado {email.split('@', 1)[0]}",
         email=email,
         telefone=normalizar_telefone(afiliado_existente.get("telefone") or "") or None,
-        ativo=bool(afiliado_existente.get("ativo"))
+        ativo=bool(afiliado_existente.get("ativo")),
+        link_saved_at=link_saved_momento
     )
     if not atualizado:
         return redirect("/minha-conta?info=afiliado_erro#afiliados")
@@ -3117,14 +3139,15 @@ def cliente_area():
     info_key = (request.args.get("info") or "").strip().lower()
     info_messages = {
         "senha_criada": "Senha criada com sucesso.",
-        "afiliado_criado": "Afiliacao ativada com sucesso. Seu link de indicacao ja esta disponivel.",
+        "afiliado_criado": "Afiliacao ativada com sucesso. Agora salve seu link para liberar a copia.",
         "afiliado_reativado": "Sua afiliacao foi reativada com sucesso.",
         "afiliado_termos_aceitos": "Termos e condicoes aceitos com sucesso para o programa de afiliados.",
         "afiliado_existente": "Sua conta ja esta afiliada.",
         "afiliado_termos_obrigatorios": "Para liberar sua indicacao, aceite os Termos e Condicoes do programa.",
         "afiliado_slug_invalido": "Link invalido. Use apenas letras minusculas, numeros e hifen (2 a 60 caracteres).",
         "afiliado_slug_indisponivel": "Este link ja esta em uso por outro afiliado.",
-        "afiliado_link_sem_alteracao": "Seu link de afiliado ja esta com esse valor.",
+        "afiliado_link_sem_alteracao": "Seu link de afiliado ja esta salvo com esse valor.",
+        "afiliado_link_confirmado": "Link salvo com sucesso. Copia liberada.",
         "afiliado_link_atualizado": "Link de afiliado atualizado com sucesso.",
         "afiliado_erro": "Nao foi possivel ativar sua afiliacao agora. Tente novamente."
     }
@@ -3278,6 +3301,21 @@ def cliente_area():
 
     afiliado_cliente = buscar_afiliado_por_email(email, apenas_ativos=False)
     afiliado_cliente_view = montar_dados_afiliado_cliente(afiliado_cliente)
+    affiliate_copy_pending_steps = []
+    if not afiliado_cliente_view:
+        affiliate_copy_pending_steps.extend([
+            "Criar sua afiliacao.",
+            "Salvar seu link de afiliado.",
+            "Aceitar os Termos e Condicoes do programa."
+        ])
+    else:
+        if not afiliado_cliente_view.get("ativo"):
+            affiliate_copy_pending_steps.append("Ativar ou reativar sua afiliacao.")
+        if not afiliado_cliente_view.get("link_saved"):
+            affiliate_copy_pending_steps.append("Salvar seu link de afiliado.")
+        if not afiliado_cliente_view.get("terms_accepted"):
+            affiliate_copy_pending_steps.append("Aceitar os Termos e Condicoes do programa.")
+    affiliate_copy_ready = bool(afiliado_cliente_view and not affiliate_copy_pending_steps)
 
     return render_template(
         "client_area.html",
@@ -3297,6 +3335,8 @@ def cliente_area():
         ultimo_pedido=ultimo_pedido,
         upsell_plans=upsell_plans,
         afiliado_cliente=afiliado_cliente_view,
+        affiliate_copy_ready=affiliate_copy_ready,
+        affiliate_copy_pending_steps=affiliate_copy_pending_steps,
         affiliate_commission_percent=int(AFFILIATE_COMMISSION_PERCENT)
     )
 

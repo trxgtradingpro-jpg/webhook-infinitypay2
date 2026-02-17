@@ -1024,11 +1024,39 @@
       line-height:1.45;
       font-weight:800;
     }
+    .affiliate-link-copy[disabled],
     .affiliate-activate[disabled]{
       opacity:.75;
       cursor:not-allowed;
       transform:none;
       filter:none;
+    }
+    .affiliate-copy-hint{
+      margin:0;
+      border-radius:10px;
+      padding:10px 11px;
+      font-size:12px;
+      line-height:1.45;
+      font-weight:800;
+    }
+    .affiliate-copy-hint.warn{
+      border:1px solid rgba(255,106,106,.34);
+      background:linear-gradient(180deg, rgba(255,106,106,.12), rgba(160,26,42,.14));
+      color:#ffd5d9;
+    }
+    .affiliate-copy-hint.ok{
+      border:1px solid rgba(35,176,11,.34);
+      background:linear-gradient(180deg, rgba(35,176,11,.12), rgba(29,143,9,.14));
+      color:#cfffd2;
+    }
+    .affiliate-copy-hint strong{
+      font-weight:1000;
+    }
+    .affiliate-copy-hint ul{
+      margin:6px 0 0;
+      padding-left:18px;
+      display:grid;
+      gap:4px;
     }
     .affiliate-form{
       display:grid;
@@ -1081,6 +1109,16 @@
       font-size:12px;
       line-height:1.4;
       font-weight:700;
+    }
+    .affiliate-terms-cta{
+      border-color:rgba(35,176,11,.52);
+      background:linear-gradient(180deg, rgba(35,176,11,.96), rgba(29,143,9,.96));
+      color:#03150f;
+      width:fit-content;
+      min-width:220px;
+      justify-self:center;
+      padding:10px 20px;
+      box-shadow:0 12px 24px rgba(35,176,11,.30), inset 0 1px 0 rgba(255,255,255,.30);
     }
     .upsell-intro{
       margin:0;
@@ -1506,8 +1544,27 @@
               value="{{ afiliado_cliente.link_publico }}"
               readonly
             >
-            <button type="button" id="affiliateCopyBtn" class="affiliate-link-copy">Copiar link</button>
+            <button
+              type="button"
+              id="affiliateCopyBtn"
+              class="affiliate-link-copy"
+              data-copy-ready="{{ '1' if affiliate_copy_ready else '0' }}"
+              data-blocked-message="{% if affiliate_copy_pending_steps %}Falta: {{ affiliate_copy_pending_steps | join(' ') }}{% else %}Falta concluir a ativacao do afiliado.{% endif %}"
+              {% if not affiliate_copy_ready %}disabled aria-disabled="true"{% endif %}
+            >Copiar link</button>
           </div>
+          {% if affiliate_copy_ready %}
+            <p class="affiliate-copy-hint ok" id="affiliateCopyHint">Link liberado para copia.</p>
+          {% else %}
+            <div class="affiliate-copy-hint warn" id="affiliateCopyHint">
+              <strong>Para copiar seu link, falta:</strong>
+              <ul>
+                {% for step in affiliate_copy_pending_steps %}
+                  <li>{{ step }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
           <p class="affiliate-muted">
             Compartilhe este link: <a href="{{ afiliado_cliente.link_publico }}" target="_blank" rel="noopener noreferrer">{{ afiliado_cliente.link_publico }}</a>
           </p>
@@ -1546,13 +1603,21 @@
                 <input type="checkbox" name="accept_affiliate_terms" value="1" required>
                 <span>Para manter a indicacao liberada, confirme o aceite dos <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a>.</span>
               </label>
-              <button type="submit" class="affiliate-activate">Aceitar termos</button>
+              <button type="submit" class="affiliate-activate affiliate-terms-cta">Aceitar termos</button>
             </form>
           {% endif %}
         {% else %}
           <p class="affiliate-muted">
             Sua conta ainda nao esta afiliada. Ative abaixo e gere agora seu link de indicacao.
           </p>
+          <div class="affiliate-copy-hint warn">
+            <strong>Para copiar seu link, falta:</strong>
+            <ul>
+              {% for step in affiliate_copy_pending_steps %}
+                <li>{{ step }}</li>
+              {% endfor %}
+            </ul>
+          </div>
           <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label class="affiliate-terms-check">
@@ -2278,6 +2343,7 @@
       if (!copyBtn || !field) return;
 
       const originalLabel = copyBtn.textContent;
+      const copyReady = copyBtn.getAttribute("data-copy-ready") === "1";
       const setLabel = (text) => {
         copyBtn.textContent = text;
         setTimeout(() => {
@@ -2286,6 +2352,11 @@
       };
 
       copyBtn.addEventListener("click", async () => {
+        if (!copyReady || copyBtn.disabled) {
+          setLabel("Bloqueado");
+          return;
+        }
+
         const value = (field.value || "").trim();
         if (!value) return;
 
