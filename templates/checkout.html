@@ -240,6 +240,7 @@
     {% endif %}
 
     <form method="POST" action="/comprar">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
       <label for="nome">Nome completo</label>
       <input

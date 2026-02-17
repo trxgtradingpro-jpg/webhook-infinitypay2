@@ -3068,6 +3068,7 @@ def checkout(plano):
 
     return render_template(
         "checkout.html",
+        csrf_token=gerar_csrf_token(),
         plano=plano,
         plano_base=plano_base,
         is_free_plan=PLANOS[plano_base]["preco"] <= 0,
@@ -3084,6 +3085,10 @@ def comprar_get():
 # Ã¢Å“â€¦ POST real
 @app.route("/comprar", methods=["POST"])
 def comprar():
+    token = (request.form.get("csrf_token") or "").strip()
+    if not validar_csrf_token(token):
+        return "Falha de validacao CSRF.", 403
+
     nome_raw = request.form.get("nome")
     email_raw = request.form.get("email")
     telefone_raw = request.form.get("telefone")

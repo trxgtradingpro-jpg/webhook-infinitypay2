@@ -18,6 +18,7 @@ if (!WA_SENDER_TOKEN) {
 }
 
 const app = express();
+app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
 
 let sock = null;
@@ -133,7 +134,12 @@ async function connectWhatsApp() {
   }
 }
 
-app.get('/', (req, res) => {
+app.get('/healthz', (_req, res) => {
+  return res.json({ ok: true });
+});
+
+app.get('/', authMiddleware, (req, res) => {
+  res.set('Cache-Control', 'no-store');
   return res.json({
     ok: true,
     connected: isConnected,
@@ -141,7 +147,8 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/qr', (req, res) => {
+app.get('/qr', authMiddleware, (req, res) => {
+  res.set('Cache-Control', 'no-store');
   return res.json({
     ok: true,
     qr: currentQr
