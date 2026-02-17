@@ -435,6 +435,10 @@ html[data-theme="light"] .chart-head {
   border-bottom-color: rgba(15, 23, 42, 0.14) !important;
 }
 
+html[data-theme="light"] .chart-contract-control label {
+  color: #eef6ff !important;
+}
+
 html[data-theme="light"] :is(
   .vignette,
   .grid-bg,

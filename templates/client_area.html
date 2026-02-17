@@ -503,6 +503,10 @@
       font-size:clamp(13px, .9vw, 14px);
       letter-spacing:-.2px;
     }
+    .line.line-compact span{
+      min-width:0;
+      margin-right:4px;
+    }
     .kpi{
       display:flex;
       gap:10px;
@@ -1135,7 +1139,7 @@
           <span class="pill warn">Expirados: {{ (pedidos|length) - (ativos|length) }}</span>
         </div>
         {% if ultimo_pedido %}
-          <p class="line" style="margin-top:10px;"><span>Plano mais recente:</span> <strong>{{ ultimo_pedido.plano_nome }}</strong></p>
+          <p class="line line-compact" style="margin-top:10px;"><span>Plano mais recente:</span> <strong>{{ ultimo_pedido.plano_nome }}</strong></p>
           <p class="line"><span>Expira em:</span> {{ ultimo_pedido.expira_em_fmt }}</p>
         {% else %}
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
