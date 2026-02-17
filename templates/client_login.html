@@ -257,6 +257,7 @@
       const passInput = document.getElementById("senha");
       const passLabel = document.getElementById("senhaLabel");
       const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      const csrfToken = "{{ csrf_token }}";
       let timer = null;
       let requestSeq = 0;
       let setupMode = false;
@@ -313,9 +314,16 @@
         setStatus("", "Verificando e-mail...");
         const seq = ++requestSeq;
         try {
-          const resp = await fetch(`/api/client/email-status?email=${encodeURIComponent(email)}`, {
+          const params = new URLSearchParams({
+            email: email,
+            csrf_token: csrfToken
+          });
+          const resp = await fetch(`/api/client/email-status?${params.toString()}`, {
             method: "GET",
-            headers: {"Accept": "application/json"},
+            headers: {
+              "Accept": "application/json",
+              "X-CSRF-Token": csrfToken
+            },
             cache: "no-store",
             credentials: "same-origin"
           });

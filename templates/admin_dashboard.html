@@ -113,6 +113,8 @@
                   <span class="okfree">Pago (gratis)</span>
                 {% elif p.status == 'PAGO' %}
                   <span class="ok">Pago</span>
+                {% elif p.status == 'PROCESSANDO' %}
+                  <span class="pend">Processando</span>
                 {% else %}
                   <span class="pend">Pendente</span>
                 {% endif %}
@@ -131,7 +133,12 @@
               </td>
               <td class="actions-cell">
                 <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
-                {% if p.whatsapp_link %} | <a href="/admin/whatsapp/{{ p.order_id }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>{% endif %}
+                {% if p.whatsapp_link %}
+                  | <form method="POST" action="/admin/whatsapp/{{ p.order_id }}" class="actions-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn-link">WhatsApp</button>
+                  </form>
+                {% endif %}
                 {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}
                 {% if p.tem_duplicados %}
                   <br><span class="alert">{{ p.duplicados_total }} duplicado(s)</span>

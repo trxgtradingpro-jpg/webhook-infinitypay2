@@ -1,0 +1,88 @@
+TRX PRO - Security Audit Notes
+Date: 2026-02-17
+
+Important
+- No internet-facing system can be guaranteed as "100% impenetrable".
+- This revision hardens key attack surfaces and reduces practical risk.
+
+What was hardened in this revision
+1. Webhook anti-race and integrity
+- Added processing lock flow for orders using status PROCESSANDO.
+- Added DB helpers:
+  - reservar_order_para_processamento(order_id)
+  - restaurar_order_para_pendente(order_id)
+- Webhook now reserves the order before heavy processing, preventing duplicate concurrent handling.
+- If processing fails, order is restored to PENDENTE.
+- Webhook now validates Content-Type JSON and returns 500 when email dispatch fails (instead of returning false success).
+
+2. Admin route hardening
+- Added optional admin IP allowlist via env var ADMIN_IP_ALLOWLIST.
+- Protects /admin/*, /api/analytics/* and /dashboard when allowlist is configured.
+
+3. CSRF and origin hardening
+- Added same-origin validation for sensitive POST/PUT/PATCH/DELETE routes.
+- Sensitive routes now reject cross-origin forged requests.
+- /api/client/email-status now requires CSRF token.
+- Client login and recover pages now send CSRF token in query + header for email-status checks.
+
+4. Session/cookie hardening
+- Session cookie SameSite is normalized and validated (Lax/Strict/None).
+- Unsafe None without Secure is automatically downgraded to Lax.
+- Added SESSION_COOKIE_NAME, SESSION_COOKIE_PATH and SESSION_REFRESH_EACH_REQUEST=False.
+
+5. Password hashing hardening
+- Added configurable PASSWORD_HASH_METHOD (default: scrypt).
+- Replaced direct generate_password_hash calls with centralized secure helper.
+
+6. Admin action safety
+- Changed /admin/whatsapp/<order_id> from GET to POST.
+- Updated admin dashboard action to submit via form + CSRF token.
+- Removed state-changing action over GET (CSRF risk reduction).
+
+7. Response/header hardening
+- Added no-store cache headers for /api/client and /api/analytics.
+- Added X-Robots-Tag noindex,nofollow on admin/login/private areas.
+
+8. WhatsApp sender service hardening (Node)
+- Added timing-safe bearer token comparison.
+- Added auth endpoint rate limiting by IP.
+- Added basic hardening headers (nosniff, frame deny, referrer policy, permissions policy).
+
+Operational recommendations to improve even more
+1. Configure ADMIN_IP_ALLOWLIST immediately
+- Example: ADMIN_IP_ALLOWLIST=177.10.20.30,200.147.10.0/24
+
+2. Use strong secrets (required)
+- ADMIN_SECRET with 32+ random chars.
+- Set BACKUP_ENCRYPTION_PASSWORD explicitly (do not rely on fallback).
+
+3. Enforce HTTPS everywhere
+- Keep SESSION_COOKIE_SECURE=true in production.
+- Use HSTS at app and reverse proxy levels.
+
+4. Add WAF and perimeter controls
+- Cloudflare or equivalent with bot/rate protections.
+- Geo/IP restrictions for admin endpoints if possible.
+
+5. Database hardening
+- Restrict DB user privileges to minimum required.
+- Restrict inbound DB access to app hosts only.
+- Enable encrypted backups and periodic restore tests.
+
+6. Logging and monitoring
+- Centralize logs and alerts for failed logins, webhook errors, and admin attempts.
+- Add anomaly alerts for suspicious spikes in auth/API traffic.
+
+7. Secrets management
+- Store secrets in a vault or secure runtime env.
+- Rotate ADMIN_SECRET, webhook tokens, and sender tokens periodically.
+
+8. Security testing cadence
+- Run periodic SAST/dependency checks.
+- Run targeted penetration tests on login, webhook, and admin flows.
+
+Validation executed in this revision
+- Python syntax check: OK
+  - python -m py_compile app.py database.py email_utils.py backup_utils.py whatsapp_sender.py
+- Route and CSRF verification pass: OK
+- Note: node --check was not executed because node command is not available in this environment.

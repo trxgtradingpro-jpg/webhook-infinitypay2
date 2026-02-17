@@ -1,5 +1,6 @@
 const express = require('express');
 const pino = require('pino');
+const crypto = require('crypto');
 const {
   default: makeWASocket,
   DisconnectReason,
@@ -20,6 +21,13 @@ if (!WA_SENDER_TOKEN) {
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 let sock = null;
 let isConnected = false;
@@ -28,6 +36,34 @@ let isConnecting = false;
 let reconnectTimer = null;
 
 const lastSentByNumber = new Map();
+const authRequestsByIp = new Map();
+const MAX_AUTH_REQUESTS_PER_MINUTE = Number(process.env.MAX_AUTH_REQUESTS_PER_MINUTE || 120);
+
+function safeTokenEquals(a, b) {
+  const one = Buffer.from(String(a || ''), 'utf8');
+  const two = Buffer.from(String(b || ''), 'utf8');
+  if (one.length !== two.length) return false;
+  return crypto.timingSafeEqual(one, two);
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || req.socket?.remoteAddress || req.ip || 'unknown';
+}
+
+function isAuthRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const timestamps = authRequestsByIp.get(ip) || [];
+  const filtered = timestamps.filter((ts) => now - ts < windowMs);
+  if (filtered.length >= Math.max(20, MAX_AUTH_REQUESTS_PER_MINUTE)) {
+    authRequestsByIp.set(ip, filtered);
+    return true;
+  }
+  filtered.push(now);
+  authRequestsByIp.set(ip, filtered);
+  return false;
+}
 
 function parseBearerToken(req) {
   const auth = req.headers.authorization || '';
@@ -37,8 +73,12 @@ function parseBearerToken(req) {
 }
 
 function authMiddleware(req, res, next) {
+  const ip = getClientIp(req);
+  if (isAuthRateLimited(ip)) {
+    return res.status(429).json({ ok: false, error: 'rate_limited' });
+  }
   const token = parseBearerToken(req);
-  if (!token || token !== WA_SENDER_TOKEN) {
+  if (!token || !safeTokenEquals(token, WA_SENDER_TOKEN)) {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   }
   next();

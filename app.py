@@ -11,7 +11,7 @@ import time
 import base64
 from datetime import datetime, timedelta, timezone
 import math
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import re
 import threading
 import hmac
@@ -19,6 +19,7 @@ import hashlib
 import secrets
 from collections import defaultdict, deque
 from zoneinfo import ZoneInfo
+from ipaddress import ip_address, ip_network
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 from cryptography.fernet import Fernet, InvalidToken
@@ -33,6 +34,8 @@ from database import (
     salvar_order,
     buscar_order_por_id,
     marcar_order_processada,
+    reservar_order_para_processamento,
+    restaurar_order_para_pendente,
     registrar_falha_email,
     atualizar_order_afiliado,
     transacao_ja_processada,
@@ -104,6 +107,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 # ======================================================
 
 ADMIN_SECRET = os.environ["ADMIN_SECRET"]
+if len(ADMIN_SECRET.strip()) < 32:
+    print("[SECURITY] ADMIN_SECRET curto detectado. Recomendado usar 32+ caracteres aleatórios.", flush=True)
 app.secret_key = ADMIN_SECRET
 ADMIN_PASSWORD = (os.environ.get("ADMIN_PASSWORD") or "").strip()
 ADMIN_PASSWORD_HASH = (os.environ.get("ADMIN_PASSWORD_HASH") or "").strip()
@@ -147,13 +152,21 @@ ALLOW_LEGACY_UNSIGNED_WEBHOOK = (os.environ.get("ALLOW_LEGACY_UNSIGNED_WEBHOOK",
 
 DEFAULT_SECURE_COOKIE = PUBLIC_BASE_URL.startswith("https://")
 SESSION_COOKIE_SECURE = (os.environ.get("SESSION_COOKIE_SECURE") or ("true" if DEFAULT_SECURE_COOKIE else "false")).strip().lower() == "true"
-SESSION_COOKIE_SAMESITE = (os.environ.get("SESSION_COOKIE_SAMESITE") or "Lax").strip()
+SESSION_COOKIE_SAMESITE = (os.environ.get("SESSION_COOKIE_SAMESITE") or "Lax").strip().capitalize()
+if SESSION_COOKIE_SAMESITE not in {"Lax", "Strict", "None"}:
+    SESSION_COOKIE_SAMESITE = "Lax"
+if SESSION_COOKIE_SAMESITE == "None" and not SESSION_COOKIE_SECURE:
+    SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_TTL_HOURS = int(os.environ.get("SESSION_TTL_HOURS", "8"))
+SESSION_COOKIE_NAME = (os.environ.get("SESSION_COOKIE_NAME") or "trx_session").strip() or "trx_session"
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SECURE=SESSION_COOKIE_SECURE,
     SESSION_COOKIE_SAMESITE=SESSION_COOKIE_SAMESITE,
+    SESSION_COOKIE_NAME=SESSION_COOKIE_NAME,
+    SESSION_COOKIE_PATH="/",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=max(1, SESSION_TTL_HOURS)),
+    SESSION_REFRESH_EACH_REQUEST=False,
     MAX_CONTENT_LENGTH=int(os.environ.get("MAX_CONTENT_LENGTH_BYTES", str(2 * 1024 * 1024))),
 )
 
@@ -211,6 +224,8 @@ BACKUP_MINUTE = int(os.environ.get("BACKUP_MINUTE", "59"))
 BACKUP_OUTPUT_DIR = os.environ.get("BACKUP_OUTPUT_DIR", "backups").strip() or "backups"
 BACKUP_EMAIL_TO = os.environ.get("BACKUP_EMAIL_TO", "trxtradingpro@gmail.com").strip()
 BACKUP_ENCRYPTION_PASSWORD = (os.environ.get("BACKUP_ENCRYPTION_PASSWORD") or ADMIN_SECRET).strip()
+if not (os.environ.get("BACKUP_ENCRYPTION_PASSWORD") or "").strip():
+    print("[SECURITY] BACKUP_ENCRYPTION_PASSWORD nao definido; usando ADMIN_SECRET como fallback.", flush=True)
 BACKUP_RETENTION_DAYS = int(os.environ.get("BACKUP_RETENTION_DAYS", "15"))
 BACKUP_WORKER_ENABLED = (os.environ.get("BACKUP_WORKER_ENABLED", "true").strip().lower() == "true")
 _backup_lock = threading.Lock()
@@ -224,6 +239,37 @@ _failed_login_lock = threading.Lock()
 
 _request_rate_limit = {}
 _request_rate_lock = threading.Lock()
+
+ADMIN_IP_ALLOWLIST_RAW = (os.environ.get("ADMIN_IP_ALLOWLIST") or "").strip()
+ADMIN_IP_ALLOWLIST = []
+for item in ADMIN_IP_ALLOWLIST_RAW.split(","):
+    trecho = (item or "").strip()
+    if not trecho:
+        continue
+    try:
+        if "/" in trecho:
+            ADMIN_IP_ALLOWLIST.append(ip_network(trecho, strict=False))
+        else:
+            ADMIN_IP_ALLOWLIST.append(ip_address(trecho))
+    except ValueError:
+        print(f"[SECURITY] Ignorando item invalido em ADMIN_IP_ALLOWLIST: {trecho}", flush=True)
+
+BASE_ORIGIN = urlparse(PUBLIC_BASE_URL)
+PUBLIC_BASE_ORIGIN = f"{BASE_ORIGIN.scheme}://{BASE_ORIGIN.netloc}".rstrip("/")
+SENSITIVE_POST_PATHS = {
+    "/comprar",
+    "/login",
+    "/login/recuperar-senha",
+    "/login/primeiro-acesso",
+    "/login/confirmar-codigo",
+    "/logout",
+    "/minha-conta/afiliados/ativar",
+    "/minha-conta/afiliados/editar-link",
+    "/minha-conta/afiliados/preferencia-comissao",
+}
+PASSWORD_HASH_METHOD = (os.environ.get("PASSWORD_HASH_METHOD") or "scrypt").strip().lower()
+if PASSWORD_HASH_METHOD not in {"scrypt", "pbkdf2:sha256"}:
+    PASSWORD_HASH_METHOD = "scrypt"
 
 CLIENT_SESSION_EMAIL_KEY = "cliente_email"
 CLIENT_PENDING_EMAIL_KEY = "cliente_pending_email"
@@ -1440,7 +1486,7 @@ def garantir_conta_cliente_para_order(order, enviar_email_credenciais=False):
         return False, None
 
     senha_temporaria = gerar_senha_temporaria()
-    senha_hash = generate_password_hash(senha_temporaria)
+    senha_hash = gerar_hash_senha(senha_temporaria)
     resultado = criar_ou_atualizar_conta_cliente(
         email=email,
         nome=nome_enc,
@@ -1530,7 +1576,7 @@ def iniciar_recuperacao_senha_cliente(email):
         return False
 
     senha_temporaria = gerar_senha_temporaria()
-    senha_hash = generate_password_hash(senha_temporaria)
+    senha_hash = gerar_hash_senha(senha_temporaria)
     ok_reset = forcar_reset_senha_conta_cliente(email, senha_hash)
     if not ok_reset:
         return False
@@ -2410,6 +2456,50 @@ def obter_ip_request():
     return (request.remote_addr or "").strip()
 
 
+def _ip_em_allowlist(ip_texto):
+    ip_norm = (ip_texto or "").strip()
+    if not ADMIN_IP_ALLOWLIST:
+        return True
+    try:
+        ip_obj = ip_address(ip_norm)
+        if getattr(ip_obj, "ipv4_mapped", None):
+            ip_obj = ip_obj.ipv4_mapped
+    except ValueError:
+        return False
+    for item in ADMIN_IP_ALLOWLIST:
+        if isinstance(item, type(ip_obj)) and ip_obj == item:
+            return True
+        try:
+            if ip_obj in item:
+                return True
+        except TypeError:
+            continue
+    return False
+
+
+def _origem_confiavel_request():
+    if not PUBLIC_BASE_ORIGIN:
+        return True
+    origem = (request.headers.get("Origin") or "").strip()
+    referer = (request.headers.get("Referer") or "").strip()
+    candidato = origem or referer
+    if not candidato:
+        # Alguns navegadores/rede removem Origin/Referer.
+        return True
+    try:
+        parsed = urlparse(candidato)
+    except Exception:
+        return False
+    if not parsed.scheme or not parsed.netloc:
+        return False
+    origem_norm = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    return hmac.compare_digest(origem_norm, PUBLIC_BASE_ORIGIN)
+
+
+def gerar_hash_senha(valor):
+    return generate_password_hash(valor, method=PASSWORD_HASH_METHOD)
+
+
 def parse_relatorio_mensal_nome(arquivo):
     match = REGEX_RELATORIO_MENSAL.match((arquivo or "").strip())
     if not match:
@@ -2492,6 +2582,19 @@ def aplicar_protecoes_request():
     path = request.path or ""
     method = request.method.upper()
     ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
+    admin_surface = path.startswith("/admin") or path.startswith("/api/analytics") or path == "/dashboard"
+
+    if admin_surface and not _ip_em_allowlist(ip):
+        return "Acesso administrativo bloqueado para este IP.", 403
+
+    if method in {"POST", "PUT", "PATCH", "DELETE"}:
+        sensitive_post = (
+            path in SENSITIVE_POST_PATHS
+            or path.startswith("/admin")
+            or path.startswith("/api/analytics")
+        )
+        if sensitive_post and not _origem_confiavel_request():
+            return "Origem da requisição não autorizada.", 403
 
     if not cliente_logado():
         caminho_publico = not path.startswith("/admin") and not path.startswith("/api")
@@ -2523,7 +2626,7 @@ def aplicar_protecoes_request():
             return "Muitas tentativas de login. Aguarde alguns segundos.", 429
 
     if method == "GET" and path == "/api/client/email-status":
-        if excedeu_rate_limit(f"get_cliente_email_status:{ip}", limite=80, janela_segundos=60):
+        if excedeu_rate_limit(f"get_cliente_email_status:{ip}", limite=40, janela_segundos=60):
             return jsonify({"ok": False, "error": "rate_limited"}), 429
 
     if method == "POST" and path == "/api/client/lead-upgrade-click":
@@ -2579,11 +2682,16 @@ def aplicar_headers_seguranca(response):
     if request.path.startswith("/admin"):
         response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         response.headers.setdefault("Pragma", "no-cache")
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     if (
         request.path.startswith("/login")
         or request.path.startswith("/minha-conta")
         or request.path.startswith("/sucesso")
     ):
+        response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        response.headers.setdefault("Pragma", "no-cache")
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
+    if request.path.startswith("/api/client") or request.path.startswith("/api/analytics"):
         response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         response.headers.setdefault("Pragma", "no-cache")
 
@@ -2781,7 +2889,20 @@ def checkout_sucesso(order_id):
 
 @app.route("/api/client/email-status")
 def api_cliente_email_status():
+    token = (
+        request.headers.get(CSRF_HEADER_NAME)
+        or request.args.get("csrf_token")
+        or ""
+    ).strip()
+    if not validar_csrf_token(token):
+        return jsonify({"ok": False, "error": "csrf_invalid"}), 403
+
     email = normalizar_email(request.args.get("email") or "")
+    ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
+    chave_email = hashlib.sha256(f"{ip}:{email}".encode("utf-8")).hexdigest()[:32]
+    if excedeu_rate_limit(f"get_cliente_email_status_pair:{chave_email}", limite=20, janela_segundos=60):
+        return jsonify({"ok": False, "error": "rate_limited"}), 429
+
     status = verificar_status_email_cliente(email)
     if not status["valid"]:
         return jsonify({
@@ -3010,23 +3131,17 @@ def cliente_recuperar_senha():
         email_form = normalizar_email(request.form.get("email") or "")
         if not EMAIL_RE.fullmatch(email_form):
             erro = "Informe um e-mail v\u00e1lido."
-            enviado = False
+        else:
             try:
                 ok = iniciar_recuperacao_senha_cliente(email_form)
-                if ok:
-                    enviado = True
-                    info = "Enviamos uma senha tempor\u00e1ria para seu e-mail."
-                else:
-                    provisionado = provisionar_conta_cliente_por_email(email_form)
-                    if provisionado:
-                        enviado = True
-                        info = "Criamos sua conta e enviamos a senha tempor\u00e1ria para seu e-mail."
+                if not ok:
+                    provisionar_conta_cliente_por_email(email_form)
             except Exception as exc:
                 print(f"[CLIENTE] Falha ao recuperar senha para {email_form}: {exc}", flush=True)
                 erro = "N\u00e3o foi poss\u00edvel processar agora. Tente novamente em instantes."
 
-            if not enviado and not erro:
-                erro = "Este e-mail n\u00e3o existe no banco."
+            if not erro:
+                info = "Se o e-mail estiver cadastrado, enviaremos as instruções para recuperação."
 
     return render_template(
         "client_recover_password.html",
@@ -3073,7 +3188,7 @@ def cliente_primeiro_acesso():
         elif conta.get("password_hash") and check_password_hash(conta["password_hash"], senha_nova):
             erro = "A nova senha precisa ser diferente da senha tempor\u00e1ria."
         else:
-            senha_hash_nova = generate_password_hash(senha_nova)
+            senha_hash_nova = gerar_hash_senha(senha_nova)
             ok_confirm = confirmar_senha_conta_cliente(email, senha_hash_nova)
             if not ok_confirm:
                 erro = "Falha ao criar sua senha. Tente novamente."
@@ -3916,6 +4031,9 @@ def webhook():
     if not verificar_token_webhook():
         return jsonify({"msg": "N\u00e3o autorizado"}), 401
 
+    if not request.is_json:
+        return jsonify({"msg": "Content-Type inv\u00e1lido"}), 400
+
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({"msg": "Payload inv\u00e1lido"}), 400
@@ -3935,7 +4053,15 @@ def webhook():
         return jsonify({"msg": "J\u00e1 processado"}), 200
 
     order = buscar_order_por_id(order_id)
-    if not order or order.get("status") != "PENDENTE":
+    if not order:
+        return jsonify({"msg": "Pedido inv\u00e1lido"}), 200
+
+    status_order = (order.get("status") or "").strip().upper()
+    if status_order == "PAGO":
+        return jsonify({"msg": "J\u00e1 processado"}), 200
+    if status_order == "PROCESSANDO":
+        return jsonify({"msg": "Pedido em processamento"}), 200
+    if status_order != "PENDENTE":
         return jsonify({"msg": "Pedido inv\u00e1lido"}), 200
 
     plano_id = order.get("plano")
@@ -3946,32 +4072,44 @@ def webhook():
     if preco_esperado > 0 and paid_amount < preco_esperado:
         return jsonify({"msg": "Pagamento insuficiente"}), 400
 
+    if not reservar_order_para_processamento(order_id):
+        return jsonify({"msg": "Pedido em processamento"}), 200
+
     arquivo = None
+    processamento_concluido = False
     try:
         arquivo, senha = compactar_plano(plano_info["pasta"], PASTA_SAIDA)
         sucesso = enviar_email_com_retry(order, plano_info, arquivo, senha)
-        if sucesso:
-            marcar_order_processada(order_id)
-            marcar_transacao_processada(transaction_nsu)
-            order_pago = buscar_order_por_id(order_id)
-            try:
-                garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
-            except Exception as exc:
-                print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
-            try:
-                registrar_comissao_pedido_afiliado(order_pago, transaction_nsu=transaction_nsu)
-            except Exception as exc:
-                print(f"[AFILIADOS] Falha ao registrar comissao do webhook {order_id}: {exc}", flush=True)
-            try:
-                conceder_bonus_indicacao_pedido(order_pago)
-            except Exception as exc:
-                print(f"[AFILIADOS] Falha ao conceder bonus do webhook {order_id}: {exc}", flush=True)
-            registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
-            agendar_whatsapp_pos_pago(order_pago)
+        if not sucesso:
+            raise RuntimeError("Falha ao enviar e-mail de acesso do pedido.")
+
+        marcar_order_processada(order_id)
+        marcar_transacao_processada(transaction_nsu)
+        order_pago = buscar_order_por_id(order_id)
+        try:
+            garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
+        except Exception as exc:
+            print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
+        try:
+            registrar_comissao_pedido_afiliado(order_pago, transaction_nsu=transaction_nsu)
+        except Exception as exc:
+            print(f"[AFILIADOS] Falha ao registrar comissao do webhook {order_id}: {exc}", flush=True)
+        try:
+            conceder_bonus_indicacao_pedido(order_pago)
+        except Exception as exc:
+            print(f"[AFILIADOS] Falha ao conceder bonus do webhook {order_id}: {exc}", flush=True)
+        registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
+        agendar_whatsapp_pos_pago(order_pago)
+        processamento_concluido = True
     except Exception as exc:
         print(f"Falha ao processar webhook {order_id}: {exc}", flush=True)
         return jsonify({"msg": "Erro no processamento"}), 500
     finally:
+        if not processamento_concluido:
+            try:
+                restaurar_order_para_pendente(order_id)
+            except Exception as exc:
+                print(f"[WEBHOOK] Falha ao restaurar status pendente {order_id}: {exc}", flush=True)
         if arquivo and os.path.exists(arquivo):
             os.remove(arquivo)
 
@@ -4537,7 +4675,7 @@ def api_analytics_chart():
     })
 
 
-@app.route("/admin/whatsapp/<order_id>")
+@app.route("/admin/whatsapp/<order_id>", methods=["POST"])
 def admin_whatsapp(order_id):
     if not session.get("admin"):
         return redirect("/admin/login")
@@ -4658,14 +4796,3 @@ def admin_pedido(order_id):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
-
-
-
-
-
-
-
-

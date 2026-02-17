@@ -50,6 +50,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS whatsapp_auto_dispatches (
@@ -479,9 +480,47 @@ def marcar_order_processada(order_id):
         WHERE order_id = %s
     """, (order_id,))
 
+    atualizado = cur.rowcount > 0
     conn.commit()
     cur.close()
     conn.close()
+    return atualizado
+
+
+def reservar_order_para_processamento(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE orders
+        SET status = 'PROCESSANDO'
+        WHERE order_id = %s
+          AND status = 'PENDENTE'
+    """, (order_id,))
+
+    reservado = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return reservado
+
+
+def restaurar_order_para_pendente(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE orders
+        SET status = 'PENDENTE'
+        WHERE order_id = %s
+          AND status = 'PROCESSANDO'
+    """, (order_id,))
+
+    restaurado = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return restaurado
 
 
 def registrar_falha_email(order_id, tentativas, erro):
