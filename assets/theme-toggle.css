@@ -393,6 +393,7 @@ html[data-theme="light"] .result-plan-box.plan-black .result-price {
   color: #cfa4ff !important;
 }
 
+html[data-theme="light"] .back,
 html[data-theme="light"] .back-link,
 html[data-theme="light"] .ghost-btn,
 html[data-theme="light"] .result-link,
