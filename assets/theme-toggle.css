@@ -403,11 +403,22 @@ html[data-theme="light"] .cta-secondary {
   background: rgba(255, 255, 255, 0.88) !important;
 }
 
+html[data-theme="light"] .result-card .cta-secondary.result-free-cta {
+  color: #2c1800 !important;
+  border-color: rgba(255, 138, 31, 0.62) !important;
+  background: linear-gradient(180deg, #ffbd6e 0%, #ff9e2f 62%, #f07b16 100%) !important;
+  box-shadow: 0 12px 28px rgba(255, 138, 31, 0.30) !important;
+}
+
 html[data-theme="light"] .brand,
 html[data-theme="light"] .progress-meta,
 html[data-theme="light"] .hint,
 html[data-theme="light"] .next-level {
   color: #334155 !important;
+}
+
+html[data-theme="light"] .top :is(h1, .title, .title span, .subtitle) {
+  color: #eef6ff !important;
 }
 
 html[data-theme="light"] section.plans .title .line-1 {

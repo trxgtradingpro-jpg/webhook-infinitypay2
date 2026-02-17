@@ -341,8 +341,29 @@
     }
     .result-plan-box.plan-black .result-plan,
     .result-plan-box.plan-black .result-price{ color:#cfa4ff; }
-    .result-free-cta{
-      margin-top:12px;
+    .cta-secondary.result-free-cta{
+      margin:12px auto 0;
+      width:auto;
+      min-width: 240px;
+      max-width: min(100%, 320px);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 18px;
+      border-radius:999px;
+      border:1px solid rgba(255,170,96,.62);
+      background: linear-gradient(180deg, #ffbd6e 0%, #ff9e2f 62%, #f07b16 100%);
+      color:#2c1800;
+      font-weight:1000;
+      letter-spacing:.2px;
+      box-shadow: 0 12px 28px rgba(255,138,31,.30);
+    }
+    .cta-secondary.result-free-cta:hover{
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+    .cta-secondary.result-free-cta:active{
+      transform: translateY(0) scale(.99);
     }
     .next-level{
       margin-top:10px;
