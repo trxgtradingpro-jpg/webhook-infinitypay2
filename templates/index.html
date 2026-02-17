@@ -270,6 +270,25 @@
       position:relative;
       z-index:1;
     }
+    .hero-video-placeholder{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background:
+        radial-gradient(420px 180px at 50% 35%, rgba(35,176,11,.18), transparent 68%),
+        linear-gradient(180deg, #070c12 0%, #04070b 100%);
+      z-index:2;
+      transition: opacity .28s ease;
+    }
+    .hero-video-placeholder img{
+      width:min(132px, 28vw);
+      max-width:34%;
+      height:auto;
+      filter: drop-shadow(0 18px 34px rgba(0,0,0,.45));
+      user-select:none;
+      -webkit-user-drag:none;
+    }
     .hero-video iframe{
       width:100%;
       height:100%;
@@ -277,7 +296,10 @@
       display:block;
       opacity:0;
       transition: opacity .28s ease;
+      position:relative;
+      z-index:1;
     }
+    .hero-video.is-ready .hero-video-placeholder{ opacity:0; pointer-events:none; }
     .hero-video.is-ready iframe{ opacity:1; }
     @media (max-width: 700px){
       .logo-box{
@@ -1754,6 +1776,9 @@
       <div class="logo-wrap">
         <div class="logo-box">
           <div class="hero-video" id="heroVideo" data-video-id="19bR-OLADRU" data-loaded="0">
+            <div class="hero-video-placeholder" aria-hidden="true">
+              <img src="/assets/favicons/trx_bull_exact_favicon.ico" alt="" draggable="false">
+            </div>
             <iframe
               id="heroVideoFrame"
               title="TRX PRO video oficial"
@@ -2536,7 +2561,13 @@
 
       frame.addEventListener("load", () => {
         videoWrap.classList.add("is-ready");
+        videoWrap.dataset.loadError = "0";
       }, { once: true });
+
+      frame.addEventListener("error", () => {
+        videoWrap.classList.remove("is-ready");
+        videoWrap.dataset.loadError = "1";
+      });
 
       if (videoWrap.dataset.loaded === "1") return;
 

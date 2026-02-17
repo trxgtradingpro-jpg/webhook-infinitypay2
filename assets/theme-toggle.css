@@ -116,7 +116,7 @@ html[data-theme="light"] :is(
 html[data-theme="light"] .brand img,
 html[data-theme="light"] .title-logo {
   border-color: rgba(0, 0, 0, 0.76) !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: #000 !important;
 }
 
 html[data-theme="dark"] :is(input, select, textarea) {
