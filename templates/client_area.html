@@ -521,6 +521,67 @@
       gap:10px;
       flex-wrap:wrap;
     }
+    .card-wide{
+      grid-column:1 / -1;
+    }
+    .summary-grid{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+      gap:10px;
+    }
+    .summary-item{
+      border:1px solid rgba(178,204,235,.24);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(255,255,255,.03);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+      display:grid;
+      gap:6px;
+    }
+    .summary-item .s-label{
+      color:rgba(220,232,247,.76);
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.25px;
+    }
+    .summary-item .s-value{
+      color:#eef6ff;
+      font-size:17px;
+      font-weight:1000;
+      letter-spacing:-.2px;
+      line-height:1.08;
+    }
+    .summary-item .s-value.ok{
+      color:#9ff8c5;
+    }
+    .summary-item .s-value.warn{
+      color:#ffdba0;
+    }
+    .summary-item .s-value.info{
+      color:#9de8d9;
+    }
+    html[data-theme="light"] .summary-item{
+      background:rgba(15,23,42,.04) !important;
+      border-color:rgba(15,23,42,.18) !important;
+      box-shadow:none !important;
+    }
+    html[data-theme="light"] .summary-item .s-label{
+      color:#334155 !important;
+    }
+    html[data-theme="light"] .summary-item .s-value{
+      color:#0f172a !important;
+    }
+    html[data-theme="light"] .summary-item .s-value.ok{
+      color:#166534 !important;
+    }
+    html[data-theme="light"] .summary-item .s-value.warn{
+      color:#b45309 !important;
+    }
+    html[data-theme="light"] .summary-item .s-value.info{
+      color:#0f766e !important;
+    }
     .chart-wrap{
       width:100%;
       height:390px;
@@ -1261,6 +1322,50 @@
         {% else %}
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
         {% endif %}
+      </article>
+
+      <article class="card card-wide">
+        <h2>Resumo geral de tudo</h2>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="s-label">Historico total</span>
+            <span class="s-value info">{{ pedidos|length }} registro(s)</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Planos ativos</span>
+            <span class="s-value {{ 'ok' if (ativos|length) > 0 else 'warn' }}">{{ ativos|length }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Diagnostico de perfil</span>
+            <span class="s-value {{ 'ok' if diagnostico_concluido else 'warn' }}">{{ 'Concluido' if diagnostico_concluido else 'Pendente' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Afiliacao</span>
+            <span class="s-value {{ 'ok' if afiliado_cliente and afiliado_cliente.ativo else 'warn' }}">
+              {% if afiliado_cliente and afiliado_cliente.ativo %}Ativa{% elif afiliado_cliente %}Inativa{% else %}Nao ativa{% endif %}
+            </span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Curva de capital</span>
+            <span class="s-value {{ 'ok' if capital_chart and capital_chart.available else 'warn' }}">
+              {% if capital_chart and capital_chart.available %}Disponivel{% else %}Indisponivel{% endif %}
+            </span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Upgrade de planos</span>
+            <span class="s-value {{ 'ok' if upsell_plans else 'warn' }}">
+              {% if upsell_plans %}{{ upsell_plans|length }} opcao(oes){% else %}Sem sugestoes{% endif %}
+            </span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Notificacoes</span>
+            <span class="s-value {{ 'warn' if notification_count > 0 else 'ok' }}">{{ notification_count }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Ultimo plano</span>
+            <span class="s-value info">{{ ultimo_pedido.plano_nome if ultimo_pedido else 'Nenhum' }}</span>
+          </div>
+        </div>
       </article>
     </section>
 

@@ -364,6 +364,48 @@
       line-height: 1.12;
       max-width: min(92vw, 420px);
     }
+    .cta.login-cta{
+      margin-top: 10px;
+    }
+    .client-login-btn{
+      background: linear-gradient(180deg, rgba(14,33,61,.98), rgba(8,20,38,.98));
+      color: #e8f3ff;
+      border: 1px solid rgba(108,184,255,.58);
+      box-shadow: 0 14px 42px rgba(11,32,64,.34), inset 0 1px 0 rgba(255,255,255,.12);
+      white-space: normal;
+      text-align: center;
+      line-height: 1.1;
+      max-width: min(92vw, 430px);
+    }
+    .client-login-btn:hover{
+      border-color: rgba(35,176,11,.62);
+      filter: brightness(1.08);
+    }
+    .client-login-btn.secondary{
+      background: linear-gradient(180deg, rgba(255,178,74,.96), rgba(236,113,16,.96));
+      color: #2d1500;
+      border-color: rgba(255,190,108,.72);
+      box-shadow: 0 14px 36px rgba(236,113,16,.34), inset 0 1px 0 rgba(255,255,255,.32);
+    }
+    .client-login-strip{
+      margin: 10px auto 0;
+      width:min(980px, 96vw);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(108,184,255,.34);
+      background: linear-gradient(90deg, rgba(74,163,255,.12), rgba(35,176,11,.08));
+      box-shadow: 0 16px 48px rgba(0,0,0,.22);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .client-login-strip span{
+      color: rgba(230,243,255,.9);
+      font-weight: 900;
+      text-align:center;
+    }
     .quiz-btn{
       background: linear-gradient(120deg, #ffffff 0%, #defee7 30%, #ffffff 60%, #dff6ff 100%);
       color: #041a12;
@@ -1824,6 +1866,9 @@
         <a class="btn quiz-btn" href="/diagnostico-de-perfil-trx">Diagnóstico de Perfil TRX (1 min)</a>
       </div>
       <p class="cta-note">Teste grátis disponível para validar no replay, operação por operação.</p>
+      <div class="cta login-cta">
+        <a class="btn client-login-btn" href="/login">Já comprei? Entrar e liberar meu acesso</a>
+      </div>
 
       <!-- Curva -->
       <div class="chart">
@@ -2234,6 +2279,10 @@
       <div class="price-bar">
         ⏱ Condições atuais por tempo limitado: <span id="priceCountdown">13min 13s</span>
         <small>Comece validando no TRX Grátis e evolua de plano quando fizer sentido para você.</small>
+      </div>
+      <div class="client-login-strip">
+        <span>Já é cliente TRX?</span>
+        <a class="btn client-login-btn secondary" href="/login">Sou cliente: acessar área de membros</a>
       </div>
 <div class="disclaimer">
         Resultados passados não garantem resultados futuros. Operar envolve risco.
