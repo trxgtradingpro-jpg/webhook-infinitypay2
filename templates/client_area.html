@@ -1919,38 +1919,38 @@
     {% if not diagnostico_concluido %}
       <section class="diagnostic-prompt" id="diagnosticPromptCard" aria-live="polite">
         <div class="diagnostic-prompt-content">
-          <p class="diagnostic-pill">Recomendacao de plano pendente</p>
-          <h2>Falta concluir seu Diagnostico de Perfil TRX</h2>
-          <p>Esse diagnostico identifica seu perfil e recomenda o plano mais adequado para sua operacao, evitando escolhas no escuro e acelerando sua configuracao inicial.</p>
-          <p class="diagnostic-note">Leva cerca de 1 minuto e ajuda voce a comecar com mais clareza e seguranca.</p>
+          <p class="diagnostic-pill">Recomendação de plano pendente</p>
+          <h2>Falta concluir seu Diagnóstico de Perfil TRX</h2>
+          <p>Esse diagnóstico identifica seu perfil e recomenda o plano mais adequado para sua operação, evitando escolhas no escuro e acelerando sua configuração inicial.</p>
+          <p class="diagnostic-note">Leva cerca de 1 minuto e ajuda você a começar com mais clareza e segurança.</p>
         </div>
         <div class="diagnostic-actions">
-          <a class="diagnostic-btn primary" href="/diagnostico-de-perfil-trx">Fazer diagnostico agora</a>
+          <a class="diagnostic-btn primary" href="/diagnostico-de-perfil-trx">Fazer diagnóstico agora</a>
           <button class="diagnostic-btn ghost" id="diagnosticLaterBtn" type="button">Mais tarde</button>
         </div>
-        <p class="diagnostic-later-msg" id="diagnosticLaterMsg" hidden>Sem problemas. Quando voce quiser, vai ser rapidinho concluir o diagnostico.</p>
+        <p class="diagnostic-later-msg" id="diagnosticLaterMsg" hidden>Sem problemas. Quando você quiser, vai ser rapidinho concluir o diagnóstico.</p>
       </section>
     {% endif %}
 
     <nav class="account-menu">
       <a href="#resumo">Resumo</a>
       <a href="#afiliados">Afiliados</a>
-      <a href="#manual-instalacao">Manual de instalacao</a>
+      <a href="#manual-instalacao">Manual de instalação</a>
       <a href="#capital">Curva de capital</a>
       {% if upsell_plans %}
       <a href="#upgrade">Upgrade</a>
       {% endif %}
-      <a href="#historico">Historico</a>
+      <a href="#historico">Histórico</a>
     </nav>
 
     <section class="grid section-anchor" id="resumo">
       <article class="card card-wide onboarding-card {{ 'onboarding-done-card' if onboarding_progress.percent >= 100 else '' }}" id="onboardingChecklistCard">
         <div id="onboardingFlowContent" {% if onboarding_progress.percent >= 100 %}hidden{% endif %}>
           <div class="onboarding-head">
-            <h2>Checklist de ativacao</h2>
-            <p id="onboardingProgressMeta" class="onboarding-progress-meta">{{ onboarding_progress.done_count }}/{{ onboarding_progress.total_steps }} etapas concluidas</p>
+            <h2>Checklist de ativação</h2>
+            <p id="onboardingProgressMeta" class="onboarding-progress-meta">{{ onboarding_progress.done_count }}/{{ onboarding_progress.total_steps }} etapas concluídas</p>
           </div>
-          <p class="onboarding-copy">Avance etapa por etapa. Use <strong>Prosseguir</strong> e <strong>Voltar</strong>; na ultima, clique em <strong>Confirmar e salvar</strong>.</p>
+          <p class="onboarding-copy">Avance etapa por etapa. Use <strong>Prosseguir</strong> e <strong>Voltar</strong>; na última, clique em <strong>Confirmar e salvar</strong>.</p>
           <div class="onboarding-progress-row">
             <div class="onboarding-progress-bar" aria-hidden="true">
               <span id="onboardingProgressFill" class="onboarding-progress-fill" style="width: {{ onboarding_progress.percent }}%;"></span>
@@ -1961,7 +1961,7 @@
           <div class="onboarding-step-card">
             <label class="onboarding-step-check" for="onboardingCurrentStepCheckbox">
               <input type="checkbox" id="onboardingCurrentStepCheckbox" data-step-key="">
-              <span id="onboardingCurrentStepLabel">Etapa de ativacao</span>
+              <span id="onboardingCurrentStepLabel">Etapa de ativação</span>
             </label>
             <p id="onboardingCurrentStepHint" class="onboarding-step-hint"></p>
           </div>
@@ -1974,8 +1974,8 @@
           <p id="onboardingSaveMsg" class="onboarding-save-msg" aria-live="polite"></p>
         </div>
         <div id="onboardingDoneContent" class="onboarding-done-inner" {% if onboarding_progress.percent < 100 %}hidden{% endif %}>
-          <strong id="onboardingDoneTitle">Checklist de ativacao concluido.</strong>
-          <span id="onboardingDoneMeta">{{ onboarding_progress.done_count }}/{{ onboarding_progress.total_steps }} etapas confirmadas. Sua area esta pronta para uso.</span>
+          <strong id="onboardingDoneTitle">Checklist de ativação concluído.</strong>
+          <span id="onboardingDoneMeta">{{ onboarding_progress.done_count }}/{{ onboarding_progress.total_steps }} etapas confirmadas. Sua área está pronta para uso.</span>
         </div>
         <script type="application/json" id="onboardingStepsJson">{{ onboarding_progress.steps|tojson }}</script>
       </article>
@@ -2015,10 +2015,10 @@
             <canvas id="capitalChartResumo"></canvas>
           </div>
           <p class="summary-chart-note">
-            Visual rapido no resumo. Para ajustar janela e contratos, acesse a aba <a href="#capital">Curva de capital</a>.
+            Visual rápido no resumo. Para ajustar janela e contratos, acesse a aba <a href="#capital">Curva de capital</a>.
           </p>
         {% else %}
-          <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
+          <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponível no momento.' }}</p>
         {% endif %}
       </article>
 
@@ -2026,7 +2026,7 @@
         <h2>Resumo geral de tudo</h2>
         <div class="summary-grid">
           <div class="summary-item">
-            <span class="s-label">Historico total</span>
+            <span class="s-label">Histórico total</span>
             <span class="s-value info">{{ pedidos|length }} registro(s)</span>
           </div>
           <div class="summary-item">
@@ -2034,25 +2034,25 @@
             <span class="s-value {{ 'ok' if (ativos|length) > 0 else 'warn' }}">{{ ativos|length }}</span>
           </div>
           <div class="summary-item">
-            <span class="s-label">Diagnostico de perfil</span>
-            <span class="s-value {{ 'ok' if diagnostico_concluido else 'warn' }}">{{ 'Concluido' if diagnostico_concluido else 'Pendente' }}</span>
+            <span class="s-label">Diagnóstico de perfil</span>
+            <span class="s-value {{ 'ok' if diagnostico_concluido else 'warn' }}">{{ 'Concluído' if diagnostico_concluido else 'Pendente' }}</span>
           </div>
           <div class="summary-item">
-            <span class="s-label">Afiliacao</span>
+            <span class="s-label">Afiliação</span>
             <span class="s-value {{ 'ok' if afiliado_cliente and afiliado_cliente.ativo else 'warn' }}">
-              {% if afiliado_cliente and afiliado_cliente.ativo %}Ativa{% elif afiliado_cliente %}Inativa{% else %}Nao ativa{% endif %}
+              {% if afiliado_cliente and afiliado_cliente.ativo %}Ativa{% elif afiliado_cliente %}Inativa{% else %}Não ativa{% endif %}
             </span>
           </div>
           <div class="summary-item">
             <span class="s-label">Curva de capital</span>
             <span class="s-value {{ 'ok' if capital_chart and capital_chart.available else 'warn' }}">
-              {% if capital_chart and capital_chart.available %}Disponivel{% else %}Indisponivel{% endif %}
+              {% if capital_chart and capital_chart.available %}Disponível{% else %}Indisponível{% endif %}
             </span>
           </div>
           <div class="summary-item">
             <span class="s-label">Upgrade de planos</span>
             <span class="s-value {{ 'ok' if upsell_plans else 'warn' }}">
-              {% if upsell_plans %}{{ upsell_plans|length }} opcao(oes){% else %}Sem sugestoes{% endif %}
+              {% if upsell_plans %}{{ upsell_plans|length }} opção(ões){% else %}Sem sugestões{% endif %}
             </span>
           </div>
           <div class="summary-item">
@@ -2060,7 +2060,7 @@
             <span class="s-value {{ 'warn' if notification_count > 0 else 'ok' }}">{{ notification_count }}</span>
           </div>
           <div class="summary-item">
-            <span class="s-label">Ultimo plano</span>
+            <span class="s-label">Último plano</span>
             <span class="s-value info">{{ ultimo_pedido.plano_nome if ultimo_pedido else 'Nenhum' }}</span>
           </div>
         </div>
@@ -2070,19 +2070,19 @@
     <section class="card section-anchor" id="afiliados">
       <h2>Programa de afiliados</h2>
       <p class="affiliate-intro">
-        Aqui voce pode ativar sua afiliacao, gerar seu link de indicacao e acompanhar uma regra clara de comissionamento.
+        Aqui você pode ativar sua afiliação, gerar seu link de indicação e acompanhar uma regra clara de comissionamento.
       </p>
       <div class="affiliate-box">
         <ul class="affiliate-rules">
-          <li><strong>Escolha de recebimento:</strong> voce define se prefere receber em <strong>dinheiro</strong> ou em <strong>plano</strong>.</li>
+          <li><strong>Escolha de recebimento:</strong> você define se prefere receber em <strong>dinheiro</strong> ou em <strong>plano</strong>.</li>
           <li><strong>Modo Dinheiro:</strong> {{ affiliate_commission_percent }}% do valor do plano pago adquirido pelo indicado.</li>
-          <li><strong>Modo Plano:</strong> 1 mes gratis do mesmo plano comprado pelo indicado.</li>
+          <li><strong>Modo Plano:</strong> 1 m&ecirc;s gr&aacute;tis do mesmo plano comprado pelo indicado.</li>
           <li><strong>Primeiro indicador:</strong> o primeiro afiliado que indicar um e-mail fica vinculado de forma permanente.</li>
           <li><strong>Compra futura:</strong> se esse mesmo cliente comprar novamente depois, o beneficio continua para quem indicou primeiro.</li>
-          <li><strong>Persistencia:</strong> os dados de indicacao e comissao ficam registrados no banco com order_id, plano, checkout, valor pago e valor da comissao.</li>
+          <li><strong>Persistência:</strong> os dados de indicação e comissão ficam registrados no banco com order_id, plano, checkout, valor pago e valor da comissão.</li>
         </ul>
         <p class="affiliate-note">
-          Importante: o rastreio e feito por e-mail do comprador. Evite criar varias contas para o mesmo cliente.
+          Importante: o rastreio é feito por e-mail do comprador. Evite criar várias contas para o mesmo cliente.
         </p>
         {% if afiliado_cliente %}
           <div class="affiliate-status-row">
@@ -2096,7 +2096,7 @@
           </div>
           <form method="POST" action="/minha-conta/afiliados/preferencia-comissao" class="affiliate-form affiliate-pref-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <p class="affiliate-pref-label">Como voce quer receber sua indicacao?</p>
+            <p class="affiliate-pref-label">Como você quer receber sua indicação?</p>
             <div class="affiliate-pref-options">
               <label class="affiliate-pref-option">
                 <input type="radio" name="commission_preference" value="dinheiro" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'dinheiro' %}checked{% endif %}>
@@ -2104,10 +2104,10 @@
               </label>
               <label class="affiliate-pref-option">
                 <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
-                <span>Plano: 1 mes gratis no mesmo plano comprado pelo indicado.</span>
+                <span>Plano: 1 m&ecirc;s gr&aacute;tis no mesmo plano comprado pelo indicado.</span>
               </label>
             </div>
-            <button type="submit" class="affiliate-activate">Salvar preferencia</button>
+            <button type="submit" class="affiliate-activate">Salvar prefer&ecirc;ncia</button>
           </form>
           <div class="affiliate-link-row">
             <input
@@ -2139,7 +2139,7 @@
             </div>
           </div>
           {% if affiliate_copy_ready %}
-            <p class="affiliate-copy-hint ok" id="affiliateCopyHint">Link liberado para copia.</p>
+            <p class="affiliate-copy-hint ok" id="affiliateCopyHint">Link liberado para c&oacute;pia.</p>
           {% endif %}
           <p class="affiliate-muted">
             Compartilhe este link: <a href="{{ afiliado_cliente.link_publico }}" target="_blank" rel="noopener noreferrer">{{ afiliado_cliente.link_publico }}</a>
@@ -2161,7 +2161,7 @@
               >
               <button type="submit" class="affiliate-activate">Salvar link</button>
             </div>
-            <p class="affiliate-slug-hint">Use apenas letras minusculas, numeros e hifen. Exemplo: guilherme-trx</p>
+            <p class="affiliate-slug-hint">Use apenas letras min&uacute;sculas, n&uacute;meros e h&iacute;fen. Exemplo: guilherme-trx</p>
           </form>
           {% if not afiliado_cliente.ativo %}
             <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
@@ -2173,14 +2173,14 @@
                 </label>
                 <label class="affiliate-pref-option">
                   <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
-                  <span>Plano: 1 mes gratis por indicado valido.</span>
+                  <span>Plano: 1 mês grátis por indicado válido.</span>
                 </label>
               </div>
               <label class="affiliate-terms-check">
                 <input type="checkbox" name="accept_affiliate_terms" value="1" required>
-                <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
+                <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a> para liberar minha indicação.</span>
               </label>
-              <button type="submit" class="affiliate-activate">Reativar afiliacao</button>
+              <button type="submit" class="affiliate-activate">Reativar afiliação</button>
             </form>
           {% elif not afiliado_cliente.terms_accepted %}
             <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
@@ -2192,19 +2192,19 @@
                 </label>
                 <label class="affiliate-pref-option">
                   <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
-                  <span>Plano: 1 mes gratis por indicado valido.</span>
+                  <span>Plano: 1 mês grátis por indicado válido.</span>
                 </label>
               </div>
               <label class="affiliate-terms-check">
                 <input type="checkbox" name="accept_affiliate_terms" value="1" required>
-                <span>Para manter a indicacao liberada, confirme o aceite dos <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a>.</span>
+                <span>Para manter a indicação liberada, confirme o aceite dos <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</span>
               </label>
               <button type="submit" class="affiliate-activate affiliate-terms-cta">Aceitar termos</button>
             </form>
           {% endif %}
         {% else %}
           <p class="affiliate-muted">
-            Sua conta ainda nao esta afiliada. Ative abaixo e gere agora seu link de indicacao.
+            Sua conta ainda não está afiliada. Ative abaixo e gere agora seu link de indicação.
           </p>
           <div class="affiliate-copy-hint warn">
             <strong>Para copiar seu link, falta:</strong>
@@ -2223,12 +2223,12 @@
               </label>
               <label class="affiliate-pref-option">
                 <input type="radio" name="commission_preference" value="plano">
-                <span>Plano: 1 mes gratis no mesmo plano do indicado.</span>
+                <span>Plano: 1 mês grátis no mesmo plano do indicado.</span>
               </label>
             </div>
             <label class="affiliate-terms-check">
               <input type="checkbox" name="accept_affiliate_terms" value="1" required>
-              <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
+              <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a> para liberar minha indicação.</span>
             </label>
             <button type="submit" class="affiliate-activate">Quero me afiliar</button>
           </form>
@@ -2237,15 +2237,15 @@
     </section>
 
     <section class="card section-anchor" id="manual-instalacao">
-      <h2>Manual de instalacao</h2>
+      <h2>Manual de instalação</h2>
       <p class="install-sub">
-        Siga o passo a passo no video oficial para instalar e configurar o TRX PRO corretamente.
+        Siga o passo a passo no vídeo oficial para instalar e configurar o TRX PRO corretamente.
       </p>
       <div class="install-video-wrap">
         <div class="install-video" id="installVideo" data-video-id="{{ install_video_id }}" data-loaded="0">
           <iframe
             id="installVideoFrame"
-            title="Manual de instalacao TRX PRO"
+            title="Manual de instalação TRX PRO"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             referrerpolicy="strict-origin-when-cross-origin"
             allowfullscreen
@@ -2259,7 +2259,7 @@
       <h2>Crescimento do capital</h2>
       {% if capital_chart and capital_chart.available %}
         <p class="line"><span>Plano:</span> {{ capital_chart.plan_name }}</p>
-        <p class="chart-editable-note">Ajustes do grafico: clique nos botoes e altere a quantidade de contratos.</p>
+        <p class="chart-editable-note">Ajustes do gráfico: clique nos botões e altere a quantidade de contratos.</p>
         <div class="chart-config-row">
           {% if capital_chart.window_modes %}
           <div class="chart-window-controls">
@@ -2296,7 +2296,7 @@
         </div>
         <p class="chart-hint" id="chartHintText">Passe o mouse sobre a linha para ver a data e o valor do dia.</p>
       {% else %}
-        <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
+        <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponível no momento.' }}</p>
         <p class="empty">CSV esperado: <code>dia,pontos</code> (ex.: <code>1,600</code>, <code>2,-300</code>). Marcador opcional: <code>13,11260g</code>.</p>
       {% endif %}
     </section>
@@ -2305,7 +2305,7 @@
     <section class="card section-anchor" id="upgrade">
       <h2>Evolua para um plano pago</h2>
       <p class="upsell-intro">
-        Seu acesso gratuito esta ativo. Para liberar mais recursos e suporte completo, escolha um plano abaixo.
+        Seu acesso gratuito está ativo. Para liberar mais recursos e suporte completo, escolha um plano abaixo.
       </p>
       <div class="upsell-grid">
         {% for plano in upsell_plans %}
@@ -2323,12 +2323,12 @@
           </a>
         {% endfor %}
       </div>
-      <p class="upsell-note">Ao clicar, voce sera direcionado para o checkout do plano selecionado.</p>
+      <p class="upsell-note">Ao clicar, você será direcionado para o checkout do plano selecionado.</p>
     </section>
     {% endif %}
 
     <section class="card section-anchor" id="historico">
-      <h2>Historico de acessos liberados</h2>
+      <h2>Histórico de acessos liberados</h2>
       {% if pedidos %}
         <div class="table-wrap">
           <table>
@@ -2372,11 +2372,11 @@
           </table>
         </div>
       {% else %}
-        <p class="empty">Ainda nao encontramos planos ativos para esta conta.</p>
+        <p class="empty">Ainda não encontramos planos ativos para esta conta.</p>
       {% endif %}
     </section>
 
-    <a class="back" href="/">Voltar para a pagina inicial</a>
+    <a class="back" href="/">Voltar para a página inicial</a>
   </main>
 
   {% include "_shared_footer.html" %}
@@ -2560,9 +2560,9 @@
           }
           if (modeData.id === "forward30") {
             if (payload.marker_detected) {
-              return "Janela de 30 dias posteriores. Mostra do inicio do plano ate o dia marcado com g no CSV (dia " + payload.marker_day + "). Contratos aplicados: " + activeContracts + ".";
+              return "Janela de 30 dias posteriores. Mostra do início do plano até o dia marcado com g no CSV (dia " + payload.marker_day + "). Contratos aplicados: " + activeContracts + ".";
             }
-            return "Janela de 30 dias posteriores. Mostra do inicio do plano ate o ultimo dia atualizado. Contratos aplicados: " + activeContracts + ".";
+            return "Janela de 30 dias posteriores. Mostra do início do plano até o último dia atualizado. Contratos aplicados: " + activeContracts + ".";
           }
           if (modeData.id === "back30") {
             return "Janela de 30 dias anteriores. O dia atual fica no fim do grafico. Contratos aplicados: " + activeContracts + ".";
@@ -2835,7 +2835,7 @@
           if (windowRangeText) {
             const startDate = modeData.window_start_date || payload.window_start_date || payload.start_date || "";
             const endDate = modeData.window_end_date || payload.window_end_date || payload.end_date || "";
-            windowRangeText.textContent = startDate + " ate " + endDate;
+            windowRangeText.textContent = startDate + " até " + endDate;
           }
           if (chartHintText) {
             chartHintText.textContent = getHintText(modeData);
@@ -3085,10 +3085,10 @@
 
       function setDoneSummary(doneCount, totalSteps){
         if (doneTitleEl) {
-          doneTitleEl.textContent = "Checklist de ativacao concluido.";
+          doneTitleEl.textContent = "Checklist de ativação concluído.";
         }
         if (doneMetaEl) {
-          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua area ja esta pronta para operacao.";
+          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua área já está pronta para operação.";
         }
       }
 
@@ -3115,7 +3115,7 @@
         const currentStep = steps[currentStepIndex];
         if (!currentStep) return;
 
-        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluidas";
+        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluídas";
         progressFillEl.style.width = percent + "%";
         progressPercentEl.textContent = percent + "%";
         statusEl.textContent = getStatusMessage(doneCount, totalSteps);
@@ -3131,7 +3131,7 @@
         currentStepCheckboxEl.checked = Boolean(payload[currentStep.key]);
         currentStepLabelEl.textContent = currentStep.label || ("Etapa " + (currentStepIndex + 1));
         if (currentStepIndex >= totalSteps - 1) {
-          currentStepHintEl.textContent = "Ultima etapa: marque esta confirmacao e clique em Confirmar e salvar.";
+          currentStepHintEl.textContent = "Última etapa: marque esta confirmação e clique em Confirmar e salvar.";
         } else {
           currentStepHintEl.textContent = "Etapa " + (currentStepIndex + 1) + " de " + totalSteps + ". Marque e clique em Prosseguir.";
         }
@@ -3397,5 +3397,6 @@
   </script>
 </body>
 </html>
+
 
 

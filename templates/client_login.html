@@ -200,7 +200,7 @@
 </head>
 <body>
   <section class="card">
-    <h1>Area do Cliente</h1>
+    <h1>&Aacute;rea do Cliente</h1>
     <p class="sub">Use seu e-mail de compra e senha para acessar seus dados e datas de expiracao dos planos.</p>
 
     {% if erro %}
@@ -236,15 +236,15 @@
 
       <label class="remember">
         <input type="checkbox" name="remember_me" value="1" {% if remember_checked %}checked{% endif %}>
-        Manter login automatico neste dispositivo
+        Manter login automático neste dispositivo
       </label>
 
       <button type="submit">Entrar</button>
       <a class="recover-link" href="/login/recuperar-senha">Recuperar senha</a>
     </form>
 
-    <p class="foot">Primeiro acesso sem senha cadastrada: no botao Entrar vamos enviar codigo de 6 digitos para seu e-mail.</p>
-    <a href="/" class="back">Voltar para a pagina inicial</a>
+    <p class="foot">Primeiro acesso sem senha cadastrada: no botão Entrar, vamos enviar código de 6 dígitos para seu e-mail.</p>
+    <a href="/" class="back">Voltar para a página inicial</a>
   </section>
 
   {% include "_shared_footer.html" %}
@@ -284,7 +284,7 @@
           passInput.value = "";
           passInput.required = false;
           passInput.disabled = true;
-          passInput.placeholder = "Primeiro acesso detectado (senha ainda nao criada)";
+          passInput.placeholder = "Primeiro acesso detectado (senha ainda não criada)";
         } else {
           passLabel.textContent = "Senha";
           passInput.required = true;
@@ -304,7 +304,7 @@
           return;
         }
         if (!emailRe.test(email)) {
-          setStatus("err", "Digite um e-mail valido.");
+          setStatus("err", "Digite um e-mail válido.");
           setPasswordMode(false);
           lockSubmit(true);
           return;
@@ -324,20 +324,20 @@
           if (seq !== requestSeq) return;
 
           if (!data.valid) {
-            setStatus("err", data.message || "Digite um e-mail valido.");
+            setStatus("err", data.message || "Digite um e-mail válido.");
             setPasswordMode(false);
             lockSubmit(true);
             return;
           }
           if (!data.exists) {
-            setStatus("err", data.message || "Este e-mail nao existe no banco.");
+            setStatus("err", data.message || "Este e-mail não existe no banco.");
             setPasswordMode(false);
             lockSubmit(true);
             return;
           }
           if (data.status === "setup_required" || data.status === "paid_order" || data.requires_password_setup) {
             setPasswordMode(true);
-            setStatus("ok", data.message || "Primeiro acesso detectado. Clique em Entrar para receber o codigo.");
+            setStatus("ok", data.message || "Primeiro acesso detectado. Clique em Entrar para receber o código.");
             lockSubmit(false);
             return;
           }
@@ -347,7 +347,7 @@
         } catch (_) {
           if (seq !== requestSeq) return;
           setPasswordMode(false);
-          setStatus("", "Nao foi possivel validar o e-mail agora.");
+          setStatus("", "Não foi possível validar o e-mail agora.");
           lockSubmit(false);
         }
       }

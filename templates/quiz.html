@@ -563,14 +563,14 @@
       <a class="back-link" href="/">← Voltar para os planos</a>
       <div class="brand">
         <img src="/assets/favicons/trx_bull_exact_256.png?v=5" alt="TRX" />
-        <span>TRX PRO | Diagnostico de Perfil TRX</span>
+        <span>TRX PRO | Diagnóstico de Perfil TRX</span>
       </div>
     </div>
 
     <section class="quiz-card">
-      <p class="quiz-eyebrow">DIAGNOSTICO TRX</p>
+      <p class="quiz-eyebrow">DIAGN&Oacute;STICO TRX</p>
       <h1 class="quiz-title">Diagnóstico de Perfil TRX (1 min): descubra automaticamente seu plano ideal</h1>
-      <p class="quiz-sub">Fluxo rapido de 6 perguntas com recomendacao objetiva no final.</p>
+      <p class="quiz-sub">Fluxo rápido de 6 perguntas com recomendação objetiva no final.</p>
 
       <div class="progress-wrap">
         <div class="progress-meta">
@@ -610,7 +610,7 @@
         {
           id: "level",
           title: "Q1 — Qual seu nivel hoje?",
-          subtitle: "Seu nivel ajuda a calibrar potencia e simplicidade no inicio.",
+          subtitle: "Seu nível ajuda a calibrar potência e simplicidade no início.",
           options: [
             { value: "never", label: "Nunca operei" },
             { value: "beginner", label: "Iniciante" },
@@ -620,25 +620,25 @@
         },
         {
           id: "goal",
-          title: "Q2 — Voce quer o TRX pra…",
+          title: "Q2 — Você quer o TRX para…",
           subtitle: "Escolha o objetivo que mais representa seu momento.",
           options: [
             { value: "test", label: "Testar e ver como funciona" },
-            { value: "consistency", label: "Operar com consistencia (sem exagero)" },
-            { value: "scale", label: "Escalar resultado (mais forca)" },
-            { value: "unsure", label: "Ainda nao sei" }
+            { value: "consistency", label: "Operar com consist&ecirc;ncia (sem exagero)" },
+            { value: "scale", label: "Escalar resultado (mais for&ccedil;a)" },
+            { value: "unsure", label: "Ainda não sei" }
           ]
         },
         {
           id: "contracts",
-          title: "Q3 — Quantos contratos voce pretende usar na maioria do tempo?",
-          subtitle: "Essa e a ancora principal da recomendacao.",
+          title: "Q3 — Quantos contratos você pretende usar na maioria do tempo?",
+          subtitle: "Essa &eacute; a &acirc;ncora principal da recomenda&ccedil;&atilde;o.",
           options: [
             { value: "one", label: "1 contrato" },
             { value: "two_five", label: "2 a 5 contratos" },
             { value: "six_twenty", label: "6 a 20 contratos" },
             { value: "twenty_one_plus", label: "21+ contratos" },
-            { value: "unsure", label: "Ainda nao sei" }
+            { value: "unsure", label: "Ainda não sei" }
           ]
         },
         {
@@ -653,18 +653,18 @@
         },
         {
           id: "time",
-          title: "Q5 — Quanto tempo por dia voce consegue acompanhar?",
-          subtitle: "Quanto menos tempo, mais importante comecar de forma simples.",
+          title: "Q5 — Quanto tempo por dia você consegue acompanhar?",
+          subtitle: "Quanto menos tempo, mais importante come&ccedil;ar de forma simples.",
           options: [
-            { value: "very_little", label: "Quase nada (quero o mais simples possivel)" },
+            { value: "very_little", label: "Quase nada (quero o mais simples possível)" },
             { value: "half_hour", label: "30-60 min por dia" },
             { value: "routine_experience", label: "Tenho rotina e experiencia" }
           ]
         },
         {
           id: "start_mode",
-          title: "Q6 — Voce quer comecar por…",
-          subtitle: "Ultimo passo para definir o melhor caminho agora.",
+          title: "Q6 — Você quer começar por…",
+          subtitle: "Último passo para definir o melhor caminho agora.",
           options: [
             { value: "free_first", label: "Teste grátis primeiro" },
             { value: "direct_best", label: "Entrar no melhor plano pra mim direto" }
@@ -826,7 +826,7 @@
 
       const hint = document.createElement("div");
       hint.className = "hint";
-      hint.textContent = "Dica: responda com sinceridade para receber uma recomendacao mais precisa.";
+      hint.textContent = "Dica: responda com sinceridade para receber uma recomenda&ccedil;&atilde;o mais precisa.";
 
       nav.appendChild(left);
       nav.appendChild(hint);
@@ -868,7 +868,7 @@
         reasons.push(`Com base na sua faixa de contratos, o plano ${planName(recommended)} fica no nivel certo para operar sem distorcer risco.`);
       } else {
         recommended = recommendWhenContractsUnknown(answers);
-        reasons.push(`Como voce ainda esta definindo volume de contratos, o plano ${planName(recommended)} equilibra entrada rapida e seguranca.`);
+        reasons.push(`Como você ainda está definindo volume de contratos, o plano ${planName(recommended)} equilibra entrada rápida e segurança.`);
       }
 
       const originalPlan = recommended;
@@ -880,7 +880,7 @@
         const idx = QUIZ_CONFIG.planOrder.indexOf(originalPlan);
         recommended = QUIZ_CONFIG.planOrder[Math.max(0, idx - 1)];
         nextLevel = originalPlan;
-        reasons.push(`Para evitar arrependimento no inicio, recomendamos ${planName(recommended)} agora e ${planName(nextLevel)} como proximo nivel.`);
+        reasons.push(`Para evitar arrependimento no início, recomendamos ${planName(recommended)} agora e ${planName(nextLevel)} como próximo nível.`);
       }
 
       const basePlanBeforeStartMode = recommended;
@@ -889,18 +889,18 @@
           nextLevel = basePlanBeforeStartMode;
         }
         recommended = "gratis";
-        reasons.unshift("Como voce escolheu 'Teste grátis primeiro', o plano recomendado para comecar agora e o GRATIS.");
+        reasons.unshift("Como você escolheu 'Teste grátis primeiro', o plano recomendado para começar agora é o GRÁTIS.");
       }
 
       if (reasons.length < 2) {
         if (answers.goal === "scale") {
-          reasons.push("Seu objetivo de escala pede uma estrutura com mais forca e folga operacional.");
+          reasons.push("Seu objetivo de escala pede uma estrutura com mais for&ccedil;a e folga operacional.");
         } else if (answers.goal === "consistency") {
-          reasons.push("Seu foco em consistencia favorece uma configuracao equilibrada e repetivel.");
+          reasons.push("Seu foco em consist&ecirc;ncia favorece uma configura&ccedil;&atilde;o equilibrada e repet&iacute;vel.");
         } else if (answers.goal === "test") {
-          reasons.push("Seu momento de validacao indica um caminho de menor atrito para comecar com clareza.");
+          reasons.push("Seu momento de valida&ccedil;&atilde;o indica um caminho de menor atrito para come&ccedil;ar com clareza.");
         } else {
-          reasons.push("A recomendacao final considera risco, disponibilidade de tempo e potencial de evolucao.");
+          reasons.push("A recomenda&ccedil;&atilde;o final considera risco, disponibilidade de tempo e potencial de evolu&ccedil;&atilde;o.");
         }
       }
 
@@ -998,7 +998,7 @@
       const footer = document.createElement("div");
       footer.className = "result-footer";
       footer.innerHTML = `
-        <button class="ghost-btn" type="button" id="restartQuizBtn">Refazer diagnostico</button>
+        <button class="ghost-btn" type="button" id="restartQuizBtn">Refazer diagnóstico</button>
         <a class="result-link" href="/">Voltar para os planos</a>
       `;
       wrap.appendChild(footer);

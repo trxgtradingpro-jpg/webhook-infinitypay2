@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Pedido {{ pedido.order_id[:8] }} • Admin</title>
+  <title>Pedido {{ pedido.order_id[:8] }} &bull; Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,13 +106,14 @@
 
       {% if pedido.ultimo_erro %}
         <div class="order-alert">
-          <strong>Ultimo erro de envio:</strong>
+          <strong>Último erro de envio:</strong>
           {{ pedido.ultimo_erro }}
         </div>
       {% endif %}
 
-      <a class="back-link" href="/admin/dashboard">← Voltar ao dashboard</a>
+      <a class="back-link" href="/admin/dashboard">&larr; Voltar ao dashboard</a>
     </section>
   </main>
 </body>
 </html>
+

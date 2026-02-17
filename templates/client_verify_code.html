@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmar Codigo | TRX PRO</title>
+  <title>Confirmar Código | TRX PRO</title>
   <style>
     :root{
       --bg:#070b16;
@@ -169,8 +169,8 @@
 </head>
 <body>
   <section class="card">
-    <h1>Confirmar codigo</h1>
-    <p class="sub">Digite o codigo de 6 digitos enviado para seu e-mail para liberar a criacao da nova senha.</p>
+    <h1>Confirmar código</h1>
+    <p class="sub">Digite o código de 6 dígitos enviado para seu e-mail para liberar a criação da nova senha.</p>
     <p class="email">Conta: <strong>{{ email_masked or email }}</strong></p>
 
     <div class="meta">
@@ -193,17 +193,17 @@
       <input type="hidden" name="email" value="{{ email }}">
       <input type="hidden" name="action" value="verify">
 
-      <label for="codigo">Codigo de confirmacao</label>
+      <label for="codigo">Código de confirmação</label>
       <input id="codigo" name="codigo" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" required autocomplete="one-time-code">
 
-      <button type="submit">Confirmar codigo</button>
+      <button type="submit">Confirmar código</button>
     </form>
 
     <form method="POST" action="/login/confirmar-codigo" class="resend">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="email" value="{{ email }}">
       <input type="hidden" name="action" value="resend">
-      <button type="submit">Reenviar codigo</button>
+      <button type="submit">Reenviar código</button>
     </form>
 
     <div class="links">

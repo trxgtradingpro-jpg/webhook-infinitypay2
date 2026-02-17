@@ -35,11 +35,11 @@
     {% endif %}
 
     <section class="panel">
-      <h2 class="panel-title">Regra de comissao e atribuicao</h2>
+      <h2 class="panel-title">Regra de comissão e atribuição</h2>
       <p class="panel-subtitle">
-        Comissao de afiliado: 50% do valor do plano pago pelo indicado.
-        O primeiro afiliado que indicar um e-mail fica salvo como dono da indicacao para compras futuras desse mesmo e-mail.
-        Os dados de indicacao e comissao sao persistidos no banco (slug, e-mail indicado, pedido, checkout, valor do plano e valor da comissao).
+        Comissão de afiliado: 50% do valor do plano pago pelo indicado.
+        O primeiro afiliado que indicar um e-mail fica salvo como dono da indicação para compras futuras desse mesmo e-mail.
+        Os dados de indicação e comissão são persistidos no banco (slug, e-mail indicado, pedido, checkout, valor do plano e valor da comissão).
       </p>
     </section>
 
@@ -55,7 +55,7 @@
           <div>
             <label for="novo_slug">Slug</label>
             <input id="novo_slug" name="slug" type="text" placeholder="Ex.: carlos-souza" pattern="[a-z0-9-]{2,60}">
-            <div class="tip">Somente letras minusculas, numeros e hifen.</div>
+            <div class="tip">Somente letras minúsculas, números e hífen.</div>
           </div>
           <div>
             <label for="novo_email">E-mail</label>
@@ -82,11 +82,11 @@
               <th>Slug</th>
               <th>Nome</th>
               <th>Status</th>
-              <th>Link publico</th>
+              <th>Link público</th>
               <th>Checkout ref</th>
               <th>Contato</th>
-              <th>Atualizacao</th>
-              <th>Acoes</th>
+              <th>Atualização</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -116,7 +116,7 @@
                 <td>
                   <form method="POST" action="/admin/afiliados/{{ a.slug }}/editar" class="row-actions">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <input type="text" name="slug" value="{{ a.slug }}" required pattern="[a-z0-9-]{2,60}" title="Somente letras minusculas, numeros e hifen">
+                    <input type="text" name="slug" value="{{ a.slug }}" required pattern="[a-z0-9-]{2,60}" title="Somente letras minúsculas, números e hífen">
                     <input type="text" name="nome" value="{{ a.nome }}" required>
                     <input type="email" name="email" value="{{ a.email or '' }}" placeholder="E-mail">
                     <input type="text" name="telefone" value="{{ a.telefone or '' }}" placeholder="Telefone">
@@ -150,7 +150,7 @@
             headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
           });
           const d = await r.json();
-          alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+          alert(d.message || (d.ok ? 'Backup concluído.' : 'Falha ao gerar backup.'));
         } catch (e) {
           alert('Falha ao acionar backup.');
         } finally {

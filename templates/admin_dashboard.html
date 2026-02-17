@@ -14,12 +14,12 @@
     <div class="topbar">
       <div>
         <div class="title">Painel Admin | Resumo</div>
-        <p class="title-sub">Visao geral de pedidos, status e operacao comercial.</p>
+        <p class="title-sub">Visão geral de pedidos, status e operação comercial.</p>
       </div>
       <nav class="menu">
         <a class="active" href="/admin/dashboard">Resumo</a>
-        <a href="/admin/relatorios">Relatorios</a>
-        <a href="/dashboard">Graficos</a>
+        <a href="/admin/relatorios">Relatórios</a>
+        <a href="/dashboard">Gráficos</a>
         <a href="/admin/analytics">Analytics</a>
         <a href="/admin/afiliados">Afiliados</a>
         <button type="button" id="backupNowBtn">Backup agora</button>
@@ -35,7 +35,7 @@
       <div class="card"><div class="label">Processados (pagos reais)</div><div class="value">{{ stats.processados }}</div></div>
       <div class="card"><div class="label">Pendentes</div><div class="value">{{ stats.pendentes }}</div></div>
       <div class="card"><div class="label">Total pagos</div><div class="value">{{ stats.pagos }}</div></div>
-      <div class="card"><div class="label">Total gratis</div><div class="value">{{ stats.total_gratis }}</div></div>
+      <div class="card"><div class="label">Total grátis</div><div class="value">{{ stats.total_gratis }}</div></div>
       <div class="card"><div class="label">Faturamento total</div><div class="value">{{ stats.total_faturado }}</div></div>
       <div class="card"><div class="label">Online agora</div><div class="value" id="online-count">{{ stats.online }}</div></div>
     </div>
@@ -51,7 +51,7 @@
           <select id="filtro-plano" name="plano">
             <option value="todos" {% if filtro_plano == 'todos' %}selected{% endif %}>Todos</option>
             <option value="pagos" {% if filtro_plano == 'pagos' %}selected{% endif %}>Somente pagos</option>
-            <option value="gratis" {% if filtro_plano == 'gratis' %}selected{% endif %}>Somente gratis</option>
+            <option value="gratis" {% if filtro_plano == 'gratis' %}selected{% endif %}>Somente grátis</option>
             <option value="pendentes" {% if filtro_plano == 'pendentes' %}selected{% endif %}>Somente pendentes</option>
             {% for plano in planos %}
               <option value="{{ plano }}" {% if filtro_plano == plano %}selected{% endif %}>{{ plano }}</option>
@@ -79,7 +79,7 @@
             <th>Status</th>
             <th>Data</th>
             <th>Dias p/30</th>
-            <th>Acoes</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -176,7 +176,7 @@
             headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
           });
           const d = await r.json();
-          alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+          alert(d.message || (d.ok ? 'Backup concluído.' : 'Falha ao gerar backup.'));
         } catch (e) {
           alert('Falha ao acionar backup.');
         } finally {

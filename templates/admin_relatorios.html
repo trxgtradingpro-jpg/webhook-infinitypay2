@@ -84,7 +84,7 @@
             headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
           });
           const d = await r.json();
-          alert(d.message || (d.ok ? 'Backup concluido.' : 'Falha ao gerar backup.'));
+          alert(d.message || (d.ok ? 'Backup concluído.' : 'Falha ao gerar backup.'));
         } catch (e) {
           alert('Falha ao acionar backup.');
         } finally {
