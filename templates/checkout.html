@@ -8,21 +8,19 @@
   <style>
     * { box-sizing: border-box; }
 
-    /* ✅ FIX: remove flex centralizado (isso quebrava quando o footer crescia) */
     body {
       margin: 0;
-      padding: 24px 16px; /* respiro para não cortar no topo/baixo */
+      padding: 24px 16px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       background: linear-gradient(135deg, #f4f6f8, #eef2f6);
       min-height: 100vh;
       overflow-x: hidden;
     }
 
-    /* centraliza o card na horizontal e permite rolagem quando precisar */
     .checkout-container {
       width: 100%;
       max-width: 420px;
-      margin: 0 auto;              /* ✅ centraliza horizontal */
+      margin: 0 auto;
       background: #ffffff;
       border-radius: 14px;
       padding: 32px 28px;
@@ -111,16 +109,9 @@
     }
 
     /* Footer (seu) */
-    .site-footer {
-      margin-top: 18px;
-      text-align: center;
-    }
+    .site-footer { margin-top: 18px; text-align: center; }
 
-    .site-trust-grid {
-      margin-top: 22px;
-      display: grid;
-      gap: 8px;
-    }
+    .site-trust-grid { margin-top: 22px; display: grid; gap: 8px; }
 
     .site-trust-item {
       border: 1px solid #d8e2ea;
@@ -183,10 +174,7 @@
       -webkit-user-drag: none;
     }
 
-    .security-badge-secondary {
-      margin-top: 0;
-      display: block;
-    }
+    .security-badge-secondary { margin-top: 0; display: block; }
 
     .security-badge-seal {
       width: min(88px, 24vw);
@@ -210,11 +198,7 @@
       color: #0f172a;
     }
 
-    .site-rights {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #64748b;
-    }
+    .site-rights { margin-top: 6px; font-size: 13px; color: #64748b; }
 
     .site-links {
       margin-top: 12px;
@@ -233,7 +217,7 @@
 
     .site-links a:hover { color: #0f172a; }
 
-    /* ✅ FIX: evita imagens/selos “estourarem” o card */
+    /* evita imagens/selos estourarem */
     .site-footer img,
     .site-footer svg,
     .security-badge-wrap img,
@@ -242,13 +226,44 @@
       height: auto;
     }
 
-    /* Pequenas melhorias mobile */
+    /* ===== FIX FOOTER (checkout) - reduzir tamanho e espaçamento horizontal ===== */
+    .site-footer{
+      max-width: 360px;
+      margin: 18px auto 0;
+    }
+
+    .site-trust-grid{
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .site-seals{ gap: 6px; }
+
+    .site-seals span{
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+
+    .security-badge-wrap{ gap: 8px; }
+
+    .security-badge-img{ width: 160px; }
+
+    .security-badge-seal{ width: 62px; }
+
+    .site-copy{ font-size: 18px; }
+
+    .site-links{ gap: 10px; }
+
+    .site-links a{ font-size: 12px; }
+
     @media (max-width: 420px) {
-      .checkout-container {
-        padding: 26px 18px;
-        border-radius: 12px;
-      }
+      .checkout-container { padding: 26px 18px; border-radius: 12px; }
       h1 { font-size: 22px; }
+
+      /* ainda menor no celular */
+      .site-footer{ max-width: 320px; }
+      .security-badge-img{ width: 145px; }
+      .security-badge-seal{ width: 56px; }
     }
   </style>
 </head>
@@ -307,7 +322,6 @@
       />
       <div class="info">Usado para suporte e comunicação</div>
 
-      <!-- PLANO (VEM DA URL) -->
       <input type="hidden" name="plano" value="{{ plano }}">
 
       <button type="submit">
