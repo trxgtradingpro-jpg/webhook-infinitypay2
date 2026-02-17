@@ -255,7 +255,7 @@
             <p class="proof-disclaimer">Resultados passados n&atilde;o garantem resultados futuros. Operar envolve risco.</p>
           </article>
         </div>
-
+      {#
         {% set audit = proof_audit or {} %}
         {% set audit_method = audit.get("methodology", {}) %}
         {% set audit_risk = audit.get("risk", {}) %}
@@ -311,6 +311,7 @@
             A prova pode ser conferida pelos relat&oacute;rios mensais e pela base de curva. Resultados passados n&atilde;o garantem resultados futuros.
           </p>
         </div>
+      #}
       </div>
     </div>
   </section>
