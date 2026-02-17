@@ -989,6 +989,60 @@
       transform:translateY(-1px);
       filter:brightness(1.08);
     }
+    .affiliate-copy-wrap{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+    }
+    .affiliate-copy-wrap.is-locked .affiliate-link-copy{
+      opacity:.84;
+      cursor:not-allowed;
+    }
+    .affiliate-copy-tooltip{
+      position:absolute;
+      left:50%;
+      bottom:calc(100% + 10px);
+      transform:translateX(-50%) translateY(6px);
+      width:min(360px, 84vw);
+      border-radius:12px;
+      border:1px solid rgba(255,106,106,.44);
+      background:linear-gradient(180deg, rgba(28,12,20,.96), rgba(18,8,15,.98));
+      box-shadow:0 16px 32px rgba(0,0,0,.35);
+      padding:10px 12px;
+      color:#ffd5d9;
+      font-size:12px;
+      line-height:1.4;
+      font-weight:800;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .16s ease, transform .16s ease;
+      z-index:12;
+    }
+    .affiliate-copy-tooltip::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:100%;
+      transform:translateX(-50%);
+      border-width:7px 7px 0 7px;
+      border-style:solid;
+      border-color:rgba(28,12,20,.98) transparent transparent transparent;
+    }
+    .affiliate-copy-tooltip strong{
+      font-weight:1000;
+    }
+    .affiliate-copy-tooltip ul{
+      margin:6px 0 0;
+      padding-left:18px;
+      display:grid;
+      gap:4px;
+    }
+    .affiliate-copy-wrap.is-locked:hover .affiliate-copy-tooltip,
+    .affiliate-copy-wrap.is-locked:focus-within .affiliate-copy-tooltip,
+    .affiliate-copy-wrap.is-locked.show-tooltip .affiliate-copy-tooltip{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
     .affiliate-muted{
       margin:0;
       color:var(--muted2);
@@ -1544,26 +1598,29 @@
               value="{{ afiliado_cliente.link_publico }}"
               readonly
             >
-            <button
-              type="button"
-              id="affiliateCopyBtn"
-              class="affiliate-link-copy"
-              data-copy-ready="{{ '1' if affiliate_copy_ready else '0' }}"
-              data-blocked-message="{% if affiliate_copy_pending_steps %}Falta: {{ affiliate_copy_pending_steps | join(' ') }}{% else %}Falta concluir a ativacao do afiliado.{% endif %}"
-              {% if not affiliate_copy_ready %}disabled aria-disabled="true"{% endif %}
-            >Copiar link</button>
+            <div class="affiliate-copy-wrap {% if not affiliate_copy_ready %}is-locked{% endif %}" id="affiliateCopyWrap">
+              <button
+                type="button"
+                id="affiliateCopyBtn"
+                class="affiliate-link-copy"
+                data-copy-ready="{{ '1' if affiliate_copy_ready else '0' }}"
+                data-blocked-message="{% if affiliate_copy_pending_steps %}Falta: {{ affiliate_copy_pending_steps | join(' ') }}{% else %}Falta concluir a ativacao do afiliado.{% endif %}"
+                {% if not affiliate_copy_ready %}aria-disabled="true"{% endif %}
+              >Copiar link</button>
+              {% if not affiliate_copy_ready %}
+                <div class="affiliate-copy-tooltip" id="affiliateCopyTooltip" role="tooltip">
+                  <strong>Para copiar seu link, falta:</strong>
+                  <ul>
+                    {% for step in affiliate_copy_pending_steps %}
+                      <li>{{ step }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </div>
           </div>
           {% if affiliate_copy_ready %}
             <p class="affiliate-copy-hint ok" id="affiliateCopyHint">Link liberado para copia.</p>
-          {% else %}
-            <div class="affiliate-copy-hint warn" id="affiliateCopyHint">
-              <strong>Para copiar seu link, falta:</strong>
-              <ul>
-                {% for step in affiliate_copy_pending_steps %}
-                  <li>{{ step }}</li>
-                {% endfor %}
-              </ul>
-            </div>
           {% endif %}
           <p class="affiliate-muted">
             Compartilhe este link: <a href="{{ afiliado_cliente.link_publico }}" target="_blank" rel="noopener noreferrer">{{ afiliado_cliente.link_publico }}</a>
@@ -2340,19 +2397,30 @@
     (function setupAffiliateCopy(){
       const copyBtn = document.getElementById("affiliateCopyBtn");
       const field = document.getElementById("affiliateLinkField");
+      const copyWrap = document.getElementById("affiliateCopyWrap");
       if (!copyBtn || !field) return;
 
       const originalLabel = copyBtn.textContent;
       const copyReady = copyBtn.getAttribute("data-copy-ready") === "1";
+      let tooltipTimer = null;
       const setLabel = (text) => {
         copyBtn.textContent = text;
         setTimeout(() => {
           copyBtn.textContent = originalLabel;
         }, 1500);
       };
+      const showTooltip = () => {
+        if (!copyWrap || copyReady) return;
+        copyWrap.classList.add("show-tooltip");
+        clearTimeout(tooltipTimer);
+        tooltipTimer = setTimeout(() => {
+          copyWrap.classList.remove("show-tooltip");
+        }, 2200);
+      };
 
       copyBtn.addEventListener("click", async () => {
-        if (!copyReady || copyBtn.disabled) {
+        if (!copyReady) {
+          showTooltip();
           setLabel("Bloqueado");
           return;
         }
