@@ -285,10 +285,104 @@ html[data-theme="light"] .upsell-card .upsell-cta,
 html[data-theme="light"] .upsell-card .upsell-price small,
 html[data-theme="light"] .upsell-card .tag {
   color: #eaf3ff !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28) !important;
 }
 
 html[data-theme="light"] .upsell-card .upsell-price {
   color: var(--card-price) !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="light"] .upsell-card {
+  color: #ecf4ff !important;
+}
+
+html[data-theme="light"] .answer-btn {
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.24) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+html[data-theme="light"] .answer-btn:hover {
+  color: #052e1e !important;
+  border-color: rgba(35, 176, 11, 0.56) !important;
+  background: rgba(35, 176, 11, 0.18) !important;
+}
+
+html[data-theme="light"] .result-card {
+  border-color: rgba(35, 176, 11, 0.48) !important;
+  background: rgba(35, 176, 11, 0.14) !important;
+}
+
+html[data-theme="light"] .result-plan-box {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  background: rgba(5, 10, 22, 0.92) !important;
+}
+
+html[data-theme="light"] .result-plan-box .result-contracts {
+  color: #dfeafe !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="light"] .result-plan-box .result-plan,
+html[data-theme="light"] .result-plan-box .result-price {
+  color: #f5f9ff !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="light"] .result-plan-box.plan-gratis .result-plan,
+html[data-theme="light"] .result-plan-box.plan-gratis .result-price {
+  color: #ffd93d !important;
+}
+
+html[data-theme="light"] .result-plan-box.plan-bronze .result-plan,
+html[data-theme="light"] .result-plan-box.plan-bronze .result-price {
+  color: #ffae36 !important;
+}
+
+html[data-theme="light"] .result-plan-box.plan-prata .result-plan,
+html[data-theme="light"] .result-plan-box.plan-prata .result-price {
+  color: #d7dde8 !important;
+}
+
+html[data-theme="light"] .result-plan-box.plan-gold .result-plan,
+html[data-theme="light"] .result-plan-box.plan-gold .result-price {
+  color: #ffdf46 !important;
+}
+
+html[data-theme="light"] .result-plan-box.plan-black .result-plan,
+html[data-theme="light"] .result-plan-box.plan-black .result-price {
+  color: #cfa4ff !important;
+}
+
+html[data-theme="light"] .back-link,
+html[data-theme="light"] .ghost-btn,
+html[data-theme="light"] .result-link,
+html[data-theme="light"] .cta-secondary {
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.24) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+
+html[data-theme="light"] .brand,
+html[data-theme="light"] .progress-meta,
+html[data-theme="light"] .hint,
+html[data-theme="light"] .next-level {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] section.plans .title .line-1 {
+  color: #1f2937 !important;
+}
+
+html[data-theme="light"] section.plans .title .accent-green {
+  color: #059669 !important;
+}
+
+html[data-theme="light"] .chart-head {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.76) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.14) !important;
 }
 
 html[data-theme="light"] :is(
