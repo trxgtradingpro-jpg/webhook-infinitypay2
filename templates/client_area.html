@@ -1053,7 +1053,7 @@
     <header class="top">
       <div>
         <h1 class="title">
-          <img class="title-logo" src="/assets/favicons/trx_bull_exact_favicon.ico" alt="TRX PRO" draggable="false">
+          <img class="title-logo" src="/assets/favicons/trx_bull_exact_256.png?v=5" alt="TRX PRO" draggable="false">
           <span>Minha Conta TRX PRO</span>
         </h1>
         <p class="subtitle">Bem-vindo, {{ conta_nome or 'Cliente' }}.</p>
@@ -1114,7 +1114,6 @@
 
     <nav class="account-menu">
       <a href="#resumo">Resumo</a>
-      <a href="#manual-instalacao">Manual de instalacao</a>
       <a href="#capital">Curva de capital</a>
       {% if upsell_plans %}
       <a href="#upgrade">Upgrade</a>
@@ -1145,25 +1144,6 @@
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
         {% endif %}
       </article>
-    </section>
-
-    <section class="card section-anchor" id="manual-instalacao">
-      <h2>Manual de instalacao</h2>
-      <p class="install-sub">
-        Siga o passo a passo no video oficial para instalar e configurar o TRX PRO corretamente.
-      </p>
-      <div class="install-video-wrap">
-        <div class="install-video" id="installVideo" data-video-id="{{ install_video_id }}" data-loaded="0">
-          <iframe
-            id="installVideoFrame"
-            title="Manual de instalacao TRX PRO"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen
-            loading="lazy"
-          ></iframe>
-        </div>
-      </div>
     </section>
 
     <section class="card section-anchor" id="capital">
