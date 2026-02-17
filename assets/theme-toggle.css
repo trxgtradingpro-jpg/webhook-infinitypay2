@@ -44,8 +44,9 @@ html[data-theme="light"] {
   --bg2: #ffffff;
   --text: #0f172a;
   --txt: #0f172a;
-  --muted: rgba(15, 23, 42, 0.68);
-  --muted2: rgba(15, 23, 42, 0.56);
+  --text-muted: #334155;
+  --muted: rgba(15, 23, 42, 0.80);
+  --muted2: rgba(15, 23, 42, 0.72);
   --stroke: rgba(15, 23, 42, 0.12);
   --stroke2: rgba(15, 23, 42, 0.18);
   --line: rgba(15, 23, 42, 0.18);
@@ -58,7 +59,6 @@ html[data-theme="light"] {
   --border: rgba(15, 23, 42, 0.16);
   --border-soft: rgba(15, 23, 42, 0.08);
   --text-main: #0f172a;
-  --text-muted: #475569;
   --blue: #1d4ed8;
   --blue-soft: #2563eb;
   --shadow: 0 18px 48px rgba(15, 23, 42, 0.14);
