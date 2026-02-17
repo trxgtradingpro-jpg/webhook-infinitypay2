@@ -302,6 +302,8 @@ AFFILIATE_SLUG_RE = re.compile(r"^[a-z0-9-]{2,60}$")
 AFFILIATE_COMMISSION_PERCENT = 50.0
 AFFILIATE_COMMISSION_RATE = AFFILIATE_COMMISSION_PERCENT / 100.0
 AFFILIATE_TERMS_VERSION = (os.environ.get("AFFILIATE_TERMS_VERSION") or "2026-02-17").strip()
+AFFILIATE_COMMISSION_PREFERENCE_DEFAULT = "dinheiro"
+AFFILIATE_COMMISSION_PREFERENCES = {"dinheiro", "plano"}
 RESERVED_AFFILIATE_SLUGS = {
     "admin",
     "api",
@@ -346,6 +348,13 @@ def slug_afiliado_valido(slug):
     if not slug:
         return False
     return AFFILIATE_SLUG_RE.fullmatch(slug) is not None and slug not in RESERVED_AFFILIATE_SLUGS
+
+
+def normalizar_preferencia_comissao_afiliado(valor):
+    pref = (valor or "").strip().lower()
+    if pref in AFFILIATE_COMMISSION_PREFERENCES:
+        return pref
+    return AFFILIATE_COMMISSION_PREFERENCE_DEFAULT
 
 
 def _parse_bool_payload(valor):
@@ -498,12 +507,21 @@ def montar_dados_afiliado_cliente(afiliado):
     link_publico = montar_url_absoluta(f"/{slug}")
     terms_accepted_at = afiliado.get("terms_accepted_at")
     link_saved_at = afiliado.get("link_saved_at")
+    commission_preference = normalizar_preferencia_comissao_afiliado(
+        afiliado.get("commission_preference")
+    )
     return {
         "slug": slug,
         "nome": nome or slug,
         "email": normalizar_email(afiliado.get("email") or ""),
         "telefone": normalizar_telefone(afiliado.get("telefone") or ""),
         "ativo": bool(afiliado.get("ativo")),
+        "commission_preference": commission_preference,
+        "commission_preference_label": (
+            "Plano (1 mes gratis no plano indicado)"
+            if commission_preference == "plano"
+            else "Dinheiro (50% de comissao)"
+        ),
         "terms_accepted": bool(terms_accepted_at),
         "terms_accepted_at": terms_accepted_at,
         "link_saved": bool(link_saved_at),
@@ -660,8 +678,8 @@ def registrar_comissao_pedido_afiliado(order, transaction_nsu=None):
     ):
         return False
 
+    afiliado_por_slug = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=False)
     if not EMAIL_RE.fullmatch(affiliate_email_norm):
-        afiliado_por_slug = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=False)
         affiliate_email_norm = normalizar_email((afiliado_por_slug or {}).get("email") or "")
         if afiliado_por_slug:
             order["affiliate_nome"] = order.get("affiliate_nome") or normalizar_nome(afiliado_por_slug.get("nome") or "")
@@ -673,6 +691,12 @@ def registrar_comissao_pedido_afiliado(order, transaction_nsu=None):
         affiliate_slug=affiliate_slug,
         affiliate_email=affiliate_email_norm
     ):
+        return False
+
+    commission_preference = normalizar_preferencia_comissao_afiliado(
+        (afiliado_por_slug or {}).get("commission_preference")
+    )
+    if commission_preference == "plano":
         return False
 
     amount_centavos = int(PLANOS.get(plano, {}).get("preco") or 0)
@@ -729,13 +753,19 @@ def conceder_bonus_indicacao_pedido(order):
         affiliate_email = affiliate_email or normalizar_email((referral or {}).get("affiliate_email") or "")
         affiliate_telefone = affiliate_telefone or normalizar_telefone((referral or {}).get("affiliate_telefone") or "")
 
+    afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=False)
     if not EMAIL_RE.fullmatch(affiliate_email):
-        afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=False)
         affiliate_email = normalizar_email((afiliado or {}).get("email") or "")
         affiliate_nome = affiliate_nome or normalizar_nome((afiliado or {}).get("nome") or "")
         affiliate_telefone = affiliate_telefone or normalizar_telefone((afiliado or {}).get("telefone") or "")
 
     if not EMAIL_RE.fullmatch(affiliate_email):
+        return False
+
+    commission_preference = normalizar_preferencia_comissao_afiliado(
+        (afiliado or {}).get("commission_preference")
+    )
+    if commission_preference != "plano":
         return False
 
     if affiliate_eh_autoindicacao(
@@ -1557,7 +1587,7 @@ def _cspr_headers():
 
 
 THEME_HEAD_INJECTION = (
-    '\n<link rel="stylesheet" href="/assets/theme-toggle.css?v=20260216">'
+    '\n<link rel="stylesheet" href="/assets/theme-toggle.css?v=20260217">'
     '\n<script>(function(){try{var t=localStorage.getItem("trx_theme");'
     'if(t!=="light"&&t!=="dark"){t=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";}'
     'document.documentElement.setAttribute("data-theme",t);'
@@ -1565,7 +1595,7 @@ THEME_HEAD_INJECTION = (
     '}catch(_){document.documentElement.setAttribute("data-theme","dark");document.documentElement.style.colorScheme="dark";}})();</script>\n'
 )
 
-THEME_BODY_INJECTION = '\n<script src="/assets/theme-toggle.js?v=20260216"></script>\n'
+THEME_BODY_INJECTION = '\n<script src="/assets/theme-toggle.js?v=20260217"></script>\n'
 
 
 def _injetar_theme_global(response):
@@ -2508,6 +2538,10 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"post_cliente_afiliado_editar_link:{ip}", limite=12, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
 
+    if method == "POST" and path == "/minha-conta/afiliados/preferencia-comissao":
+        if excedeu_rate_limit(f"post_cliente_afiliado_preferencia:{ip}", limite=12, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
+
     if method == "POST" and path == "/login/recuperar-senha":
         if excedeu_rate_limit(f"post_cliente_recover:{ip}", limite=8, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -3218,6 +3252,12 @@ def cliente_ativar_afiliacao():
     accept_terms = (request.form.get("accept_affiliate_terms") or "").strip().lower()
     if accept_terms not in {"1", "true", "on", "yes"}:
         return redirect("/minha-conta?info=afiliado_termos_obrigatorios#afiliados")
+    preference_raw = (request.form.get("commission_preference") or "").strip().lower()
+    commission_preference = (
+        normalizar_preferencia_comissao_afiliado(preference_raw)
+        if preference_raw in AFFILIATE_COMMISSION_PREFERENCES
+        else None
+    )
 
     terms_accepted_at = datetime.now(timezone.utc)
     terms_accepted_ip = (obter_ip_request() or request.remote_addr or "").strip()[:64] or None
@@ -3239,6 +3279,7 @@ def cliente_ativar_afiliacao():
                 email=email,
                 telefone=telefone_conta or afiliado_existente.get("telefone") or None,
                 ativo=True,
+                commission_preference=commission_preference,
                 terms_accepted_at=terms_accepted_at,
                 terms_accepted_ip=terms_accepted_ip,
                 terms_version=AFFILIATE_TERMS_VERSION
@@ -3253,6 +3294,7 @@ def cliente_ativar_afiliacao():
                 email=email,
                 telefone=telefone_conta or afiliado_existente.get("telefone") or None,
                 ativo=bool(afiliado_existente.get("ativo")),
+                commission_preference=commission_preference,
                 terms_accepted_at=terms_accepted_at,
                 terms_accepted_ip=terms_accepted_ip,
                 terms_version=AFFILIATE_TERMS_VERSION
@@ -3272,6 +3314,7 @@ def cliente_ativar_afiliacao():
         email=email,
         telefone=telefone_conta,
         ativo=True,
+        commission_preference=commission_preference or AFFILIATE_COMMISSION_PREFERENCE_DEFAULT,
         terms_accepted_at=terms_accepted_at,
         terms_accepted_ip=terms_accepted_ip,
         terms_version=AFFILIATE_TERMS_VERSION
@@ -3352,6 +3395,45 @@ def cliente_editar_link_afiliado():
     return redirect("/minha-conta?info=afiliado_link_atualizado#afiliados")
 
 
+@app.route("/minha-conta/afiliados/preferencia-comissao", methods=["POST"])
+def cliente_atualizar_preferencia_comissao_afiliado():
+    token = (request.form.get("csrf_token") or request.headers.get(CSRF_HEADER_NAME) or "").strip()
+    if not validar_csrf_token(token):
+        return "Falha de validacao CSRF.", 403
+
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    afiliado_existente = buscar_afiliado_por_email(email, apenas_ativos=False)
+    if not afiliado_existente:
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    slug_atual = normalizar_slug_afiliado(afiliado_existente.get("slug") or "")
+    if not slug_afiliado_valido(slug_atual):
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    preference_raw = (request.form.get("commission_preference") or "").strip().lower()
+    if preference_raw not in AFFILIATE_COMMISSION_PREFERENCES:
+        return redirect("/minha-conta?info=afiliado_preferencia_invalida#afiliados")
+    commission_preference = normalizar_preferencia_comissao_afiliado(preference_raw)
+
+    atualizado = atualizar_afiliado(
+        slug_atual=slug_atual,
+        slug_novo=slug_atual,
+        nome=normalizar_nome(afiliado_existente.get("nome") or "") or f"Afiliado {email.split('@', 1)[0]}",
+        email=email,
+        telefone=normalizar_telefone(afiliado_existente.get("telefone") or "") or None,
+        ativo=bool(afiliado_existente.get("ativo")),
+        commission_preference=commission_preference
+    )
+    if not atualizado:
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    return redirect("/minha-conta?info=afiliado_preferencia_salva#afiliados")
+
+
 @app.route("/minha-conta")
 def cliente_area():
     email = obter_email_cliente_logado()
@@ -3382,6 +3464,8 @@ def cliente_area():
         "afiliado_link_sem_alteracao": "Seu link de afiliado ja esta salvo com esse valor.",
         "afiliado_link_confirmado": "Link salvo com sucesso. Copia liberada.",
         "afiliado_link_atualizado": "Link de afiliado atualizado com sucesso.",
+        "afiliado_preferencia_salva": "Preferencia de comissao atualizada com sucesso.",
+        "afiliado_preferencia_invalida": "Escolha uma preferencia valida: dinheiro ou plano.",
         "afiliado_erro": "Nao foi possivel ativar sua afiliacao agora. Tente novamente."
     }
     info_message = info_messages.get(info_key, "")
@@ -3390,6 +3474,7 @@ def cliente_area():
         "afiliado_termos_obrigatorios",
         "afiliado_slug_invalido",
         "afiliado_slug_indisponivel",
+        "afiliado_preferencia_invalida",
     }
     info_message_level = "warn" if info_key in info_warn_keys else "ok"
     quiz_user_key = (session.get("quiz_user_key") or "").strip()

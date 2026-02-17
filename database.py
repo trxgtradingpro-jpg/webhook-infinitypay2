@@ -15,6 +15,13 @@ BACKUP_ADVISORY_LOCK_KEY = 771200913
 def get_conn():
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
+
+def _normalizar_preferencia_comissao_interna(valor):
+    pref = (valor or "").strip().lower()
+    if pref == "plano":
+        return "plano"
+    return "dinheiro"
+
 # ======================================================
 # INIT / MIGRATIONS
 # ======================================================
@@ -133,6 +140,7 @@ def init_db():
             email TEXT,
             telefone TEXT,
             ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            commission_preference TEXT NOT NULL DEFAULT 'dinheiro',
             terms_accepted_at TIMESTAMP,
             link_saved_at TIMESTAMP,
             terms_accepted_ip TEXT,
@@ -292,6 +300,7 @@ def init_db():
     cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS link_saved_at TIMESTAMP")
     cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS terms_accepted_ip TEXT")
     cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS terms_version TEXT")
+    cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS commission_preference TEXT NOT NULL DEFAULT 'dinheiro'")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS transaction_nsu TEXT")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS referred_email TEXT")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_slug TEXT")
@@ -826,7 +835,8 @@ def listar_afiliados(include_inativos=True):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, commission_preference,
+               terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
     """
     params = []
@@ -850,12 +860,13 @@ def listar_afiliados(include_inativos=True):
             "email": row[3],
             "telefone": row[4],
             "ativo": bool(row[5]),
-            "terms_accepted_at": row[6],
-            "link_saved_at": row[7],
-            "terms_accepted_ip": row[8],
-            "terms_version": row[9],
-            "created_at": row[10],
-            "updated_at": row[11]
+            "commission_preference": _normalizar_preferencia_comissao_interna(row[6]),
+            "terms_accepted_at": row[7],
+            "link_saved_at": row[8],
+            "terms_accepted_ip": row[9],
+            "terms_version": row[10],
+            "created_at": row[11],
+            "updated_at": row[12]
         })
 
     return afiliados
@@ -866,7 +877,8 @@ def buscar_afiliado_por_slug(slug, apenas_ativos=False):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, commission_preference,
+               terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
         WHERE slug = %s
     """
@@ -892,12 +904,13 @@ def buscar_afiliado_por_slug(slug, apenas_ativos=False):
         "email": row[3],
         "telefone": row[4],
         "ativo": bool(row[5]),
-        "terms_accepted_at": row[6],
-        "link_saved_at": row[7],
-        "terms_accepted_ip": row[8],
-        "terms_version": row[9],
-        "created_at": row[10],
-        "updated_at": row[11]
+        "commission_preference": _normalizar_preferencia_comissao_interna(row[6]),
+        "terms_accepted_at": row[7],
+        "link_saved_at": row[8],
+        "terms_accepted_ip": row[9],
+        "terms_version": row[10],
+        "created_at": row[11],
+        "updated_at": row[12]
     }
 
 
@@ -910,7 +923,8 @@ def buscar_afiliado_por_email(email, apenas_ativos=False):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, commission_preference,
+               terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
         WHERE LOWER(COALESCE(TRIM(email), '')) = %s
     """
@@ -936,12 +950,13 @@ def buscar_afiliado_por_email(email, apenas_ativos=False):
         "email": row[3],
         "telefone": row[4],
         "ativo": bool(row[5]),
-        "terms_accepted_at": row[6],
-        "link_saved_at": row[7],
-        "terms_accepted_ip": row[8],
-        "terms_version": row[9],
-        "created_at": row[10],
-        "updated_at": row[11]
+        "commission_preference": _normalizar_preferencia_comissao_interna(row[6]),
+        "terms_accepted_at": row[7],
+        "link_saved_at": row[8],
+        "terms_accepted_ip": row[9],
+        "terms_version": row[10],
+        "created_at": row[11],
+        "updated_at": row[12]
     }
 
 
@@ -1134,6 +1149,7 @@ def criar_afiliado(
     email=None,
     telefone=None,
     ativo=True,
+    commission_preference="dinheiro",
     terms_accepted_at=None,
     link_saved_at=None,
     terms_accepted_ip=None,
@@ -1144,9 +1160,10 @@ def criar_afiliado(
 
     cur.execute("""
         INSERT INTO affiliates (
-            slug, nome, email, telefone, ativo, terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
+            slug, nome, email, telefone, ativo, commission_preference,
+            terms_accepted_at, link_saved_at, terms_accepted_ip, terms_version, created_at, updated_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
         ON CONFLICT (slug) DO NOTHING
     """, (
         slug,
@@ -1154,6 +1171,7 @@ def criar_afiliado(
         email,
         telefone,
         bool(ativo),
+        _normalizar_preferencia_comissao_interna(commission_preference),
         terms_accepted_at,
         link_saved_at,
         terms_accepted_ip,
@@ -1174,6 +1192,7 @@ def atualizar_afiliado(
     email=None,
     telefone=None,
     ativo=True,
+    commission_preference=None,
     terms_accepted_at=None,
     link_saved_at=None,
     terms_accepted_ip=None,
@@ -1189,6 +1208,7 @@ def atualizar_afiliado(
             email = %s,
             telefone = %s,
             ativo = %s,
+            commission_preference = COALESCE(%s, commission_preference),
             terms_accepted_at = COALESCE(%s, terms_accepted_at),
             link_saved_at = COALESCE(%s, link_saved_at),
             terms_accepted_ip = COALESCE(%s, terms_accepted_ip),
@@ -1201,6 +1221,7 @@ def atualizar_afiliado(
         email,
         telefone,
         bool(ativo),
+        (_normalizar_preferencia_comissao_interna(commission_preference) if commission_preference is not None else None),
         terms_accepted_at,
         link_saved_at,
         terms_accepted_ip,

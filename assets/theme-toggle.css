@@ -334,6 +334,29 @@ html[data-theme="light"] .status.bad {
   border-color: rgba(239, 68, 68, 0.44) !important;
 }
 
+html[data-theme="light"] .msg {
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+}
+
+html[data-theme="light"] .msg.ok {
+  color: #14532d !important;
+  border-color: rgba(22, 163, 74, 0.46) !important;
+  background: linear-gradient(180deg, rgba(187, 247, 208, 0.82), rgba(134, 239, 172, 0.62)) !important;
+}
+
+html[data-theme="light"] .msg.warn {
+  color: #7c2d12 !important;
+  border-color: rgba(245, 158, 11, 0.48) !important;
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.90), rgba(253, 186, 116, 0.60)) !important;
+}
+
+html[data-theme="light"] .msg a {
+  color: #7c2d12 !important;
+  border-bottom-color: rgba(124, 45, 18, 0.48) !important;
+}
+
 html[data-theme="light"] .logout,
 html[data-theme="light"] .menu .danger,
 html[data-theme="light"] .btn-danger {

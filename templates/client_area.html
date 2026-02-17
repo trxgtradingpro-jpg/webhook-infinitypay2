@@ -1272,6 +1272,75 @@
       gap:10px;
       margin:0;
     }
+    .affiliate-pref-form{
+      border:1px solid rgba(74,163,255,.30);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(255,255,255,.02);
+    }
+    .affiliate-pref-label{
+      margin:0;
+      color:#dce9ff;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.1px;
+    }
+    .affiliate-pref-options{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:8px;
+    }
+    .affiliate-pref-option{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      border:1px solid rgba(178,204,235,.24);
+      border-radius:10px;
+      background:rgba(255,255,255,.03);
+      padding:9px 10px;
+      cursor:pointer;
+      transition:.16s border-color, .16s background;
+    }
+    .affiliate-pref-option:hover{
+      border-color:rgba(35,176,11,.44);
+      background:rgba(35,176,11,.08);
+    }
+    .affiliate-pref-option input{
+      width:15px;
+      height:15px;
+      margin-top:2px;
+      accent-color:#23b00b;
+      flex:0 0 auto;
+    }
+    .affiliate-pref-option span{
+      color:#e6f1ff;
+      font-size:12px;
+      line-height:1.35;
+      font-weight:800;
+    }
+    @media (max-width: 760px){
+      .affiliate-pref-options{
+        grid-template-columns:1fr;
+      }
+    }
+    html[data-theme="light"] .affiliate-pref-form{
+      border-color:rgba(15,23,42,.18) !important;
+      background:rgba(15,23,42,.03) !important;
+    }
+    html[data-theme="light"] .affiliate-pref-label{
+      color:#0f172a !important;
+    }
+    html[data-theme="light"] .affiliate-pref-option{
+      border-color:rgba(15,23,42,.18) !important;
+      background:rgba(255,255,255,.72) !important;
+    }
+    html[data-theme="light"] .affiliate-pref-option span{
+      color:#0f172a !important;
+    }
+    html[data-theme="light"] .affiliate-pref-option:hover{
+      border-color:rgba(22,163,74,.42) !important;
+      background:rgba(22,163,74,.10) !important;
+    }
     .affiliate-terms-check{
       display:flex;
       align-items:flex-start;
@@ -1752,10 +1821,11 @@
       </p>
       <div class="affiliate-box">
         <ul class="affiliate-rules">
-          <li><strong>Comissao fixa:</strong> {{ affiliate_commission_percent }}% do valor do plano pago adquirido pelo indicado.</li>
-          <li><strong>Bonus de indicacao:</strong> para cada compra paga valida do indicado, voce recebe 1 mes gratis do mesmo plano adquirido por ele.</li>
+          <li><strong>Escolha de recebimento:</strong> voce define se prefere receber em <strong>dinheiro</strong> ou em <strong>plano</strong>.</li>
+          <li><strong>Modo Dinheiro:</strong> {{ affiliate_commission_percent }}% do valor do plano pago adquirido pelo indicado.</li>
+          <li><strong>Modo Plano:</strong> 1 mes gratis do mesmo plano comprado pelo indicado.</li>
           <li><strong>Primeiro indicador:</strong> o primeiro afiliado que indicar um e-mail fica vinculado de forma permanente.</li>
-          <li><strong>Compra futura:</strong> se esse mesmo cliente comprar novamente depois, a comissao continua para quem indicou primeiro.</li>
+          <li><strong>Compra futura:</strong> se esse mesmo cliente comprar novamente depois, o beneficio continua para quem indicou primeiro.</li>
           <li><strong>Persistencia:</strong> os dados de indicacao e comissao ficam registrados no banco com order_id, plano, checkout, valor pago e valor da comissao.</li>
         </ul>
         <p class="affiliate-note">
@@ -1769,7 +1839,23 @@
               <span class="status bad">Inativo</span>
             {% endif %}
             <span class="affiliate-status-text">Slug: <strong>{{ afiliado_cliente.slug }}</strong></span>
+            <span class="affiliate-status-text">Recebimento: <strong>{{ afiliado_cliente.commission_preference_label }}</strong></span>
           </div>
+          <form method="POST" action="/minha-conta/afiliados/preferencia-comissao" class="affiliate-form affiliate-pref-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <p class="affiliate-pref-label">Como voce quer receber sua indicacao?</p>
+            <div class="affiliate-pref-options">
+              <label class="affiliate-pref-option">
+                <input type="radio" name="commission_preference" value="dinheiro" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'dinheiro' %}checked{% endif %}>
+                <span>Dinheiro: {{ affiliate_commission_percent }}% por plano pago do indicado.</span>
+              </label>
+              <label class="affiliate-pref-option">
+                <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
+                <span>Plano: 1 mes gratis no mesmo plano comprado pelo indicado.</span>
+              </label>
+            </div>
+            <button type="submit" class="affiliate-activate">Salvar preferencia</button>
+          </form>
           <div class="affiliate-link-row">
             <input
               id="affiliateLinkField"
@@ -1827,6 +1913,16 @@
           {% if not afiliado_cliente.ativo %}
             <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <div class="affiliate-pref-options">
+                <label class="affiliate-pref-option">
+                  <input type="radio" name="commission_preference" value="dinheiro" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'dinheiro' %}checked{% endif %}>
+                  <span>Dinheiro: {{ affiliate_commission_percent }}% por plano pago.</span>
+                </label>
+                <label class="affiliate-pref-option">
+                  <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
+                  <span>Plano: 1 mes gratis por indicado valido.</span>
+                </label>
+              </div>
               <label class="affiliate-terms-check">
                 <input type="checkbox" name="accept_affiliate_terms" value="1" required>
                 <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
@@ -1836,6 +1932,16 @@
           {% elif not afiliado_cliente.terms_accepted %}
             <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <div class="affiliate-pref-options">
+                <label class="affiliate-pref-option">
+                  <input type="radio" name="commission_preference" value="dinheiro" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'dinheiro' %}checked{% endif %}>
+                  <span>Dinheiro: {{ affiliate_commission_percent }}% por plano pago.</span>
+                </label>
+                <label class="affiliate-pref-option">
+                  <input type="radio" name="commission_preference" value="plano" {% if (afiliado_cliente.commission_preference or 'dinheiro') == 'plano' %}checked{% endif %}>
+                  <span>Plano: 1 mes gratis por indicado valido.</span>
+                </label>
+              </div>
               <label class="affiliate-terms-check">
                 <input type="checkbox" name="accept_affiliate_terms" value="1" required>
                 <span>Para manter a indicacao liberada, confirme o aceite dos <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a>.</span>
@@ -1857,6 +1963,16 @@
           </div>
           <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="affiliate-pref-options">
+              <label class="affiliate-pref-option">
+                <input type="radio" name="commission_preference" value="dinheiro" checked>
+                <span>Dinheiro: {{ affiliate_commission_percent }}% por plano pago do indicado.</span>
+              </label>
+              <label class="affiliate-pref-option">
+                <input type="radio" name="commission_preference" value="plano">
+                <span>Plano: 1 mes gratis no mesmo plano do indicado.</span>
+              </label>
+            </div>
             <label class="affiliate-terms-check">
               <input type="checkbox" name="accept_affiliate_terms" value="1" required>
               <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
