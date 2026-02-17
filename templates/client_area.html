@@ -1875,19 +1875,19 @@
             id="notifToggleBtn"
             class="notif-btn"
             type="button"
-            aria-label="Abrir notificacoes"
+            aria-label="Abrir notificações"
             aria-expanded="false"
             aria-controls="notifPanel"
           >
             <span class="notif-ic" aria-hidden="true">&#128276;</span>
-            <span class="notif-text">Notificacoes</span>
+            <span class="notif-text">Notificações</span>
             {% if notification_count > 0 %}
               <span class="notif-badge">{{ notification_count }}</span>
             {% endif %}
           </button>
           <aside id="notifPanel" class="notif-panel" aria-hidden="true">
             <div class="notif-head">
-              <span>Notificacoes</span>
+              <span>Notificações</span>
               <span>{{ notification_count }}</span>
             </div>
             <div class="notif-list">
@@ -1902,7 +1902,7 @@
                   </article>
                 {% endfor %}
               {% else %}
-                <p class="notif-empty">Sem notificacoes novas.</p>
+                <p class="notif-empty">Sem notificações novas.</p>
               {% endif %}
             </div>
           </aside>
@@ -2056,7 +2056,7 @@
             </span>
           </div>
           <div class="summary-item">
-            <span class="s-label">Notificacoes</span>
+            <span class="s-label">Notificações</span>
             <span class="s-value {{ 'warn' if notification_count > 0 else 'ok' }}">{{ notification_count }}</span>
           </div>
           <div class="summary-item">
