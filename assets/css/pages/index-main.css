@@ -785,6 +785,114 @@
     }
 
     /* Relatórios mensais */
+    .proof-audit{
+      margin-top: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(74,163,255,.28);
+      background: linear-gradient(180deg, rgba(10,16,26,.88), rgba(7,11,19,.92));
+      padding: 14px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 18px 48px rgba(0,0,0,.28);
+    }
+    .proof-audit-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .proof-audit-head h3{
+      margin:0;
+      font-size: clamp(20px, 2.5vw, 28px);
+      letter-spacing:-.3px;
+      font-weight:1000;
+    }
+    .proof-audit-stamp{
+      border-radius:999px;
+      padding: 7px 10px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.05);
+      color: rgba(235,246,255,.84);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+    }
+    .proof-audit-sub{
+      margin: 8px 0 0;
+      color: rgba(228,239,250,.72);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+    .proof-audit-grid{
+      margin-top: 10px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 980px){ .proof-audit-grid{ grid-template-columns: 1fr; } }
+    .proof-audit-card{
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.20);
+      padding: 12px;
+      box-shadow: 0 14px 34px rgba(0,0,0,.24);
+    }
+    .audit-label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .35px;
+      color: rgba(178,213,250,.78);
+      font-weight: 900;
+    }
+    .audit-list{
+      margin: 8px 0 0;
+      padding-left: 18px;
+      display:grid;
+      gap: 7px;
+      color: rgba(228,239,250,.80);
+      font-weight: 700;
+      line-height: 1.4;
+      font-size: 13px;
+    }
+    .audit-list code{
+      border-radius: 6px;
+      background: rgba(255,255,255,.08);
+      padding: 2px 6px;
+      font-size: 12px;
+      color: rgba(233,243,255,.92);
+    }
+    .proof-audit-links{
+      margin-top: 9px;
+      display:flex;
+      gap: 8px;
+      flex-wrap:wrap;
+    }
+    .audit-link{
+      border-radius: 999px;
+      border: 1px solid rgba(74,163,255,.42);
+      background: rgba(74,163,255,.14);
+      color: #b8ddff;
+      font-weight: 900;
+      font-size: 12px;
+      text-decoration:none;
+      padding: 8px 10px;
+      transition: .16s transform, .16s filter;
+    }
+    .audit-link:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+      text-decoration:none;
+    }
+    .proof-audit-note{
+      margin: 10px 0 0;
+      color: rgba(228,239,250,.60);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
     section.monthly{
       padding: 8px 0 16px;
     }

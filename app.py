@@ -3062,6 +3062,130 @@ def parse_relatorio_mensal_nome(arquivo):
     }
 
 
+def formatar_data_hora_br(dt_utc):
+    if not dt_utc:
+        return "-"
+    try:
+        tz_admin = ZoneInfo(ADMIN_TIMEZONE)
+    except Exception:
+        tz_admin = timezone.utc
+    return dt_utc.astimezone(tz_admin).strftime("%d/%m/%Y %H:%M")
+
+
+def calcular_sha256_arquivo(caminho):
+    hasher = hashlib.sha256()
+    with open(caminho, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def contar_linhas_validas_csv(caminho):
+    total = 0
+    try:
+        with open(caminho, "r", encoding="utf-8-sig", errors="ignore") as f:
+            for linha in f:
+                linha_limpa = (linha or "").strip()
+                if not linha_limpa or linha_limpa.startswith("#"):
+                    continue
+                total += 1
+    except Exception:
+        return 0
+    return total
+
+
+def montar_prova_comercial_auditavel():
+    periodo_inicio = (os.environ.get("TRX_AUDIT_PERIOD_START") or "08/02/2025").strip()
+    periodo_fim = (os.environ.get("TRX_AUDIT_PERIOD_END") or "08/02/2026").strip()
+    janela_operacional = (os.environ.get("TRX_AUDIT_WINDOW") or "09h às 12h").strip()
+    slippage = (os.environ.get("TRX_AUDIT_SLIPPAGE") or "0").strip()
+    ajustes = (os.environ.get("TRX_AUDIT_AJUSTES") or "Todos").strip()
+
+    csv_path = (CAPITAL_CURVE_CSV_PATH or "").strip()
+    csv_norm = csv_path.replace("\\", "/")
+    csv_exists = bool(csv_path and os.path.exists(csv_path))
+    csv_sha256 = ""
+    csv_sha256_short = "-"
+    csv_rows = 0
+    csv_last_modified_iso = ""
+    csv_last_modified_br = "-"
+    csv_source_url = None
+
+    if csv_exists:
+        try:
+            csv_sha256 = calcular_sha256_arquivo(csv_path)
+            csv_sha256_short = csv_sha256[:16]
+        except Exception:
+            csv_sha256 = ""
+            csv_sha256_short = "-"
+        csv_rows = contar_linhas_validas_csv(csv_path)
+        try:
+            dt_mod = datetime.fromtimestamp(os.path.getmtime(csv_path), tz=timezone.utc)
+            csv_last_modified_iso = dt_mod.isoformat()
+            csv_last_modified_br = formatar_data_hora_br(dt_mod)
+        except Exception:
+            pass
+
+        if csv_norm.startswith("assets/"):
+            csv_source_url = f"/{csv_norm}"
+
+    pasta_meses = os.path.join("assets", "meses")
+    reports_count = 0
+    reports_last_month = "-"
+    reports_last_gain = "-"
+
+    if os.path.isdir(pasta_meses):
+        parsed_reports = []
+        for arquivo in os.listdir(pasta_meses):
+            parsed = parse_relatorio_mensal_nome(arquivo)
+            if parsed:
+                parsed_reports.append(parsed)
+
+        reports_count = len(parsed_reports)
+        if parsed_reports:
+            parsed_reports.sort(key=lambda item: item.get("_sort", (99, 99, 99, "")))
+            ultimo = parsed_reports[-1]
+            reports_last_month = ultimo.get("month") or "-"
+            reports_last_gain = ultimo.get("gain") or "-"
+
+    generated_at = agora_utc()
+    return {
+        "generated_at_iso": generated_at.isoformat(),
+        "generated_at_br": formatar_data_hora_br(generated_at),
+        "methodology": {
+            "strategy": "TRX_GOLD",
+            "timeframe": "M5",
+            "period_start": periodo_inicio,
+            "period_end": periodo_fim,
+            "operational_window": janela_operacional,
+            "slippage": slippage,
+            "ajustes": ajustes,
+        },
+        "risk": {
+            "stop_loss_points": 300,
+            "stop_gain_points": 600,
+            "break_even_points": 190,
+            "max_drawdown_percent": "12,52%",
+            "max_trade_drawdown_percent": "9,21%",
+        },
+        "sources": {
+            "csv_exists": csv_exists,
+            "csv_path": csv_path or "-",
+            "csv_url": csv_source_url,
+            "csv_rows": csv_rows,
+            "csv_sha256": csv_sha256,
+            "csv_sha256_short": csv_sha256_short,
+            "csv_last_modified_iso": csv_last_modified_iso,
+            "csv_last_modified_br": csv_last_modified_br,
+            "reports_api_url": "/api/reports/monthly",
+            "reports_images_path": "/assets/meses/",
+            "reports_count": reports_count,
+            "reports_last_month": reports_last_month,
+            "reports_last_gain": reports_last_gain,
+        },
+    }
+
+
 def registrar_usuario_online():
     identificador = identificador_online_request()
     agora = time.time()
@@ -3404,7 +3528,8 @@ def home():
     return render_template(
         "index.html",
         affiliate=afiliado,
-        checkout_suffix=montar_checkout_suffix(afiliado)
+        checkout_suffix=montar_checkout_suffix(afiliado),
+        proof_audit=montar_prova_comercial_auditavel()
     )
 
 
@@ -4385,7 +4510,8 @@ def landing_afiliado(affiliate_slug):
     return render_template(
         "index.html",
         affiliate=afiliado,
-        checkout_suffix=montar_checkout_suffix(afiliado)
+        checkout_suffix=montar_checkout_suffix(afiliado),
+        proof_audit=montar_prova_comercial_auditavel()
     )
 
 

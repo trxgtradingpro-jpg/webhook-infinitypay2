@@ -255,6 +255,62 @@
             <p class="proof-disclaimer">Resultados passados n&atilde;o garantem resultados futuros. Operar envolve risco.</p>
           </article>
         </div>
+
+        {% set audit = proof_audit or {} %}
+        {% set audit_method = audit.get("methodology", {}) %}
+        {% set audit_risk = audit.get("risk", {}) %}
+        {% set audit_sources = audit.get("sources", {}) %}
+
+        <div class="proof-audit" id="prova-auditavel">
+          <div class="proof-audit-head">
+            <h3>Prova comercial audit&aacute;vel</h3>
+            <span class="proof-audit-stamp">Atualizado em {{ audit.get("generated_at_br", "-") }}</span>
+          </div>
+          <p class="proof-audit-sub">
+            Transpar&ecirc;ncia total da metodologia, per&iacute;odo, risco e origem dos dados para valida&ccedil;&atilde;o independente.
+          </p>
+
+          <div class="proof-audit-grid">
+            <article class="proof-audit-card">
+              <div class="audit-label">Metodologia</div>
+              <ul class="audit-list">
+                <li>Estrat&eacute;gia: {{ audit_method.get("strategy", "TRX_GOLD") }} | {{ audit_method.get("timeframe", "M5") }}</li>
+                <li>Per&iacute;odo avaliado: {{ audit_method.get("period_start", "-") }} at&eacute; {{ audit_method.get("period_end", "-") }}</li>
+                <li>Janela operacional: {{ audit_method.get("operational_window", "09h &agrave;s 12h") }}</li>
+                <li>Slippage: {{ audit_method.get("slippage", "0") }} | Ajustes: {{ audit_method.get("ajustes", "Todos") }}</li>
+              </ul>
+            </article>
+
+            <article class="proof-audit-card">
+              <div class="audit-label">Controle de risco</div>
+              <ul class="audit-list">
+                <li>Stop loss fixo: {{ audit_risk.get("stop_loss_points", 300) }} pontos</li>
+                <li>Stop gain fixo: {{ audit_risk.get("stop_gain_points", 600) }} pontos</li>
+                <li>Trava no 0x0: +{{ audit_risk.get("break_even_points", 190) }} pontos com candle fechado</li>
+                <li>Drawdown m&aacute;x.: {{ audit_risk.get("max_drawdown_percent", "12,52%") }} | Trade a trade: {{ audit_risk.get("max_trade_drawdown_percent", "9,21%") }}</li>
+              </ul>
+            </article>
+
+            <article class="proof-audit-card">
+              <div class="audit-label">Fonte dos dados</div>
+              <ul class="audit-list">
+                <li>Base prim&aacute;ria CSV: {{ audit_sources.get("csv_rows", 0) }} linha(s) v&aacute;lida(s)</li>
+                <li>Hash SHA-256 (CSV): <code>{{ audit_sources.get("csv_sha256_short", "-") }}</code></li>
+                <li>&Uacute;ltima atualiza&ccedil;&atilde;o da base: {{ audit_sources.get("csv_last_modified_br", "-") }}</li>
+                <li>Relat&oacute;rios mensais dispon&iacute;veis: {{ audit_sources.get("reports_count", 0) }} (m&ecirc;s mais recente: {{ audit_sources.get("reports_last_month", "-") }})</li>
+              </ul>
+              <div class="proof-audit-links">
+                {% if audit_sources.get("csv_url") %}
+                  <a class="audit-link" href="{{ audit_sources.get('csv_url') }}" target="_blank" rel="noopener">Abrir CSV da curva</a>
+                {% endif %}
+                <a class="audit-link" href="{{ audit_sources.get('reports_api_url', '/api/reports/monthly') }}" target="_blank" rel="noopener">Abrir API dos relat&oacute;rios</a>
+              </div>
+            </article>
+          </div>
+          <p class="proof-audit-note">
+            A prova pode ser conferida pelos relat&oacute;rios mensais e pela base de curva. Resultados passados n&atilde;o garantem resultados futuros.
+          </p>
+        </div>
       </div>
     </div>
   </section>
