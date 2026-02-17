@@ -34,6 +34,7 @@ from database import (
     buscar_order_por_id,
     marcar_order_processada,
     registrar_falha_email,
+    atualizar_order_afiliado,
     transacao_ja_processada,
     marcar_transacao_processada,
     listar_pedidos,
@@ -60,9 +61,12 @@ from database import (
     listar_afiliados,
     buscar_afiliado_por_slug,
     buscar_afiliado_por_email,
+    buscar_indicacao_afiliado_por_email,
     criar_afiliado,
     atualizar_afiliado,
     excluir_afiliado,
+    registrar_primeira_indicacao_afiliado,
+    registrar_comissao_afiliado,
     registrar_backup_execucao,
     listar_backups_execucao,
     adquirir_lock_backup_distribuido,
@@ -291,6 +295,8 @@ PLANOS = {
 }
 
 AFFILIATE_SLUG_RE = re.compile(r"^[a-z0-9-]{2,60}$")
+AFFILIATE_COMMISSION_PERCENT = 50.0
+AFFILIATE_COMMISSION_RATE = AFFILIATE_COMMISSION_PERCENT / 100.0
 RESERVED_AFFILIATE_SLUGS = {
     "admin",
     "api",
@@ -438,6 +444,119 @@ def montar_dados_afiliado_cliente(afiliado):
         "ativo": bool(afiliado.get("ativo")),
         "link_publico": link_publico,
     }
+
+
+def resolver_afiliado_para_compra(email, affiliate_slug_checkout, order_id=None, checkout_slug=None):
+    email_norm = normalizar_email(email)
+    if not EMAIL_RE.fullmatch(email_norm):
+        return None, None
+
+    referral = buscar_indicacao_afiliado_por_email(email_norm)
+    if referral:
+        slug_referral = normalizar_slug_afiliado(referral.get("affiliate_slug") or "")
+        if slug_afiliado_valido(slug_referral):
+            return {
+                "slug": slug_referral,
+                "nome": normalizar_nome(referral.get("affiliate_nome") or ""),
+                "email": normalizar_email(referral.get("affiliate_email") or ""),
+                "telefone": normalizar_telefone(referral.get("affiliate_telefone") or ""),
+            }, referral
+
+    slug_checkout = normalizar_slug_afiliado(affiliate_slug_checkout or "")
+    if not slug_afiliado_valido(slug_checkout):
+        return None, referral
+
+    afiliado = buscar_afiliado_por_slug(slug_checkout, apenas_ativos=True)
+    if not afiliado:
+        return None, referral
+
+    snap = {
+        "slug": afiliado.get("slug") or slug_checkout,
+        "nome": normalizar_nome(afiliado.get("nome") or ""),
+        "email": normalizar_email(afiliado.get("email") or ""),
+        "telefone": normalizar_telefone(afiliado.get("telefone") or ""),
+    }
+
+    registrar_primeira_indicacao_afiliado(
+        referred_email=email_norm,
+        affiliate_slug=snap["slug"],
+        affiliate_nome=snap["nome"],
+        affiliate_email=snap["email"],
+        affiliate_telefone=snap["telefone"],
+        first_order_id=order_id,
+        first_checkout_slug=checkout_slug,
+        first_source="checkout"
+    )
+
+    referral = buscar_indicacao_afiliado_por_email(email_norm)
+    if referral:
+        slug_referral = normalizar_slug_afiliado(referral.get("affiliate_slug") or "")
+        if slug_afiliado_valido(slug_referral):
+            return {
+                "slug": slug_referral,
+                "nome": normalizar_nome(referral.get("affiliate_nome") or ""),
+                "email": normalizar_email(referral.get("affiliate_email") or ""),
+                "telefone": normalizar_telefone(referral.get("affiliate_telefone") or ""),
+            }, referral
+
+    return snap, referral
+
+
+def registrar_comissao_pedido_afiliado(order, transaction_nsu=None):
+    if not order:
+        return False
+
+    if (order.get("status") or "").upper() != "PAGO":
+        return False
+
+    plano = (order.get("plano") or "").strip().lower()
+    if plano not in PLANOS:
+        return False
+
+    referred_email = normalizar_email(order.get("email") or "")
+    if not EMAIL_RE.fullmatch(referred_email):
+        return False
+
+    affiliate_slug = normalizar_slug_afiliado(order.get("affiliate_slug") or "")
+    if not slug_afiliado_valido(affiliate_slug):
+        referral = buscar_indicacao_afiliado_por_email(referred_email)
+        fallback_slug = normalizar_slug_afiliado((referral or {}).get("affiliate_slug") or "")
+        if not slug_afiliado_valido(fallback_slug):
+            return False
+        affiliate_slug = fallback_slug
+        order["affiliate_slug"] = affiliate_slug
+        order["affiliate_nome"] = (referral or {}).get("affiliate_nome") or order.get("affiliate_nome")
+        order["affiliate_email"] = (referral or {}).get("affiliate_email") or order.get("affiliate_email")
+        order["affiliate_telefone"] = (referral or {}).get("affiliate_telefone") or order.get("affiliate_telefone")
+        try:
+            atualizar_order_afiliado(
+                order_id=order.get("order_id"),
+                affiliate_slug=order.get("affiliate_slug"),
+                affiliate_nome=order.get("affiliate_nome"),
+                affiliate_email=order.get("affiliate_email"),
+                affiliate_telefone=order.get("affiliate_telefone"),
+            )
+        except Exception:
+            pass
+
+    amount_centavos = int(PLANOS.get(plano, {}).get("preco") or 0)
+    commission_centavos = int(round(float(amount_centavos) * AFFILIATE_COMMISSION_RATE))
+
+    return registrar_comissao_afiliado(
+        order_id=order.get("order_id"),
+        transaction_nsu=transaction_nsu,
+        referred_email=referred_email,
+        affiliate_slug=affiliate_slug,
+        affiliate_nome=order.get("affiliate_nome"),
+        affiliate_email=order.get("affiliate_email"),
+        affiliate_telefone=order.get("affiliate_telefone"),
+        plano=plano,
+        checkout_slug=order.get("checkout_slug"),
+        order_amount_centavos=amount_centavos,
+        commission_percent=AFFILIATE_COMMISSION_PERCENT,
+        commission_centavos=commission_centavos,
+        status="PENDENTE"
+    )
 
 
 MESES_ROTULO = {
@@ -2504,6 +2623,13 @@ def api_cliente_lead_upgrade_click():
             "message": "Upsell disponivel apenas para conta com plano gratuito ativo."
         }), 400
 
+    if not affiliate_slug:
+        referral = buscar_indicacao_afiliado_por_email(email)
+        referral_slug = normalizar_slug_afiliado((referral or {}).get("affiliate_slug") or "")
+        if slug_afiliado_valido(referral_slug):
+            affiliate_slug = referral_slug
+            checkout_slug = montar_plano_checkout(target_plan, affiliate_slug)
+
     registrar_lead_upgrade_cliente(
         email=email,
         order_id=order_id_origem,
@@ -3075,7 +3201,8 @@ def cliente_area():
         ativos=ativos,
         ultimo_pedido=ultimo_pedido,
         upsell_plans=upsell_plans,
-        afiliado_cliente=afiliado_cliente_view
+        afiliado_cliente=afiliado_cliente_view,
+        affiliate_commission_percent=int(AFFILIATE_COMMISSION_PERCENT)
     )
 
 
@@ -3243,13 +3370,16 @@ def comprar():
     session["email"] = email
     session["telefone"] = telefone
 
-    afiliado = None
-    if affiliate_slug:
-        afiliado = buscar_afiliado_por_slug(affiliate_slug, apenas_ativos=True)
-        if not afiliado:
-            return "Afiliado invalido", 400
-
     order_id = str(uuid.uuid4())
+    afiliado_atribuido, referral_info = resolver_afiliado_para_compra(
+        email=email,
+        affiliate_slug_checkout=affiliate_slug,
+        order_id=order_id,
+        checkout_slug=plano_checkout or plano_id
+    )
+
+    if affiliate_slug and not afiliado_atribuido and not referral_info:
+        return "Afiliado invalido", 400
 
     salvar_order(
         order_id=order_id,
@@ -3258,10 +3388,10 @@ def comprar():
         email=email,
         telefone=telefone,
         checkout_slug=plano_checkout or plano_id,
-        affiliate_slug=afiliado["slug"] if afiliado else None,
-        affiliate_nome=afiliado["nome"] if afiliado else None,
-        affiliate_email=afiliado.get("email") if afiliado else None,
-        affiliate_telefone=afiliado.get("telefone") if afiliado else None,
+        affiliate_slug=(afiliado_atribuido or {}).get("slug"),
+        affiliate_nome=(afiliado_atribuido or {}).get("nome") or None,
+        affiliate_email=(afiliado_atribuido or {}).get("email") or None,
+        affiliate_telefone=(afiliado_atribuido or {}).get("telefone") or None,
     )
 
     plano_info = PLANOS[plano_id]
@@ -3295,6 +3425,10 @@ def comprar():
                 garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
             except Exception as exc:
                 print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
+            try:
+                registrar_comissao_pedido_afiliado(order_pago)
+            except Exception as exc:
+                print(f"[AFILIADOS] Falha ao registrar comissao do pedido {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago)
             agendar_whatsapp(order_id, minutos=WHATSAPP_DELAY_MINUTES)
             agendar_whatsapp_pos_pago(order_pago)
@@ -3368,6 +3502,10 @@ def webhook():
                 garantir_conta_cliente_para_order(order_pago, enviar_email_credenciais=True)
             except Exception as exc:
                 print(f"[CLIENTE] Falha ao preparar conta do cliente {order_id}: {exc}", flush=True)
+            try:
+                registrar_comissao_pedido_afiliado(order_pago, transaction_nsu=transaction_nsu)
+            except Exception as exc:
+                print(f"[AFILIADOS] Falha ao registrar comissao do webhook {order_id}: {exc}", flush=True)
             registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
             agendar_whatsapp_pos_pago(order_pago)
     except Exception as exc:

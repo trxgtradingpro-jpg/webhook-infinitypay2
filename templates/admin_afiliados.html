@@ -35,6 +35,15 @@
     {% endif %}
 
     <section class="panel">
+      <h2 class="panel-title">Regra de comissao e atribuicao</h2>
+      <p class="panel-subtitle">
+        Comissao de afiliado: 50% do valor do plano pago pelo indicado.
+        O primeiro afiliado que indicar um e-mail fica salvo como dono da indicacao para compras futuras desse mesmo e-mail.
+        Os dados de indicacao e comissao sao persistidos no banco (slug, e-mail indicado, pedido, checkout, valor do plano e valor da comissao).
+      </p>
+    </section>
+
+    <section class="panel">
       <h2 class="panel-title">Adicionar afiliado</h2>
       <form method="POST" action="/admin/afiliados/adicionar">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

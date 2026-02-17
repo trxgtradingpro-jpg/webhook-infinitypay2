@@ -140,6 +140,49 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliates_slug ON affiliates(slug)")
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_referrals (
+            referred_email TEXT PRIMARY KEY,
+            affiliate_slug TEXT NOT NULL,
+            affiliate_nome TEXT,
+            affiliate_email TEXT,
+            affiliate_telefone TEXT,
+            first_order_id TEXT,
+            first_checkout_slug TEXT,
+            first_source TEXT,
+            first_referred_at TIMESTAMP DEFAULT NOW(),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_slug ON affiliate_referrals(affiliate_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_first_referred_at ON affiliate_referrals(first_referred_at DESC)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS affiliate_commissions (
+            id BIGSERIAL PRIMARY KEY,
+            order_id TEXT UNIQUE NOT NULL,
+            transaction_nsu TEXT,
+            referred_email TEXT NOT NULL,
+            affiliate_slug TEXT NOT NULL,
+            affiliate_nome TEXT,
+            affiliate_email TEXT,
+            affiliate_telefone TEXT,
+            plano TEXT NOT NULL,
+            checkout_slug TEXT,
+            order_amount_centavos INTEGER NOT NULL DEFAULT 0,
+            commission_percent NUMERIC(5,2) NOT NULL DEFAULT 50.00,
+            commission_centavos INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_slug ON affiliate_commissions(affiliate_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_email ON affiliate_commissions(referred_email)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_status ON affiliate_commissions(status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_created_at ON affiliate_commissions(created_at DESC)")
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS backup_runs (
             id BIGSERIAL PRIMARY KEY,
             trigger_type TEXT NOT NULL,
@@ -208,6 +251,68 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_accounts_remember_token_hash ON customer_accounts(remember_token_hash)")
     cur.execute("ALTER TABLE quiz_submissions ADD COLUMN IF NOT EXISTS account_email TEXT")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_quiz_submissions_account_email ON quiz_submissions(account_email)")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS affiliate_nome TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS affiliate_email TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS affiliate_telefone TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS first_order_id TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS first_checkout_slug TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS first_source TEXT")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS first_referred_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_slug ON affiliate_referrals(affiliate_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_first_referred_at ON affiliate_referrals(first_referred_at DESC)")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS transaction_nsu TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS referred_email TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_slug TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_nome TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_email TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_telefone TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS plano TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS checkout_slug TEXT")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS order_amount_centavos INTEGER DEFAULT 0")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(5,2) DEFAULT 50.00")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS commission_centavos INTEGER DEFAULT 0")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'PENDENTE'")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_slug ON affiliate_commissions(affiliate_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_email ON affiliate_commissions(referred_email)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_status ON affiliate_commissions(status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_created_at ON affiliate_commissions(created_at DESC)")
+
+    cur.execute("""
+        INSERT INTO affiliate_referrals (
+            referred_email,
+            affiliate_slug,
+            affiliate_nome,
+            affiliate_email,
+            affiliate_telefone,
+            first_order_id,
+            first_checkout_slug,
+            first_source,
+            first_referred_at,
+            created_at,
+            updated_at
+        )
+        SELECT DISTINCT ON (LOWER(COALESCE(TRIM(o.email), '')))
+            LOWER(COALESCE(TRIM(o.email), '')) AS referred_email,
+            LOWER(COALESCE(TRIM(o.affiliate_slug), '')) AS affiliate_slug,
+            o.affiliate_nome,
+            o.affiliate_email,
+            o.affiliate_telefone,
+            o.order_id,
+            o.checkout_slug,
+            'orders_backfill',
+            COALESCE(o.created_at, NOW()),
+            NOW(),
+            NOW()
+        FROM orders o
+        WHERE COALESCE(TRIM(o.email), '') <> ''
+          AND COALESCE(TRIM(o.affiliate_slug), '') <> ''
+        ORDER BY LOWER(COALESCE(TRIM(o.email), '')), o.created_at ASC
+        ON CONFLICT (referred_email) DO NOTHING
+    """)
 
     cur.execute("""
         UPDATE orders
@@ -653,6 +758,35 @@ def excluir_duplicados_gratis_mesmo_dia(order_id_referencia, email):
     return removidos
 
 
+def atualizar_order_afiliado(order_id, affiliate_slug=None, affiliate_nome=None, affiliate_email=None, affiliate_telefone=None):
+    order_id_norm = (order_id or "").strip()[:120]
+    if not order_id_norm:
+        return False
+
+    slug_norm = (affiliate_slug or "").strip().lower()[:80] or None
+    nome_norm = (affiliate_nome or "").strip()[:120] or None
+    email_norm = _normalizar_email_interno(affiliate_email) or None
+    telefone_norm = (affiliate_telefone or "").strip()[:40] or None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE orders
+        SET affiliate_slug = COALESCE(%s, affiliate_slug),
+            affiliate_nome = COALESCE(%s, affiliate_nome),
+            affiliate_email = COALESCE(%s, affiliate_email),
+            affiliate_telefone = COALESCE(%s, affiliate_telefone)
+        WHERE order_id = %s
+    """, (slug_norm, nome_norm, email_norm, telefone_norm, order_id_norm))
+
+    atualizado = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return atualizado
+
+
 # ======================================================
 # AFILIADOS
 # ======================================================
@@ -767,6 +901,189 @@ def buscar_afiliado_por_email(email, apenas_ativos=False):
         "created_at": row[6],
         "updated_at": row[7]
     }
+
+
+def buscar_indicacao_afiliado_por_email(email):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT referred_email,
+               affiliate_slug,
+               affiliate_nome,
+               affiliate_email,
+               affiliate_telefone,
+               first_order_id,
+               first_checkout_slug,
+               first_source,
+               first_referred_at,
+               created_at,
+               updated_at
+        FROM affiliate_referrals
+        WHERE referred_email = %s
+        LIMIT 1
+    """, (email_norm,))
+
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "referred_email": row[0],
+        "affiliate_slug": row[1],
+        "affiliate_nome": row[2],
+        "affiliate_email": row[3],
+        "affiliate_telefone": row[4],
+        "first_order_id": row[5],
+        "first_checkout_slug": row[6],
+        "first_source": row[7],
+        "first_referred_at": row[8],
+        "created_at": row[9],
+        "updated_at": row[10],
+    }
+
+
+def registrar_primeira_indicacao_afiliado(
+    referred_email,
+    affiliate_slug,
+    affiliate_nome=None,
+    affiliate_email=None,
+    affiliate_telefone=None,
+    first_order_id=None,
+    first_checkout_slug=None,
+    first_source="checkout"
+):
+    email_norm = _normalizar_email_interno(referred_email)
+    affiliate_slug_norm = (affiliate_slug or "").strip().lower()[:80]
+    if not email_norm or not affiliate_slug_norm:
+        return False
+
+    nome_norm = (affiliate_nome or "").strip()[:120] or None
+    affiliate_email_norm = _normalizar_email_interno(affiliate_email) or None
+    affiliate_telefone_norm = (affiliate_telefone or "").strip()[:40] or None
+    order_norm = (first_order_id or "").strip()[:120] or None
+    checkout_norm = (first_checkout_slug or "").strip().lower()[:120] or None
+    source_norm = (first_source or "checkout").strip()[:80]
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO affiliate_referrals (
+            referred_email,
+            affiliate_slug,
+            affiliate_nome,
+            affiliate_email,
+            affiliate_telefone,
+            first_order_id,
+            first_checkout_slug,
+            first_source,
+            first_referred_at,
+            created_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW(), NOW())
+        ON CONFLICT (referred_email) DO NOTHING
+    """, (
+        email_norm,
+        affiliate_slug_norm,
+        nome_norm,
+        affiliate_email_norm,
+        affiliate_telefone_norm,
+        order_norm,
+        checkout_norm,
+        source_norm,
+    ))
+
+    inserido = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return inserido
+
+
+def registrar_comissao_afiliado(
+    order_id,
+    referred_email,
+    affiliate_slug,
+    plano,
+    order_amount_centavos,
+    commission_percent,
+    commission_centavos,
+    transaction_nsu=None,
+    checkout_slug=None,
+    affiliate_nome=None,
+    affiliate_email=None,
+    affiliate_telefone=None,
+    status="PENDENTE"
+):
+    order_id_norm = (order_id or "").strip()[:120]
+    referred_email_norm = _normalizar_email_interno(referred_email)
+    affiliate_slug_norm = (affiliate_slug or "").strip().lower()[:80]
+    plano_norm = (plano or "").strip().lower()[:60]
+
+    if not order_id_norm or not referred_email_norm or not affiliate_slug_norm or not plano_norm:
+        return False
+
+    transaction_nsu_norm = (transaction_nsu or "").strip()[:120] or None
+    checkout_slug_norm = (checkout_slug or "").strip().lower()[:120] or None
+    affiliate_nome_norm = (affiliate_nome or "").strip()[:120] or None
+    affiliate_email_norm = _normalizar_email_interno(affiliate_email) or None
+    affiliate_telefone_norm = (affiliate_telefone or "").strip()[:40] or None
+    status_norm = (status or "PENDENTE").strip().upper()[:20] or "PENDENTE"
+    percent_num = Decimal(str(commission_percent or 0))
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO affiliate_commissions (
+            order_id,
+            transaction_nsu,
+            referred_email,
+            affiliate_slug,
+            affiliate_nome,
+            affiliate_email,
+            affiliate_telefone,
+            plano,
+            checkout_slug,
+            order_amount_centavos,
+            commission_percent,
+            commission_centavos,
+            status,
+            created_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+        ON CONFLICT (order_id) DO UPDATE
+        SET transaction_nsu = COALESCE(affiliate_commissions.transaction_nsu, EXCLUDED.transaction_nsu),
+            updated_at = NOW()
+    """, (
+        order_id_norm,
+        transaction_nsu_norm,
+        referred_email_norm,
+        affiliate_slug_norm,
+        affiliate_nome_norm,
+        affiliate_email_norm,
+        affiliate_telefone_norm,
+        plano_norm,
+        checkout_slug_norm,
+        int(order_amount_centavos or 0),
+        percent_num,
+        int(commission_centavos or 0),
+        status_norm,
+    ))
+
+    alterado = cur.rowcount > 0
+    conn.commit()
+    cur.close()
+    conn.close()
+    return alterado
 
 
 def criar_afiliado(slug, nome, email=None, telefone=None, ativo=True):

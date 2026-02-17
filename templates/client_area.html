@@ -901,6 +901,34 @@
       line-height:1.45;
       font-weight:700;
     }
+    .affiliate-rules{
+      margin:0;
+      padding-left:18px;
+      display:grid;
+      gap:8px;
+      color:#dce9ff;
+      font-size:13px;
+      line-height:1.45;
+      font-weight:700;
+    }
+    .affiliate-rules li{
+      margin:0;
+    }
+    .affiliate-rules strong{
+      color:#fff3c6;
+      font-weight:900;
+    }
+    .affiliate-note{
+      margin:0;
+      padding:10px 11px;
+      border-radius:10px;
+      border:1px solid rgba(255,210,26,.30);
+      background:linear-gradient(180deg, rgba(255,210,26,.12), rgba(255,138,31,.10));
+      color:#ffe7be;
+      font-size:12px;
+      line-height:1.45;
+      font-weight:800;
+    }
     .affiliate-activate[disabled]{
       opacity:.75;
       cursor:not-allowed;
@@ -1239,9 +1267,18 @@
     <section class="card section-anchor" id="afiliados">
       <h2>Programa de afiliados</h2>
       <p class="affiliate-intro">
-        Ative sua afiliacao para receber um link exclusivo e indicar o TRX PRO com rastreamento automatico.
+        Aqui voce pode ativar sua afiliacao, gerar seu link de indicacao e acompanhar uma regra clara de comissionamento.
       </p>
       <div class="affiliate-box">
+        <ul class="affiliate-rules">
+          <li><strong>Comissao fixa:</strong> {{ affiliate_commission_percent }}% do valor do plano pago adquirido pelo indicado.</li>
+          <li><strong>Primeiro indicador:</strong> o primeiro afiliado que indicar um e-mail fica vinculado de forma permanente.</li>
+          <li><strong>Compra futura:</strong> se esse mesmo cliente comprar novamente depois, a comissao continua para quem indicou primeiro.</li>
+          <li><strong>Persistencia:</strong> os dados de indicacao e comissao ficam registrados no banco com order_id, plano, checkout, valor pago e valor da comissao.</li>
+        </ul>
+        <p class="affiliate-note">
+          Importante: o rastreio e feito por e-mail do comprador. Evite criar varias contas para o mesmo cliente.
+        </p>
         {% if afiliado_cliente %}
           <div class="affiliate-status-row">
             {% if afiliado_cliente.ativo %}
