@@ -436,6 +436,39 @@
         transform: translateX(0);
       }
     }
+    /* Compatibilidade visual para barra antiga de login (cache legado) */
+    .client-login-strip{
+      margin: 10px auto 0;
+      width:min(980px, 96vw);
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,94,207,.24);
+      background: linear-gradient(90deg, rgba(255,255,255,.88), rgba(236,244,255,.86));
+      box-shadow: 0 16px 40px rgba(0,0,0,.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .client-login-strip span{
+      color: #13263f;
+      font-weight: 900;
+      text-align:center;
+      text-shadow: none;
+    }
+    .client-login-strip .client-login-btn{
+      color:#ffffff;
+      border-color: rgba(255,255,255,.32);
+      background: linear-gradient(180deg, #1877f2 0%, #0f5ecf 100%);
+      box-shadow: 0 12px 30px rgba(7,52,119,.30), inset 0 1px 0 rgba(255,255,255,.24);
+    }
+    .client-login-strip .client-login-btn.secondary{
+      color:#ffffff;
+      border-color: rgba(255,255,255,.34);
+      background: linear-gradient(180deg, #ff7a22 0%, #e85a10 100%);
+      box-shadow: 0 12px 30px rgba(192,86,26,.30), inset 0 1px 0 rgba(255,255,255,.24);
+    }
     .quiz-btn{
       background: linear-gradient(120deg, #ffffff 0%, #defee7 30%, #ffffff 60%, #dff6ff 100%);
       color: #041a12;
@@ -1414,6 +1447,32 @@
       box-shadow: 0 18px 60px rgba(0,0,0,.25);
     }
     .important b{color: var(--red);}
+    html[data-theme="light"] .important,
+    body.light-theme .important,
+    .theme-light .important{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(247,251,255,.94));
+      border-color: rgba(11,30,52,.24);
+      color: rgba(18,35,58,.92);
+      text-shadow: none;
+      box-shadow: 0 14px 36px rgba(11,30,52,.12);
+    }
+    html[data-theme="light"] .important b,
+    body.light-theme .important b,
+    .theme-light .important b{
+      color:#d81f1f;
+    }
+    @media (prefers-color-scheme: light){
+      .important{
+        background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(247,251,255,.94));
+        border-color: rgba(11,30,52,.24);
+        color: rgba(18,35,58,.92);
+        text-shadow: none;
+        box-shadow: 0 14px 36px rgba(11,30,52,.12);
+      }
+      .important b{
+        color:#d81f1f;
+      }
+    }
 
     /* ======= PLANOS (REFERENCIA) ======= */
     section.plans{
