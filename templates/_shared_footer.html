@@ -1,30 +1,43 @@
 <style>
   .trx-shared-footer{
-    width:min(980px, 96vw);
-    margin:22px auto 16px;
-    text-align:center;
+    width: 100%;              /* ✅ não vaza do container */
+    max-width: 100%;
+    margin: 22px auto 16px;
+    text-align: center;
     color: rgba(228,239,250,.92);
+    overflow: hidden;         /* ✅ segurança extra */
   }
+
   .trx-shared-footer-grid{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:10px;
-    margin-bottom:12px;
+    display: grid;
+    grid-template-columns: 1fr; /* ✅ no checkout fica 1 coluna */
+    gap: 10px;
+    margin-bottom: 12px;
   }
+
+  /* ✅ só vira 3 colunas em telas grandes */
+  @media (min-width: 920px){
+    .trx-shared-footer-grid{
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
   .trx-shared-footer-item{
-    border:1px solid rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.12);
     background: rgba(255,255,255,.03);
-    border-radius:12px;
-    padding:10px 12px;
-    text-align:left;
+    border-radius: 12px;
+    padding: 10px 12px;
+    text-align: left;
     box-shadow: 0 10px 24px rgba(0,0,0,.16);
   }
+
   .trx-shared-footer-item strong{
     display:block;
     font-size:13px;
     font-weight:900;
     color:#e8f2ff;
   }
+
   .trx-shared-footer-item span{
     display:block;
     margin-top:4px;
@@ -33,124 +46,149 @@
     color: rgba(228,239,250,.68);
     line-height:1.35;
   }
+
   .trx-shared-footer-seals{
     display:flex;
     flex-wrap:wrap;
     justify-content:center;
-    gap:10px;
+    gap: 8px;                 /* ✅ menos espaçamento horizontal */
     margin-bottom:12px;
   }
+
   .trx-shared-footer-seals span{
     border:1px solid rgba(255,255,255,.14);
     background: rgba(255,255,255,.04);
     border-radius:999px;
-    padding:8px 12px;
-    font-size:12px;
+    padding: 6px 10px;        /* ✅ menor */
+    font-size: 11px;          /* ✅ menor */
     font-weight:800;
     color: rgba(228,239,250,.88);
+    white-space: nowrap;
   }
+
   .trx-shared-footer-badges{
     margin: 8px auto 10px;
-    width:min(520px, 92vw);
+    width: 100%;              /* ✅ não vaza */
+    max-width: 360px;         /* ✅ fica compacto no checkout */
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:12px;
+    gap: 10px;                /* ✅ menos espaço */
     flex-wrap:wrap;
   }
+
   .trx-shared-footer-badges .badge-main{
-    width:min(250px, 70vw);
+    width: 160px;             /* ✅ menor */
+    max-width: 70%;
     display:block;
     pointer-events:none;
     user-select:none;
     -webkit-user-drag:none;
   }
+
   .trx-shared-footer-badges .badge-side{
-    width:min(96px, 24vw);
+    width: 60px;              /* ✅ menor */
+    max-width: 25%;
     display:block;
     pointer-events:none;
     user-select:none;
     -webkit-user-drag:none;
   }
+
+  .trx-shared-footer-badges img{
+    height:auto;
+  }
+
   .trx-shared-footer-legal{
     margin-top:2px;
     font-size:12px;
     color: rgba(228,239,250,.56);
     font-weight:700;
   }
+
   .trx-shared-footer-copy{
     margin-top:8px;
     font-weight:1000;
     letter-spacing:.3px;
-    font-size:24px;
+    font-size: 18px;          /* ✅ menor */
   }
+
   .trx-shared-footer-rights{
     margin-top:6px;
-    font-size:15px;
+    font-size:13px;           /* ✅ menor */
     color: rgba(228,239,250,.62);
   }
+
   .trx-shared-footer-links{
-    margin-top:14px;
+    margin-top:12px;
     display:flex;
     justify-content:center;
-    gap:26px;
+    gap: 14px;                /* ✅ menos espaçamento horizontal */
     flex-wrap:wrap;
   }
+
   .trx-shared-footer-links a{
     color: rgba(228,239,250,.62);
     text-decoration:none;
     font-weight:700;
+    font-size: 12px;          /* ✅ menor */
     transition:.15s color ease;
   }
+
   .trx-shared-footer-links a:hover{
     color:#ffffff;
   }
-  @media (max-width: 820px){
-    .trx-shared-footer-grid{
-      grid-template-columns:1fr;
-    }
-  }
 
+  /* LIGHT THEME */
   html[data-theme="light"] .trx-shared-footer,
   .theme-light .trx-shared-footer{
     color:#1f2937;
   }
+
   html[data-theme="light"] .trx-shared-footer-item,
   .theme-light .trx-shared-footer-item{
     border-color:rgba(15,23,42,.16);
     background:rgba(255,255,255,.78);
     box-shadow:0 10px 24px rgba(15,23,42,.10);
   }
+
   html[data-theme="light"] .trx-shared-footer-item strong,
   .theme-light .trx-shared-footer-item strong{
     color:#0f172a;
   }
+
   html[data-theme="light"] .trx-shared-footer-item span,
   .theme-light .trx-shared-footer-item span{
     color:#334155;
   }
+
   html[data-theme="light"] .trx-shared-footer-seals span,
   .theme-light .trx-shared-footer-seals span{
     border-color:rgba(15,23,42,.18);
     background:rgba(255,255,255,.84);
     color:#0f172a;
   }
+
   html[data-theme="light"] .trx-shared-footer-legal,
   .theme-light .trx-shared-footer-legal{
     color:#334155;
   }
+
   html[data-theme="light"] .trx-shared-footer-copy,
   .theme-light .trx-shared-footer-copy{
     color:#0f172a;
   }
+
   html[data-theme="light"] .trx-shared-footer-rights,
   .theme-light .trx-shared-footer-rights{
     color:#475569;
   }
+
   html[data-theme="light"] .trx-shared-footer-links a,
   .theme-light .trx-shared-footer-links a{
     color:#0f172a;
   }
+
   html[data-theme="light"] .trx-shared-footer-links a:hover,
   .theme-light .trx-shared-footer-links a:hover{
     color:#020617;
@@ -172,19 +210,23 @@
       <span>Suporte direto da equipe TRX PRO após a compra.</span>
     </div>
   </div>
+
   <div class="trx-shared-footer-seals">
     <span>SSL Seguro</span>
     <span>Dados Criptografados</span>
     <span>Compra Protegida</span>
     <span>Suporte Oficial TRX PRO</span>
   </div>
+
   <div class="trx-shared-footer-badges">
     <img class="badge-main" src="/assets/site-blindado-logo-1.png" alt="Selo Site Blindado" draggable="false">
     <img class="badge-side" src="/assets/secure.png" alt="Selo 100% Secure" draggable="false">
   </div>
+
   <div class="trx-shared-footer-legal">Ambiente com criptografia SSL e monitoramento contínuo.</div>
   <div class="trx-shared-footer-copy">TRX PRO &copy; 2026</div>
   <div class="trx-shared-footer-rights">Todos os direitos reservados</div>
+
   <div class="trx-shared-footer-links">
     <a href="/termos">Termos de Uso</a>
     <a href="/privacidade">Privacidade</a>
