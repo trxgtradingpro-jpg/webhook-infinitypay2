@@ -412,6 +412,93 @@ html[data-theme="light"] .admin-shell .okfree {
   font-weight: 800 !important;
 }
 
+html[data-theme="light"] .admin-shell .btn-link {
+  color: #1d4ed8 !important;
+}
+
+html[data-theme="light"] .admin-shell .btn-link-danger {
+  color: #b91c1c !important;
+}
+
+html[data-theme="light"] .admin-shell .btn-link:hover,
+html[data-theme="light"] .admin-shell .btn-link-danger:hover {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .admin-shell .bronze {
+  color: #9a3412 !important;
+  background: rgba(251, 146, 60, 0.2) !important;
+  border-color: rgba(194, 65, 12, 0.46) !important;
+}
+
+html[data-theme="light"] .admin-shell .prata {
+  color: #334155 !important;
+  background: rgba(148, 163, 184, 0.2) !important;
+  border-color: rgba(71, 85, 105, 0.42) !important;
+}
+
+html[data-theme="light"] .admin-shell .gold {
+  color: #92400e !important;
+  background: rgba(250, 204, 21, 0.22) !important;
+  border-color: rgba(217, 119, 6, 0.46) !important;
+}
+
+html[data-theme="light"] .admin-shell .black {
+  color: #5b21b6 !important;
+  background: rgba(196, 181, 253, 0.24) !important;
+  border-color: rgba(109, 40, 217, 0.44) !important;
+}
+
+html[data-theme="light"] .admin-shell .ok {
+  color: #166534 !important;
+}
+
+html[data-theme="light"] .admin-shell .pend,
+html[data-theme="light"] .admin-shell .alert {
+  color: #b45309 !important;
+}
+
+html[data-theme="light"] .admin-shell .expired {
+  color: #b91c1c !important;
+}
+
+html[data-theme="light"] .order-item {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-theme="light"] .order-item label {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] .order-item .value {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] .order-status.paid {
+  color: #166534 !important;
+  background: rgba(34, 197, 94, 0.18) !important;
+  border-color: rgba(22, 163, 74, 0.44) !important;
+}
+
+html[data-theme="light"] .order-status.pending {
+  color: #9a3412 !important;
+  background: rgba(251, 146, 60, 0.18) !important;
+  border-color: rgba(194, 65, 12, 0.44) !important;
+}
+
+html[data-theme="light"] .order-alert {
+  color: #991b1b !important;
+  border-color: rgba(220, 38, 38, 0.42) !important;
+  background: rgba(254, 226, 226, 0.92) !important;
+}
+
+html[data-theme="light"] .msg.err {
+  color: #991b1b !important;
+  border-color: rgba(220, 38, 38, 0.44) !important;
+  background: linear-gradient(180deg, rgba(254, 226, 226, 0.92), rgba(254, 202, 202, 0.84)) !important;
+}
+
 html[data-theme="light"] .upsell-card .upsell-name,
 html[data-theme="light"] .upsell-card .upsell-contracts,
 html[data-theme="light"] .upsell-card .upsell-cta,
