@@ -184,6 +184,113 @@ html[data-theme="light"] :is(
   color: #0f172a !important;
 }
 
+html[data-theme="light"] .proof-kpi {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+html[data-theme="light"] .proof-kpi .k-label {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .proof-kpi .k-value.neutral {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .proof-tags span {
+  color: #334155 !important;
+  border-color: rgba(15, 23, 42, 0.22) !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme="light"] .quiz-nudge span,
+html[data-theme="light"] .report-cumulative,
+html[data-theme="light"] .report-gain.neutral {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .report-cumulative.neutral strong {
+  color: #1f2937 !important;
+}
+
+html[data-theme="light"] .price-bar {
+  color: #1f2937 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(15, 23, 42, 0.04)) !important;
+}
+
+html[data-theme="light"] .price-bar small,
+html[data-theme="light"] .disclaimer {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .disclaimer {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-theme="light"] .site-seals span {
+  color: #1f2937 !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+}
+
+html[data-theme="light"] .site-links a {
+  color: #334155 !important;
+}
+
+html[data-theme="light"] .wrap .pill {
+  color: #1e293b !important;
+  background: rgba(15, 23, 42, 0.06) !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+html[data-theme="light"] .wrap .pill.ok {
+  color: #166534 !important;
+  background: rgba(34, 197, 94, 0.14) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+html[data-theme="light"] .wrap .pill.warn {
+  color: #b45309 !important;
+  background: rgba(245, 158, 11, 0.16) !important;
+  border-color: rgba(245, 158, 11, 0.44) !important;
+}
+
+html[data-theme="light"] .wrap .pill.bad {
+  color: #991b1b !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: rgba(239, 68, 68, 0.44) !important;
+}
+
+html[data-theme="light"] .wrap .pill strong {
+  color: inherit !important;
+}
+
+html[data-theme="light"] .status.ok {
+  color: #166534 !important;
+  background: rgba(34, 197, 94, 0.2) !important;
+  border-color: rgba(34, 197, 94, 0.45) !important;
+}
+
+html[data-theme="light"] .status.bad {
+  color: #991b1b !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.44) !important;
+}
+
+html[data-theme="light"] .upsell-card .upsell-name,
+html[data-theme="light"] .upsell-card .upsell-contracts,
+html[data-theme="light"] .upsell-card .upsell-cta,
+html[data-theme="light"] .upsell-card .upsell-price small,
+html[data-theme="light"] .upsell-card .tag {
+  color: #eaf3ff !important;
+}
+
+html[data-theme="light"] .upsell-card .upsell-price {
+  color: var(--card-price) !important;
+}
+
 html[data-theme="light"] :is(
   .vignette,
   .grid-bg,
