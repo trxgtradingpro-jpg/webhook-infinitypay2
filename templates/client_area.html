@@ -1021,6 +1021,49 @@
       font-weight:700;
       line-height:1.45;
     }
+    .support-grid{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+    }
+    .support-item{
+      border:1px solid rgba(178,204,235,.24);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(255,255,255,.03);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+      display:grid;
+      gap:8px;
+      align-content:start;
+    }
+    .support-item h3{
+      margin:0;
+      font-size:15px;
+      font-weight:1000;
+      color:#edf5ff;
+      letter-spacing:-.2px;
+    }
+    .support-item p{
+      margin:0;
+      color:rgba(220,232,247,.72);
+      font-size:13px;
+      line-height:1.4;
+      font-weight:700;
+    }
+    .support-item .affiliate-activate{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      text-decoration:none;
+    }
+    .support-note{
+      margin:10px 0 0;
+      color:rgba(212,226,244,.68);
+      font-size:12px;
+      line-height:1.4;
+      font-weight:800;
+    }
     .install-video-wrap{
       margin-top:12px;
       border:1px solid rgba(177,205,244,.18);
@@ -1936,6 +1979,7 @@
       <a href="#resumo">Resumo</a>
       <a href="#afiliados">Afiliados</a>
       <a href="#manual-instalacao">Manual de instalação</a>
+      <a href="#contato-suporte">Contato e suporte</a>
       <a href="#capital">Curva de capital</a>
       {% if upsell_plans %}
       <a href="#upgrade">Upgrade</a>
@@ -2253,6 +2297,36 @@
           ></iframe>
         </div>
       </div>
+    </section>
+
+    <section class="card section-anchor" id="contato-suporte">
+      <h2>Contato e suporte</h2>
+      <p class="install-sub">
+        Fale com o time TRX PRO para suporte técnico, dúvidas operacionais e atendimento comercial.
+      </p>
+      <div class="support-grid">
+        <article class="support-item">
+          <h3>WhatsApp oficial</h3>
+          <p>Atendimento rápido para suporte e orientações no dia a dia.</p>
+          <a
+            class="affiliate-activate"
+            href="https://wa.me/5511940431906?text=Oi!%20Preciso%20de%20suporte%20na%20%C3%A1rea%20do%20cliente%20TRX%20PRO."
+            target="_blank"
+            rel="noopener noreferrer"
+          >Falar no WhatsApp</a>
+        </article>
+        <article class="support-item">
+          <h3>E-mail</h3>
+          <p>Para assuntos administrativos e atendimento formal.</p>
+          <a class="affiliate-activate" href="mailto:suporte@trxpro.com.br">Enviar e-mail</a>
+        </article>
+        <article class="support-item">
+          <h3>Central de contato</h3>
+          <p>Acesse a página de contato com os canais oficiais atualizados.</p>
+          <a class="affiliate-activate" href="/contato">Abrir página de contato</a>
+        </article>
+      </div>
+      <p class="support-note">Se possível, informe seu e-mail de login para agilizar o atendimento.</p>
     </section>
 
     <section class="card section-anchor" id="capital">
