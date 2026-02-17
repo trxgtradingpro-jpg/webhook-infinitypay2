@@ -880,6 +880,24 @@
       cursor: pointer;
       transition: .16s transform, .16s filter;
     }
+    html[data-theme="light"] .report-nav,
+    body.light-theme .report-nav,
+    .theme-light .report-nav{
+      border-color: rgba(17,44,77,.34);
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(238,246,255,.92));
+      color: #18365a;
+      box-shadow: 0 8px 20px rgba(11,30,52,.12);
+      text-shadow: none;
+    }
+    @media (prefers-color-scheme: light){
+      .report-nav{
+        border-color: rgba(17,44,77,.34);
+        background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(238,246,255,.92));
+        color: #18365a;
+        box-shadow: 0 8px 20px rgba(11,30,52,.12);
+        text-shadow: none;
+      }
+    }
     .report-nav:hover{
       transform: translateY(-2px);
       filter: brightness(1.08);
