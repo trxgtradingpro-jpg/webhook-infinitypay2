@@ -121,7 +121,11 @@ if not ADMIN_PASSWORD and not ADMIN_PASSWORD_HASH:
 # INIT
 # ======================================================
 
-init_db()
+APP_SKIP_DB_INIT = (os.environ.get("APP_SKIP_DB_INIT", "false").strip().lower() == "true")
+if APP_SKIP_DB_INIT:
+    print("[INFO] APP_SKIP_DB_INIT=true -> pulando init_db().", flush=True)
+else:
+    init_db()
 
 PASTA_SAIDA = "saida"
 os.makedirs(PASTA_SAIDA, exist_ok=True)
@@ -231,6 +235,7 @@ if not (os.environ.get("BACKUP_ENCRYPTION_PASSWORD") or "").strip():
 BACKUP_RETENTION_DAYS = int(os.environ.get("BACKUP_RETENTION_DAYS", "15"))
 BACKUP_WORKER_ENABLED = (os.environ.get("BACKUP_WORKER_ENABLED", "true").strip().lower() == "true")
 _backup_lock = threading.Lock()
+BACKGROUND_WORKERS_ENABLED = (os.environ.get("BACKGROUND_WORKERS_ENABLED", "true").strip().lower() == "true")
 
 # ======================================================
 # OBSERVABILIDADE
@@ -1326,6 +1331,9 @@ REGEX_RELATORIO_MENSAL = re.compile(
 
 # Valor oficial do acumulado final do ciclo (fev -> jan), alinhado a curva anual.
 ACUMULADO_FINAL_CICLO = 78210.00
+APP_SKIP_ANALYTICS_BACKFILL = (
+    os.environ.get("APP_SKIP_ANALYTICS_BACKFILL", "false").strip().lower() == "true"
+)
 
 
 def formatar_valor_brl_com_sinal(valor):
@@ -1338,10 +1346,13 @@ def formatar_valor_brl_com_sinal(valor):
         return f"R$ -{valor_fmt}", "neg"
     return f"R$ {valor_fmt}", "neutral"
 
-backfill_analytics_from_orders({
-    plano_id: int(info.get("preco") or 0)
-    for plano_id, info in PLANOS.items()
-})
+if APP_SKIP_DB_INIT or APP_SKIP_ANALYTICS_BACKFILL:
+    print("[INFO] Analytics backfill desativado no startup.", flush=True)
+else:
+    backfill_analytics_from_orders({
+        plano_id: int(info.get("preco") or 0)
+        for plano_id, info in PLANOS.items()
+    })
 
 # ======================================================
 # UTIL
@@ -2428,8 +2439,11 @@ def pedido_liberado_para_whatsapp(order):
     return agendado <= agora
 
 
-iniciar_worker_whatsapp()
-iniciar_worker_backup_diario()
+if BACKGROUND_WORKERS_ENABLED:
+    iniciar_worker_whatsapp()
+    iniciar_worker_backup_diario()
+else:
+    print("[INFO] BACKGROUND_WORKERS_ENABLED=false -> workers desativados.", flush=True)
 
 
 def chave_duplicidade_pedido(order):

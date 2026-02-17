@@ -150,3 +150,29 @@ curl -X POST http://localhost:10000/send \
     "order_id":"pedido-123"
   }'
 ```
+
+## Backend tests and CI/CD
+
+Test suite (pytest):
+- login (`/login`)
+- purchase (`/comprar`)
+- webhook (`/webhook/infinitypay`)
+- client area (`/minha-conta`)
+- affiliates (`/admin/afiliados/*`)
+
+Run locally:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pip install pytest
+APP_SKIP_DB_INIT=true BACKGROUND_WORKERS_ENABLED=false pytest
+```
+
+GitHub Actions:
+- `.github/workflows/ci.yml`: mandatory validation on PR/push (compile + tests)
+- `.github/workflows/deploy.yml`: deploy pipeline with pre-deploy validation and post-deploy healthcheck
+
+Required repository secrets for deploy:
+- `PRODUCTION_DEPLOY_WEBHOOK_URL`
+- `PRODUCTION_HEALTHCHECK_URL`
+- optional: `PRODUCTION_APP_URL` (for environment URL display)
