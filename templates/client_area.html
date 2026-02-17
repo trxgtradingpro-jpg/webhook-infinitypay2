@@ -210,6 +210,15 @@
       filter:brightness(1.08);
       border-color:rgba(35,176,11,.58);
     }
+    .account-menu a.is-active{
+      border-color:rgba(35,176,11,.70);
+      background:linear-gradient(180deg, rgba(20,78,52,.92), rgba(12,52,35,.92));
+      color:#d8ffe8;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 8px 20px rgba(20,97,72,.25);
+    }
+    .section-anchor.is-hidden{
+      display:none !important;
+    }
     .top-actions{
       display:flex;
       align-items:center;
@@ -1114,6 +1123,7 @@
 
     <nav class="account-menu">
       <a href="#resumo">Resumo</a>
+      <a href="#manual-instalacao">Manual de instalacao</a>
       <a href="#capital">Curva de capital</a>
       {% if upsell_plans %}
       <a href="#upgrade">Upgrade</a>
@@ -1144,6 +1154,25 @@
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
         {% endif %}
       </article>
+    </section>
+
+    <section class="card section-anchor" id="manual-instalacao">
+      <h2>Manual de instalacao</h2>
+      <p class="install-sub">
+        Siga o passo a passo no video oficial para instalar e configurar o TRX PRO corretamente.
+      </p>
+      <div class="install-video-wrap">
+        <div class="install-video" id="installVideo" data-video-id="{{ install_video_id }}" data-loaded="0">
+          <iframe
+            id="installVideoFrame"
+            title="Manual de instalacao TRX PRO"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
     </section>
 
     <section class="card section-anchor" id="capital">
@@ -1729,6 +1758,64 @@
       })();
     </script>
   {% endif %}
+  <script>
+    (function setupAccountSections(){
+      const menu = document.querySelector(".account-menu");
+      if (!menu) return;
+
+      const links = Array.from(menu.querySelectorAll('a[href^="#"]'));
+      if (!links.length) return;
+
+      const sections = Array.from(document.querySelectorAll(".section-anchor"));
+      const sectionById = new Map();
+      sections.forEach((section) => {
+        if (!section.id) return;
+        sectionById.set(section.id, section);
+      });
+      if (!sectionById.size) return;
+
+      const firstAvailableId = links
+        .map((link) => (link.getAttribute("href") || "").replace("#", ""))
+        .find((id) => sectionById.has(id)) || "resumo";
+
+      function setActiveSection(targetId){
+        const activeId = sectionById.has(targetId) ? targetId : firstAvailableId;
+
+        sectionById.forEach((section, id) => {
+          const isActive = id === activeId;
+          section.classList.toggle("is-hidden", !isActive);
+          section.setAttribute("aria-hidden", isActive ? "false" : "true");
+        });
+
+        links.forEach((link) => {
+          const linkId = (link.getAttribute("href") || "").replace("#", "");
+          const isActive = linkId === activeId;
+          link.classList.toggle("is-active", isActive);
+          if (isActive){
+            link.setAttribute("aria-current", "page");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      }
+
+      links.forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          const targetId = (link.getAttribute("href") || "").replace("#", "");
+          setActiveSection(targetId);
+          if (window.history && window.history.replaceState){
+            window.history.replaceState(null, "", `#${targetId}`);
+          } else {
+            window.location.hash = targetId;
+          }
+        });
+      });
+
+      const hashId = (window.location.hash || "").replace("#", "");
+      setActiveSection(hashId || firstAvailableId);
+    })();
+  </script>
   <script>
     (function setupInstallVideo(){
       const videoWrap = document.getElementById("installVideo");
