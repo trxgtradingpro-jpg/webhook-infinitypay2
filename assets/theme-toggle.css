@@ -81,6 +81,12 @@ html[data-theme="dark"] :is(
   color: #eaf2ff !important;
 }
 
+html[data-theme="dark"] .brand img,
+html[data-theme="dark"] .title-logo {
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(6, 12, 20, 0.52) !important;
+}
+
 html[data-theme="light"] :is(
   .checkout-container,
   .card,
@@ -105,6 +111,12 @@ html[data-theme="light"] :is(
   border-color: rgba(15, 23, 42, 0.16) !important;
   color: #0f172a !important;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12) !important;
+}
+
+html[data-theme="light"] .brand img,
+html[data-theme="light"] .title-logo {
+  border-color: rgba(0, 0, 0, 0.76) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
 }
 
 html[data-theme="dark"] :is(input, select, textarea) {
