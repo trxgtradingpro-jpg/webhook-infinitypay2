@@ -217,9 +217,9 @@
       <input id="email" name="email" type="email" required autocomplete="username" value="{{ email or '' }}">
       <div id="emailStatus" class="email-status"></div>
 
-      <label for="senha">Senha</label>
+      <label for="senha" id="senhaLabel">Senha</label>
       <div class="password-wrap">
-        <input id="senha" name="senha" type="password" required autocomplete="current-password">
+        <input id="senha" name="senha" type="password" autocomplete="current-password">
         <button
           type="button"
           class="toggle-password"
@@ -243,7 +243,7 @@
       <a class="recover-link" href="/login/recuperar-senha">Recuperar senha</a>
     </form>
 
-    <p class="foot">Primeiro acesso: use a senha temporaria enviada no seu e-mail e finalize a troca de senha segura.</p>
+    <p class="foot">Primeiro acesso sem senha cadastrada: no botao Entrar vamos enviar codigo de 6 digitos para seu e-mail.</p>
     <a href="/" class="back">Voltar para a pagina inicial</a>
   </section>
 
@@ -252,9 +252,12 @@
       const emailInput = document.getElementById("email");
       const statusEl = document.getElementById("emailStatus");
       const submitBtn = document.querySelector('form[action="/login"] button[type="submit"]');
+      const passInput = document.getElementById("senha");
+      const passLabel = document.getElementById("senhaLabel");
       const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
       let timer = null;
       let requestSeq = 0;
+      let setupMode = false;
 
       function setStatus(type, message){
         statusEl.className = "email-status";
@@ -270,15 +273,37 @@
         submitBtn.style.cursor = lock ? "not-allowed" : "";
       }
 
+      function setPasswordMode(isSetup){
+        setupMode = !!isSetup;
+        if (!passInput || !passLabel) return;
+
+        if (setupMode){
+          passLabel.textContent = "Senha";
+          passInput.value = "";
+          passInput.required = false;
+          passInput.disabled = true;
+          passInput.placeholder = "Primeiro acesso detectado (senha ainda nao criada)";
+        } else {
+          passLabel.textContent = "Senha";
+          passInput.required = true;
+          passInput.disabled = false;
+          if ((passInput.placeholder || "").includes("Primeiro acesso")) {
+            passInput.placeholder = "";
+          }
+        }
+      }
+
       async function validarEmailAgora(valorEmail){
         const email = (valorEmail || "").trim().toLowerCase();
         if (!email) {
           setStatus("", "");
+          setPasswordMode(false);
           lockSubmit(false);
           return;
         }
         if (!emailRe.test(email)) {
           setStatus("err", "Digite um e-mail valido.");
+          setPasswordMode(false);
           lockSubmit(true);
           return;
         }
@@ -298,18 +323,28 @@
 
           if (!data.valid) {
             setStatus("err", data.message || "Digite um e-mail valido.");
+            setPasswordMode(false);
             lockSubmit(true);
             return;
           }
           if (!data.exists) {
             setStatus("err", data.message || "Este e-mail nao existe no banco.");
+            setPasswordMode(false);
             lockSubmit(true);
             return;
           }
+          if (data.status === "setup_required" || data.status === "paid_order" || data.requires_password_setup) {
+            setPasswordMode(true);
+            setStatus("ok", data.message || "Primeiro acesso detectado. Clique em Entrar para receber o codigo.");
+            lockSubmit(false);
+            return;
+          }
+          setPasswordMode(false);
           setStatus("ok", data.message || "E-mail encontrado.");
           lockSubmit(false);
         } catch (_) {
           if (seq !== requestSeq) return;
+          setPasswordMode(false);
           setStatus("", "Nao foi possivel validar o e-mail agora.");
           lockSubmit(false);
         }
@@ -327,6 +362,8 @@
 
       if ((emailInput.value || "").trim()) {
         validarEmailAgora(emailInput.value);
+      } else {
+        setPasswordMode(false);
       }
 
       document.querySelectorAll(".toggle-password[data-target]").forEach((btn) => {
@@ -334,6 +371,7 @@
           const targetId = btn.getAttribute("data-target");
           const input = document.getElementById(targetId);
           if (!input) return;
+          if (input.disabled) return;
 
           const showing = input.type === "text";
           input.type = showing ? "password" : "text";
@@ -342,6 +380,16 @@
           btn.setAttribute("title", showing ? "Mostrar senha" : "Ocultar senha");
         });
       });
+
+      const form = document.querySelector('form[action="/login"]');
+      if (form) {
+        form.addEventListener("submit", (event) => {
+          if (!setupMode && passInput && !passInput.value.trim()) {
+            event.preventDefault();
+            setStatus("err", "Informe sua senha para entrar.");
+          }
+        });
+      }
     })();
   </script>
 </body>

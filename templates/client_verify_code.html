@@ -139,13 +139,39 @@
       font-size:13px;
       font-weight:700;
     }
+    .mail-btn{
+      width:100%;
+      margin-top:12px;
+      display:inline-block;
+      text-align:center;
+      border:1px solid rgba(56,189,248,.5);
+      border-radius:10px;
+      padding:11px 14px;
+      color:#dff4ff;
+      text-decoration:none;
+      font-size:14px;
+      font-weight:800;
+      background:rgba(56,189,248,.14);
+    }
+    .mail-btn:hover{
+      border-color:rgba(56,189,248,.9);
+      background:rgba(56,189,248,.22);
+    }
+    .resend{
+      margin-top:10px;
+    }
+    .resend button{
+      margin-top:0;
+      background:linear-gradient(180deg, #0ea5e9, #0284c7);
+      color:#04111a;
+    }
   </style>
 </head>
 <body>
   <section class="card">
     <h1>Confirmar codigo</h1>
-    <p class="sub">Digite o codigo de 6 digitos enviado para seu e-mail para finalizar a troca de senha.</p>
-    <p class="email">Conta: <strong>{{ email }}</strong></p>
+    <p class="sub">Digite o codigo de 6 digitos enviado para seu e-mail para liberar a criacao da nova senha.</p>
+    <p class="email">Conta: <strong>{{ email_masked or email }}</strong></p>
 
     <div class="meta">
       <span class="pill">Tentativas: {{ attempts_used }}/{{ max_attempts }}</span>
@@ -158,18 +184,29 @@
     {% if info %}
       <div class="msg ok">{{ info }}</div>
     {% endif %}
+    {% if mailbox_url %}
+      <a class="mail-btn" href="{{ mailbox_url }}" target="_blank" rel="noopener noreferrer">{{ mailbox_label or 'Abrir caixa de e-mail' }}</a>
+    {% endif %}
 
     <form method="POST" action="/login/confirmar-codigo" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="email" value="{{ email }}">
+      <input type="hidden" name="action" value="verify">
 
       <label for="codigo">Codigo de confirmacao</label>
       <input id="codigo" name="codigo" type="text" inputmode="numeric" pattern="\d{6}" maxlength="6" required autocomplete="one-time-code">
 
-      <button type="submit">Confirmar e entrar</button>
+      <button type="submit">Confirmar codigo</button>
+    </form>
+
+    <form method="POST" action="/login/confirmar-codigo" class="resend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="email" value="{{ email }}">
+      <input type="hidden" name="action" value="resend">
+      <button type="submit">Reenviar codigo</button>
     </form>
 
     <div class="links">
-      <a href="/login/primeiro-acesso">Gerar novo codigo</a>
       <a href="/login">Voltar ao login</a>
     </div>
   </section>
