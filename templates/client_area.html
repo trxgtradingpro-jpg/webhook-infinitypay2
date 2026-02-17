@@ -524,6 +524,40 @@
     .card-wide{
       grid-column:1 / -1;
     }
+    .summary-capital-card{
+      display:grid;
+      gap:10px;
+    }
+    .summary-capital-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .summary-capital-head .line{
+      margin:0;
+    }
+    .summary-chart-wrap{
+      margin-top:0;
+      height:320px;
+    }
+    .summary-chart-note{
+      margin:0;
+      color:rgba(212,226,244,.70);
+      font-size:13px;
+      line-height:1.35;
+      font-weight:800;
+    }
+    .summary-chart-note a{
+      color:#9ed8ff;
+      font-weight:900;
+      text-decoration:none;
+      border-bottom:1px dashed rgba(158,216,255,.58);
+    }
+    .summary-chart-note a:hover{
+      filter:brightness(1.08);
+    }
     .summary-grid{
       margin-top:10px;
       display:grid;
@@ -1376,6 +1410,25 @@
         {% endif %}
       </article>
 
+      <article class="card card-wide summary-capital-card">
+        <div class="summary-capital-head">
+          <h2>Curva de capital</h2>
+          {% if capital_chart and capital_chart.available %}
+            <p class="line line-compact"><span>Plano:</span> <strong>{{ capital_chart.plan_name }}</strong></p>
+          {% endif %}
+        </div>
+        {% if capital_chart and capital_chart.available %}
+          <div class="chart-wrap summary-chart-wrap">
+            <canvas id="capitalChartResumo"></canvas>
+          </div>
+          <p class="summary-chart-note">
+            Visual rapido no resumo. Para ajustar janela e contratos, acesse a aba <a href="#capital">Curva de capital</a>.
+          </p>
+        {% else %}
+          <p class="empty">{{ capital_chart.message if capital_chart else 'Curva indisponivel no momento.' }}</p>
+        {% endif %}
+      </article>
+
       <article class="card card-wide">
         <h2>Resumo geral de tudo</h2>
         <div class="summary-grid">
@@ -1661,6 +1714,7 @@
       (function(){
         const payload = {{ capital_chart | tojson }};
         const canvas = document.getElementById("capitalChart");
+        const summaryCanvas = document.getElementById("capitalChartResumo");
         if (!payload || !payload.available || !canvas) return;
 
         const fmtBRL = new Intl.NumberFormat("pt-BR", {
@@ -1987,6 +2041,96 @@
           },
           plugins: [crosshairPlugin]
         });
+        let summaryChart = null;
+        if (summaryCanvas) {
+          summaryChart = new Chart(summaryCanvas, {
+            type: "line",
+            data: {
+              labels: initialModeData.labels || [],
+              datasets: [{
+                label: "Capital total (1 contrato)",
+                data: initialModeData.values || [],
+                borderColor: curveLineColor,
+                backgroundColor: curveFillColor,
+                fill: true,
+                tension: 0,
+                borderWidth: 2,
+                pointRadius: initialPointRadius,
+                pointHoverRadius: initialPointRadius > 0 ? 6 : 4,
+                pointHitRadius: initialPointRadius > 0 ? 10 : 6,
+                pointHoverBackgroundColor: curveLineColor,
+                pointHoverBorderColor: "#0f2d24"
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                mode: "index",
+                intersect: false
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  displayColors: false,
+                  callbacks: {
+                    title(items) {
+                      if (!items || !items.length) return "";
+                      const idx = items[0].dataIndex;
+                      const modeData = renderedModeData || getModeData(activeMode);
+                      const dateLabel = (modeData.date_labels || [])[idx] || "";
+                      const dayLabel = (modeData.labels || [])[idx] || "";
+                      return dateLabel + " (Dia " + dayLabel + ")";
+                    },
+                    label(context) {
+                      const valor = Number(context.parsed.y);
+                      if (!Number.isFinite(valor)) {
+                        return "Sem curva para esse dia.";
+                      }
+                      return "Capital total: " + fmtBRL.format(valor);
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: {
+                    color: "rgba(120, 142, 184, 0.18)"
+                  },
+                  ticks: {
+                    color: "#9db0d4",
+                    maxTicksLimit: 10
+                  },
+                  title: {
+                    display: true,
+                    text: "Dias",
+                    color: "#9db0d4"
+                  }
+                },
+                y: {
+                  min: initialModeData.y_min ?? payload.y_min,
+                  max: initialModeData.y_max ?? payload.y_max,
+                  grid: {
+                    color: "rgba(120, 142, 184, 0.18)"
+                  },
+                  ticks: {
+                    color: "#9db0d4",
+                    callback(value) {
+                      return fmtBRL.format(value);
+                    }
+                  },
+                  title: {
+                    display: true,
+                    text: "Capital acumulado (R$)",
+                    color: "#9db0d4"
+                  }
+                }
+              }
+            }
+          });
+        }
 
         function applyMode(modeId) {
           const modeData = getScaledModeData(getModeData(modeId));
@@ -2003,6 +2147,17 @@
           chart.options.scales.y.min = modeData.y_min ?? payload.y_min;
           chart.options.scales.y.max = modeData.y_max ?? payload.y_max;
           chart.update();
+          if (summaryChart) {
+            summaryChart.data.labels = modeData.labels || [];
+            summaryChart.data.datasets[0].label = "Capital total (" + activeContracts + " contrato" + (activeContracts > 1 ? "s" : "") + ")";
+            summaryChart.data.datasets[0].data = modeData.values || [];
+            summaryChart.data.datasets[0].pointRadius = pointRadius;
+            summaryChart.data.datasets[0].pointHoverRadius = pointRadius > 0 ? 6 : 4;
+            summaryChart.data.datasets[0].pointHitRadius = pointRadius > 0 ? 10 : 6;
+            summaryChart.options.scales.y.min = modeData.y_min ?? payload.y_min;
+            summaryChart.options.scales.y.max = modeData.y_max ?? payload.y_max;
+            summaryChart.update();
+          }
 
           if (windowRangeText) {
             const startDate = modeData.window_start_date || payload.window_start_date || payload.start_date || "";
