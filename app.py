@@ -297,6 +297,7 @@ PLANOS = {
 AFFILIATE_SLUG_RE = re.compile(r"^[a-z0-9-]{2,60}$")
 AFFILIATE_COMMISSION_PERCENT = 50.0
 AFFILIATE_COMMISSION_RATE = AFFILIATE_COMMISSION_PERCENT / 100.0
+AFFILIATE_TERMS_VERSION = (os.environ.get("AFFILIATE_TERMS_VERSION") or "2026-02-17").strip()
 RESERVED_AFFILIATE_SLUGS = {
     "admin",
     "api",
@@ -436,12 +437,15 @@ def montar_dados_afiliado_cliente(afiliado):
 
     nome = normalizar_nome(afiliado.get("nome") or "")
     link_publico = montar_url_absoluta(f"/{slug}")
+    terms_accepted_at = afiliado.get("terms_accepted_at")
     return {
         "slug": slug,
         "nome": nome or slug,
         "email": normalizar_email(afiliado.get("email") or ""),
         "telefone": normalizar_telefone(afiliado.get("telefone") or ""),
         "ativo": bool(afiliado.get("ativo")),
+        "terms_accepted": bool(terms_accepted_at),
+        "terms_accepted_at": terms_accepted_at,
         "link_publico": link_publico,
     }
 
@@ -2300,6 +2304,10 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"post_cliente_afiliado_ativar:{ip}", limite=10, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
 
+    if method == "POST" and path == "/minha-conta/afiliados/editar-link":
+        if excedeu_rate_limit(f"post_cliente_afiliado_editar_link:{ip}", limite=12, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
+
     if method == "POST" and path == "/login/recuperar-senha":
         if excedeu_rate_limit(f"post_cliente_recover:{ip}", limite=8, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -2971,6 +2979,13 @@ def cliente_ativar_afiliacao():
         limpar_sessao_cliente()
         return redirect("/login")
 
+    accept_terms = (request.form.get("accept_affiliate_terms") or "").strip().lower()
+    if accept_terms not in {"1", "true", "on", "yes"}:
+        return redirect("/minha-conta?info=afiliado_termos_obrigatorios#afiliados")
+
+    terms_accepted_at = datetime.now(timezone.utc)
+    terms_accepted_ip = (obter_ip_request() or request.remote_addr or "").strip()[:64] or None
+
     nome_conta = normalizar_nome(descriptografar_texto_cliente(conta.get("nome")) or "")
     telefone_conta = normalizar_telefone(descriptografar_texto_cliente(conta.get("telefone")) or "") or None
 
@@ -2987,9 +3002,27 @@ def cliente_ativar_afiliacao():
                 nome=nome_conta or afiliado_existente.get("nome") or "Afiliado TRX",
                 email=email,
                 telefone=telefone_conta or afiliado_existente.get("telefone") or None,
-                ativo=True
+                ativo=True,
+                terms_accepted_at=terms_accepted_at,
+                terms_accepted_ip=terms_accepted_ip,
+                terms_version=AFFILIATE_TERMS_VERSION
             )
             return redirect("/minha-conta?info=afiliado_reativado#afiliados")
+
+        if not afiliado_existente.get("terms_accepted_at"):
+            atualizar_afiliado(
+                slug_atual=slug_existente,
+                slug_novo=slug_existente,
+                nome=nome_conta or afiliado_existente.get("nome") or "Afiliado TRX",
+                email=email,
+                telefone=telefone_conta or afiliado_existente.get("telefone") or None,
+                ativo=bool(afiliado_existente.get("ativo")),
+                terms_accepted_at=terms_accepted_at,
+                terms_accepted_ip=terms_accepted_ip,
+                terms_version=AFFILIATE_TERMS_VERSION
+            )
+            return redirect("/minha-conta?info=afiliado_termos_aceitos#afiliados")
+
         return redirect("/minha-conta?info=afiliado_existente#afiliados")
 
     slug_novo = gerar_slug_afiliado_unico(nome_conta, email)
@@ -3002,7 +3035,10 @@ def cliente_ativar_afiliacao():
         nome=nome_afiliado,
         email=email,
         telefone=telefone_conta,
-        ativo=True
+        ativo=True,
+        terms_accepted_at=terms_accepted_at,
+        terms_accepted_ip=terms_accepted_ip,
+        terms_version=AFFILIATE_TERMS_VERSION
     )
 
     if not criado:
@@ -3012,6 +3048,53 @@ def cliente_ativar_afiliacao():
         return redirect("/minha-conta?info=afiliado_erro#afiliados")
 
     return redirect("/minha-conta?info=afiliado_criado#afiliados")
+
+
+@app.route("/minha-conta/afiliados/editar-link", methods=["POST"])
+def cliente_editar_link_afiliado():
+    token = (request.form.get("csrf_token") or request.headers.get(CSRF_HEADER_NAME) or "").strip()
+    if not validar_csrf_token(token):
+        return "Falha de validacao CSRF.", 403
+
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    afiliado_existente = buscar_afiliado_por_email(email, apenas_ativos=False)
+    if not afiliado_existente:
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    slug_atual = normalizar_slug_afiliado(afiliado_existente.get("slug") or "")
+    if not slug_afiliado_valido(slug_atual):
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    slug_novo = normalizar_slug_afiliado(request.form.get("affiliate_slug") or "")
+    if not slug_afiliado_valido(slug_novo):
+        return redirect("/minha-conta?info=afiliado_slug_invalido#afiliados")
+
+    if slug_novo == slug_atual:
+        return redirect("/minha-conta?info=afiliado_link_sem_alteracao#afiliados")
+
+    conflito = buscar_afiliado_por_slug(slug_novo, apenas_ativos=False)
+    if conflito and normalizar_email(conflito.get("email") or "") != email:
+        return redirect("/minha-conta?info=afiliado_slug_indisponivel#afiliados")
+
+    atualizado = atualizar_afiliado(
+        slug_atual=slug_atual,
+        slug_novo=slug_novo,
+        nome=normalizar_nome(afiliado_existente.get("nome") or "") or f"Afiliado {email.split('@', 1)[0]}",
+        email=email,
+        telefone=normalizar_telefone(afiliado_existente.get("telefone") or "") or None,
+        ativo=bool(afiliado_existente.get("ativo"))
+    )
+    if not atualizado:
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    if session.get("affiliate_slug") == slug_atual:
+        session["affiliate_slug"] = slug_novo
+
+    return redirect("/minha-conta?info=afiliado_link_atualizado#afiliados")
 
 
 @app.route("/minha-conta")
@@ -3036,11 +3119,23 @@ def cliente_area():
         "senha_criada": "Senha criada com sucesso.",
         "afiliado_criado": "Afiliacao ativada com sucesso. Seu link de indicacao ja esta disponivel.",
         "afiliado_reativado": "Sua afiliacao foi reativada com sucesso.",
+        "afiliado_termos_aceitos": "Termos e condicoes aceitos com sucesso para o programa de afiliados.",
         "afiliado_existente": "Sua conta ja esta afiliada.",
+        "afiliado_termos_obrigatorios": "Para liberar sua indicacao, aceite os Termos e Condicoes do programa.",
+        "afiliado_slug_invalido": "Link invalido. Use apenas letras minusculas, numeros e hifen (2 a 60 caracteres).",
+        "afiliado_slug_indisponivel": "Este link ja esta em uso por outro afiliado.",
+        "afiliado_link_sem_alteracao": "Seu link de afiliado ja esta com esse valor.",
+        "afiliado_link_atualizado": "Link de afiliado atualizado com sucesso.",
         "afiliado_erro": "Nao foi possivel ativar sua afiliacao agora. Tente novamente."
     }
     info_message = info_messages.get(info_key, "")
-    info_message_level = "warn" if info_key == "afiliado_erro" else "ok"
+    info_warn_keys = {
+        "afiliado_erro",
+        "afiliado_termos_obrigatorios",
+        "afiliado_slug_invalido",
+        "afiliado_slug_indisponivel",
+    }
+    info_message_level = "warn" if info_key in info_warn_keys else "ok"
     quiz_user_key = (session.get("quiz_user_key") or "").strip()
     diagnostico_concluido = existe_quiz_submission(
         account_email=email,

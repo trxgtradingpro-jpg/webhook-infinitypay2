@@ -996,6 +996,58 @@
       transform:none;
       filter:none;
     }
+    .affiliate-form{
+      display:grid;
+      gap:10px;
+      margin:0;
+    }
+    .affiliate-terms-check{
+      display:flex;
+      align-items:flex-start;
+      gap:8px;
+      margin:0;
+      cursor:pointer;
+    }
+    .affiliate-terms-check input{
+      width:16px;
+      height:16px;
+      margin-top:2px;
+      accent-color:#23b00b;
+      flex:0 0 auto;
+    }
+    .affiliate-terms-check span{
+      color:#e7f0ff;
+      font-size:13px;
+      line-height:1.4;
+      font-weight:700;
+    }
+    .affiliate-terms-check a{
+      color:#9ed8ff;
+      font-weight:900;
+      text-decoration:none;
+    }
+    .affiliate-terms-check a:hover{
+      text-decoration:underline;
+    }
+    .affiliate-edit-label{
+      display:block;
+      color:#dce9ff;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:.1px;
+    }
+    .affiliate-slug-field{
+      flex:1 1 220px;
+      min-width:180px;
+      text-transform:lowercase;
+    }
+    .affiliate-slug-hint{
+      margin:0;
+      color:var(--muted2);
+      font-size:12px;
+      line-height:1.4;
+      font-weight:700;
+    }
     .upsell-intro{
       margin:0;
       color:#dbe7ff;
@@ -1406,18 +1458,54 @@
           <p class="affiliate-muted">
             Compartilhe este link: <a href="{{ afiliado_cliente.link_publico }}" target="_blank" rel="noopener noreferrer">{{ afiliado_cliente.link_publico }}</a>
           </p>
+          <form method="POST" action="/minha-conta/afiliados/editar-link" class="affiliate-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="affiliateSlugInput" class="affiliate-edit-label">Editar link de afiliado (slug)</label>
+            <div class="affiliate-link-row">
+              <input
+                id="affiliateSlugInput"
+                name="affiliate_slug"
+                class="affiliate-link-field affiliate-slug-field"
+                type="text"
+                minlength="2"
+                maxlength="60"
+                pattern="[a-z0-9-]{2,60}"
+                value="{{ afiliado_cliente.slug }}"
+                required
+              >
+              <button type="submit" class="affiliate-activate">Salvar link</button>
+            </div>
+            <p class="affiliate-slug-hint">Use apenas letras minusculas, numeros e hifen. Exemplo: guilherme-trx</p>
+          </form>
           {% if not afiliado_cliente.ativo %}
-            <form method="POST" action="/minha-conta/afiliados/ativar">
+            <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label class="affiliate-terms-check">
+                <input type="checkbox" name="accept_affiliate_terms" value="1" required>
+                <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
+              </label>
               <button type="submit" class="affiliate-activate">Reativar afiliacao</button>
+            </form>
+          {% elif not afiliado_cliente.terms_accepted %}
+            <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label class="affiliate-terms-check">
+                <input type="checkbox" name="accept_affiliate_terms" value="1" required>
+                <span>Para manter a indicacao liberada, confirme o aceite dos <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a>.</span>
+              </label>
+              <button type="submit" class="affiliate-activate">Aceitar termos</button>
             </form>
           {% endif %}
         {% else %}
           <p class="affiliate-muted">
             Sua conta ainda nao esta afiliada. Ative abaixo e gere agora seu link de indicacao.
           </p>
-          <form method="POST" action="/minha-conta/afiliados/ativar">
+          <form method="POST" action="/minha-conta/afiliados/ativar" class="affiliate-form">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="affiliate-terms-check">
+              <input type="checkbox" name="accept_affiliate_terms" value="1" required>
+              <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a> para liberar minha indicacao.</span>
+            </label>
             <button type="submit" class="affiliate-activate">Quero me afiliar</button>
           </form>
         {% endif %}

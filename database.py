@@ -133,6 +133,9 @@ def init_db():
             email TEXT,
             telefone TEXT,
             ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            terms_accepted_at TIMESTAMP,
+            terms_accepted_ip TEXT,
+            terms_version TEXT,
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
         )
@@ -262,6 +265,9 @@ def init_db():
     cur.execute("ALTER TABLE affiliate_referrals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_slug ON affiliate_referrals(affiliate_slug)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_first_referred_at ON affiliate_referrals(first_referred_at DESC)")
+    cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP")
+    cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS terms_accepted_ip TEXT")
+    cur.execute("ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS terms_version TEXT")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS transaction_nsu TEXT")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS referred_email TEXT")
     cur.execute("ALTER TABLE affiliate_commissions ADD COLUMN IF NOT EXISTS affiliate_slug TEXT")
@@ -796,7 +802,7 @@ def listar_afiliados(include_inativos=True):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
     """
     params = []
@@ -820,8 +826,11 @@ def listar_afiliados(include_inativos=True):
             "email": row[3],
             "telefone": row[4],
             "ativo": bool(row[5]),
-            "created_at": row[6],
-            "updated_at": row[7]
+            "terms_accepted_at": row[6],
+            "terms_accepted_ip": row[7],
+            "terms_version": row[8],
+            "created_at": row[9],
+            "updated_at": row[10]
         })
 
     return afiliados
@@ -832,7 +841,7 @@ def buscar_afiliado_por_slug(slug, apenas_ativos=False):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
         WHERE slug = %s
     """
@@ -858,8 +867,11 @@ def buscar_afiliado_por_slug(slug, apenas_ativos=False):
         "email": row[3],
         "telefone": row[4],
         "ativo": bool(row[5]),
-        "created_at": row[6],
-        "updated_at": row[7]
+        "terms_accepted_at": row[6],
+        "terms_accepted_ip": row[7],
+        "terms_version": row[8],
+        "created_at": row[9],
+        "updated_at": row[10]
     }
 
 
@@ -872,7 +884,7 @@ def buscar_afiliado_por_email(email, apenas_ativos=False):
     cur = conn.cursor()
 
     sql = """
-        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        SELECT id, slug, nome, email, telefone, ativo, terms_accepted_at, terms_accepted_ip, terms_version, created_at, updated_at
         FROM affiliates
         WHERE LOWER(COALESCE(TRIM(email), '')) = %s
     """
@@ -898,8 +910,11 @@ def buscar_afiliado_por_email(email, apenas_ativos=False):
         "email": row[3],
         "telefone": row[4],
         "ativo": bool(row[5]),
-        "created_at": row[6],
-        "updated_at": row[7]
+        "terms_accepted_at": row[6],
+        "terms_accepted_ip": row[7],
+        "terms_version": row[8],
+        "created_at": row[9],
+        "updated_at": row[10]
     }
 
 
@@ -1086,15 +1101,35 @@ def registrar_comissao_afiliado(
     return alterado
 
 
-def criar_afiliado(slug, nome, email=None, telefone=None, ativo=True):
+def criar_afiliado(
+    slug,
+    nome,
+    email=None,
+    telefone=None,
+    ativo=True,
+    terms_accepted_at=None,
+    terms_accepted_ip=None,
+    terms_version=None
+):
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
-        INSERT INTO affiliates (slug, nome, email, telefone, ativo, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+        INSERT INTO affiliates (
+            slug, nome, email, telefone, ativo, terms_accepted_at, terms_accepted_ip, terms_version, created_at, updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
         ON CONFLICT (slug) DO NOTHING
-    """, (slug, nome, email, telefone, bool(ativo)))
+    """, (
+        slug,
+        nome,
+        email,
+        telefone,
+        bool(ativo),
+        terms_accepted_at,
+        terms_accepted_ip,
+        terms_version,
+    ))
 
     inserido = cur.rowcount > 0
     conn.commit()
@@ -1103,7 +1138,17 @@ def criar_afiliado(slug, nome, email=None, telefone=None, ativo=True):
     return inserido
 
 
-def atualizar_afiliado(slug_atual, slug_novo, nome, email=None, telefone=None, ativo=True):
+def atualizar_afiliado(
+    slug_atual,
+    slug_novo,
+    nome,
+    email=None,
+    telefone=None,
+    ativo=True,
+    terms_accepted_at=None,
+    terms_accepted_ip=None,
+    terms_version=None
+):
     conn = get_conn()
     cur = conn.cursor()
 
@@ -1114,11 +1159,64 @@ def atualizar_afiliado(slug_atual, slug_novo, nome, email=None, telefone=None, a
             email = %s,
             telefone = %s,
             ativo = %s,
+            terms_accepted_at = COALESCE(%s, terms_accepted_at),
+            terms_accepted_ip = COALESCE(%s, terms_accepted_ip),
+            terms_version = COALESCE(%s, terms_version),
             updated_at = NOW()
         WHERE slug = %s
-    """, (slug_novo, nome, email, telefone, bool(ativo), slug_atual))
+    """, (
+        slug_novo,
+        nome,
+        email,
+        telefone,
+        bool(ativo),
+        terms_accepted_at,
+        terms_accepted_ip,
+        terms_version,
+        slug_atual
+    ))
 
     atualizado = cur.rowcount > 0
+    slug_antigo = (slug_atual or "").strip().lower()
+    slug_novo_norm = (slug_novo or "").strip().lower()
+    slug_alterado = bool(atualizado and slug_antigo and slug_novo_norm and slug_antigo != slug_novo_norm)
+
+    if slug_alterado:
+        cur.execute("""
+            UPDATE affiliate_referrals
+            SET affiliate_slug = %s,
+                affiliate_nome = COALESCE(%s, affiliate_nome),
+                affiliate_email = COALESCE(%s, affiliate_email),
+                affiliate_telefone = COALESCE(%s, affiliate_telefone),
+                updated_at = NOW()
+            WHERE affiliate_slug = %s
+        """, (slug_novo_norm, nome, email, telefone, slug_antigo))
+
+        cur.execute("""
+            UPDATE affiliate_commissions
+            SET affiliate_slug = %s,
+                affiliate_nome = COALESCE(%s, affiliate_nome),
+                affiliate_email = COALESCE(%s, affiliate_email),
+                affiliate_telefone = COALESCE(%s, affiliate_telefone),
+                updated_at = NOW()
+            WHERE affiliate_slug = %s
+        """, (slug_novo_norm, nome, email, telefone, slug_antigo))
+
+        cur.execute("""
+            UPDATE orders
+            SET affiliate_slug = %s,
+                affiliate_nome = COALESCE(%s, affiliate_nome),
+                affiliate_email = COALESCE(%s, affiliate_email),
+                affiliate_telefone = COALESCE(%s, affiliate_telefone)
+            WHERE LOWER(COALESCE(TRIM(affiliate_slug), '')) = %s
+        """, (slug_novo_norm, nome, email, telefone, slug_antigo))
+
+        cur.execute("""
+            UPDATE client_upgrade_leads
+            SET affiliate_slug = %s
+            WHERE LOWER(COALESCE(TRIM(affiliate_slug), '')) = %s
+        """, (slug_novo_norm, slug_antigo))
+
     conn.commit()
     cur.close()
     conn.close()
