@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Saúde Operacional • Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/admin-theme.css?v=20260216">
+  <style>
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .2px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+    }
+    .status-pill.ok {
+      border-color: rgba(35,176,11,.45);
+      background: rgba(35,176,11,.14);
+      color: #b9f8ae;
+    }
+    .status-pill.degraded {
+      border-color: rgba(255,106,106,.45);
+      background: rgba(255,106,106,.15);
+      color: #ffd8d8;
+    }
+    .mono-compact {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted-strong);
+      word-break: break-word;
+    }
+    .health-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .small-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+    }
+    .small-badge.ok {
+      border-color: rgba(35,176,11,.45);
+      color: #9bf68c;
+      background: rgba(35,176,11,.12);
+    }
+    .small-badge.degraded {
+      border-color: rgba(255,106,106,.45);
+      color: #ffd1d1;
+      background: rgba(255,106,106,.16);
+    }
+    .table-wrap table td {
+      vertical-align: top;
+    }
+  </style>
+</head>
+<body>
+  <main class="admin-shell">
+    <div class="topbar">
+      <div>
+        <div class="title">Painel Admin | Saúde Operacional</div>
+        <p class="title-sub">Monitoramento de uptime, erros críticos e sinais operacionais em tempo real.</p>
+      </div>
+      <nav class="menu">
+        <a href="/admin/dashboard">Resumo</a>
+        <a class="active" href="/admin/health">Saúde</a>
+        <a href="/admin/relatorios">Relatórios</a>
+        <a href="/dashboard">Gráficos</a>
+        <a href="/admin/analytics">Analytics</a>
+        <a href="/admin/afiliados">Afiliados</a>
+        <form method="POST" action="/admin/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="danger" type="submit">Sair</button>
+        </form>
+      </nav>
+    </div>
+
+    <div class="stats">
+      <div class="card">
+        <div class="label">Status geral</div>
+        <div class="value"><span id="statusPill" class="status-pill">-</span></div>
+      </div>
+      <div class="card">
+        <div class="label">Uptime</div>
+        <div class="value" id="uptimeValue">-</div>
+      </div>
+      <div class="card">
+        <div class="label">Banco de dados</div>
+        <div class="value" id="databaseValue">-</div>
+      </div>
+      <div class="card">
+        <div class="label">Requests HTTP</div>
+        <div class="value" id="requestsValue">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Erros HTTP 5xx</div>
+        <div class="value" id="errors5xxValue">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Incidentes (15 min)</div>
+        <div class="value" id="incidents15mValue">0</div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2 class="panel-title">Última request</h2>
+      <p class="panel-subtitle">Endpoint, status e latência da última requisição registrada.</p>
+      <div class="mono-compact" id="lastRequestBlock">-</div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Componentes monitorados</h2>
+      <p class="panel-subtitle">Webhook, email e WhatsApp com contadores de sucesso e falha.</p>
+      <div id="componentsGrid" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Workers de fundo</h2>
+      <p class="panel-subtitle">Heartbeat e sinais de estagnação dos processos assíncronos.</p>
+      <div id="workersGrid" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Incidentes recentes</h2>
+      <p class="panel-subtitle">Eventos críticos mais recentes para investigação rápida.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Horário UTC</th>
+              <th>Componente</th>
+              <th>Erro</th>
+              <th>Contexto</th>
+            </tr>
+          </thead>
+          <tbody id="incidentsBody">
+            <tr>
+              <td colspan="4">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="health-note" id="healthGeneratedAt">Atualizado em -</p>
+    </section>
+  </main>
+
+  <script>
+    const INITIAL_HEALTH = {{ health|tojson }};
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function fmt(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n)) return "0";
+      return n.toLocaleString("pt-BR");
+    }
+
+    function renderStatus(status) {
+      const statusPill = document.getElementById("statusPill");
+      if (!statusPill) return;
+      const normalized = (status || "").toLowerCase();
+      statusPill.className = "status-pill " + (normalized === "ok" ? "ok" : "degraded");
+      statusPill.textContent = normalized === "ok" ? "OPERACIONAL" : "DEGRADADO";
+    }
+
+    function renderComponents(components) {
+      const grid = document.getElementById("componentsGrid");
+      if (!grid) return;
+      const keys = Object.keys(components || {});
+      if (!keys.length) {
+        grid.innerHTML = '<div class="card"><div class="label">Sem dados</div><div class="value">-</div></div>';
+        return;
+      }
+      grid.innerHTML = keys.map((name) => {
+        const c = components[name] || {};
+        return `
+          <article class="card">
+            <div class="label">${escapeHtml(name)}</div>
+            <div class="mono-compact">Sucesso: ${fmt(c.success)}</div>
+            <div class="mono-compact">Erros: ${fmt(c.errors)}</div>
+            <div class="mono-compact">Último sucesso: ${escapeHtml(c.last_success_at || "-")}</div>
+            <div class="mono-compact">Último erro: ${escapeHtml(c.last_error_at || "-")}</div>
+            <div class="mono-compact">Mensagem: ${escapeHtml(c.last_error || "-")}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderWorkers(workers) {
+      const grid = document.getElementById("workersGrid");
+      if (!grid) return;
+      const keys = Object.keys(workers || {});
+      if (!keys.length) {
+        grid.innerHTML = '<div class="card"><div class="label">Sem dados</div><div class="value">-</div></div>';
+        return;
+      }
+      grid.innerHTML = keys.map((name) => {
+        const w = workers[name] || {};
+        const staleClass = w.stale ? "degraded" : "ok";
+        const staleLabel = w.stale ? "Parado" : "Ativo";
+        return `
+          <article class="card">
+            <div class="label">${escapeHtml(name)}</div>
+            <div><span class="small-badge ${staleClass}">${staleLabel}</span></div>
+            <div class="mono-compact">Heartbeat: ${escapeHtml(w.last_heartbeat_at || "-")}</div>
+            <div class="mono-compact">Último erro: ${escapeHtml(w.last_error_at || "-")}</div>
+            <div class="mono-compact">Mensagem: ${escapeHtml(w.last_error || "-")}</div>
+            <div class="mono-compact">Limite de inatividade: ${fmt(w.stale_after_seconds)}s</div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderIncidents(incidents) {
+      const body = document.getElementById("incidentsBody");
+      if (!body) return;
+      const list = Array.isArray(incidents) ? incidents : [];
+      if (!list.length) {
+        body.innerHTML = '<tr><td colspan="4">Sem incidentes recentes.</td></tr>';
+        return;
+      }
+      body.innerHTML = list.map((item) => {
+        const context = item && item.context ? JSON.stringify(item.context) : "-";
+        return `
+          <tr>
+            <td>${escapeHtml(item.at || "-")}</td>
+            <td>${escapeHtml(item.component || "-")}</td>
+            <td>${escapeHtml(item.error || "-")}</td>
+            <td class="mono-compact">${escapeHtml(context)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderHealth(data) {
+      const health = data || {};
+      renderStatus(health.status);
+      const database = health.database || {};
+      const http = health.http || {};
+      const lastRequest = http.last_request || {};
+
+      const uptimeValue = document.getElementById("uptimeValue");
+      if (uptimeValue) uptimeValue.textContent = health.uptime_human || "-";
+
+      const databaseValue = document.getElementById("databaseValue");
+      if (databaseValue) databaseValue.textContent = database.ok ? "OK" : "Falha";
+
+      const requestsValue = document.getElementById("requestsValue");
+      if (requestsValue) requestsValue.textContent = fmt(http.requests_total);
+
+      const errors5xxValue = document.getElementById("errors5xxValue");
+      if (errors5xxValue) errors5xxValue.textContent = fmt(http.responses_5xx);
+
+      const incidents15mValue = document.getElementById("incidents15mValue");
+      if (incidents15mValue) incidents15mValue.textContent = fmt(health.recent_incidents_count_15m);
+
+      const lastRequestBlock = document.getElementById("lastRequestBlock");
+      if (lastRequestBlock) {
+        const method = lastRequest.method || "-";
+        const path = lastRequest.path || "-";
+        const status = lastRequest.status == null ? "-" : lastRequest.status;
+        const latency = lastRequest.latency_ms == null ? "-" : `${lastRequest.latency_ms}ms`;
+        const at = lastRequest.at || "-";
+        lastRequestBlock.textContent = `${method} ${path} | status=${status} | latência=${latency} | at=${at}`;
+      }
+
+      const generatedAt = document.getElementById("healthGeneratedAt");
+      if (generatedAt) generatedAt.textContent = `Atualizado em ${health.generated_at || "-"}`;
+
+      renderComponents(health.components || {});
+      renderWorkers(health.workers || {});
+      renderIncidents(health.recent_incidents || []);
+    }
+
+    async function refreshHealth() {
+      try {
+        const response = await fetch("/admin/health/data", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        renderHealth(data);
+      } catch (error) {
+      }
+    }
+
+    renderHealth(INITIAL_HEALTH);
+    setInterval(refreshHealth, 15000);
+  </script>
+</body>
+</html>

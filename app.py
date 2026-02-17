@@ -1,9 +1,10 @@
 from flask import (
     Flask, request, jsonify, render_template,
-    g, redirect, session, send_from_directory
+    g, redirect, session, send_from_directory, got_request_exception
 )
 import os
 import json
+import logging
 import csv
 import uuid
 import requests
@@ -230,6 +231,453 @@ if not (os.environ.get("BACKUP_ENCRYPTION_PASSWORD") or "").strip():
 BACKUP_RETENTION_DAYS = int(os.environ.get("BACKUP_RETENTION_DAYS", "15"))
 BACKUP_WORKER_ENABLED = (os.environ.get("BACKUP_WORKER_ENABLED", "true").strip().lower() == "true")
 _backup_lock = threading.Lock()
+
+# ======================================================
+# OBSERVABILIDADE
+# ======================================================
+
+def _parse_int_env(name, default, minimum=None, maximum=None):
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        value = int(default)
+    if minimum is not None:
+        value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
+OBS_LOG_LEVEL = (os.environ.get("OBS_LOG_LEVEL") or "INFO").strip().upper()
+if OBS_LOG_LEVEL not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+    OBS_LOG_LEVEL = "INFO"
+
+logging.basicConfig(
+    level=getattr(logging, OBS_LOG_LEVEL, logging.INFO),
+    format="%(message)s",
+    force=True
+)
+OBS_LOGGER = logging.getLogger("trx.observability")
+OBS_LOGGER.setLevel(getattr(logging, OBS_LOG_LEVEL, logging.INFO))
+
+OBS_ALERTS_ENABLED = (os.environ.get("OBS_ALERTS_ENABLED", "true").strip().lower() == "true")
+OBS_ALERT_WEBHOOK_URL = (os.environ.get("OBS_ALERT_WEBHOOK_URL") or "").strip()
+OBS_ALERT_EMAIL_TO = (os.environ.get("OBS_ALERT_EMAIL_TO") or "").strip()
+OBS_ALERT_WHATSAPP_TO = (os.environ.get("OBS_ALERT_WHATSAPP_TO") or "").strip()
+OBS_ALERT_COOLDOWN_SECONDS = _parse_int_env("OBS_ALERT_COOLDOWN_SECONDS", 300, minimum=30, maximum=86400)
+OBS_INCIDENT_LIMIT = _parse_int_env("OBS_INCIDENT_LIMIT", 120, minimum=20, maximum=500)
+OBS_REQUEST_LOG_ENABLED = (os.environ.get("OBS_REQUEST_LOG_ENABLED", "true").strip().lower() == "true")
+OBS_WORKER_STALE_SECONDS_WHATSAPP = _parse_int_env("OBS_WORKER_STALE_SECONDS_WHATSAPP", 150, minimum=60, maximum=3600)
+OBS_WORKER_STALE_SECONDS_BACKUP = _parse_int_env("OBS_WORKER_STALE_SECONDS_BACKUP", 172800, minimum=3600, maximum=604800)
+OBS_ALERT_COMPONENTS = {"webhook", "email", "whatsapp"}
+
+OBS_START_EPOCH = time.time()
+OBS_LOCK = threading.Lock()
+OBS_COUNTERS = defaultdict(int)
+OBS_INCIDENTS = deque(maxlen=OBS_INCIDENT_LIMIT)
+OBS_ALERT_LAST_SENT = {}
+OBS_LAST_REQUEST = {
+    "method": None,
+    "path": None,
+    "status": None,
+    "latency_ms": None,
+    "at": None,
+}
+OBS_COMPONENTS = {
+    "webhook": {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None},
+    "email": {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None},
+    "whatsapp": {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None},
+    "database": {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None},
+    "http": {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None},
+}
+OBS_WORKERS = {
+    "whatsapp_worker": {"last_heartbeat_at": None, "last_error_at": None, "last_error": None},
+    "backup_worker": {"last_heartbeat_at": None, "last_error_at": None, "last_error": None},
+}
+
+
+def obs_now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def obs_json_default(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, Exception):
+        return str(value)
+    return str(value)
+
+
+def obs_log(level, event, **fields):
+    payload = {
+        "ts": obs_now_iso(),
+        "event": event,
+    }
+    for key, value in fields.items():
+        if value is not None:
+            payload[key] = value
+
+    OBS_LOGGER.log(level, json.dumps(payload, ensure_ascii=False, default=obs_json_default))
+
+
+def obs_increment(metric, amount=1):
+    with OBS_LOCK:
+        OBS_COUNTERS[metric] += int(amount)
+
+
+def obs_record_incident(component, error_message, context=None):
+    incidente = {
+        "id": uuid.uuid4().hex[:12],
+        "at": obs_now_iso(),
+        "epoch": time.time(),
+        "component": component,
+        "error": (error_message or "")[:500],
+        "context": context or {},
+    }
+    with OBS_LOCK:
+        OBS_INCIDENTS.appendleft(incidente)
+    return incidente
+
+
+def obs_mark_success(component, context=None):
+    now_iso = obs_now_iso()
+    with OBS_LOCK:
+        status = OBS_COMPONENTS.setdefault(
+            component,
+            {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None}
+        )
+        status["success"] += 1
+        status["last_success_at"] = now_iso
+        OBS_COUNTERS[f"{component}.success"] += 1
+    if context:
+        obs_log(logging.INFO, "component_success", component=component, **context)
+
+
+def _obs_send_alert_webhook(payload):
+    if not OBS_ALERT_WEBHOOK_URL:
+        return "disabled"
+    response = requests.post(OBS_ALERT_WEBHOOK_URL, json=payload, timeout=10)
+    response.raise_for_status()
+    return "sent"
+
+
+def _obs_send_alert_email(payload):
+    if not OBS_ALERT_EMAIL_TO:
+        return "disabled"
+    assunto = f"[ALERTA TRX] Falha em {payload.get('component')}"
+    mensagem = (
+        f"Componente: {payload.get('component')}\n"
+        f"Erro: {payload.get('error')}\n"
+        f"Horário UTC: {payload.get('at')}\n"
+        f"Contexto: {json.dumps(payload.get('context') or {}, ensure_ascii=False, default=obs_json_default)}\n"
+    )
+    enviar_email_simples(
+        destinatario=OBS_ALERT_EMAIL_TO,
+        assunto=assunto,
+        mensagem=mensagem
+    )
+    return "sent"
+
+
+def _obs_send_alert_whatsapp(payload):
+    if not OBS_ALERT_WHATSAPP_TO:
+        return "disabled"
+
+    mensagem = (
+        "[ALERTA TRX]\n"
+        f"Componente: {payload.get('component')}\n"
+        f"Erro: {payload.get('error')}\n"
+        f"UTC: {payload.get('at')}"
+    )
+
+    numero = formatar_telefone_whatsapp(OBS_ALERT_WHATSAPP_TO)
+
+    if WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN:
+        url = (
+            f"https://graph.facebook.com/{WHATSAPP_GRAPH_VERSION}/"
+            f"{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        )
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload_api = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": numero,
+            "type": "text",
+            "text": {"preview_url": False, "body": mensagem},
+        }
+        response = requests.post(url, json=payload_api, headers=headers, timeout=20)
+        response.raise_for_status()
+        return "sent"
+
+    if WA_SENDER_URL and WA_SENDER_TOKEN:
+        headers = {
+            "Authorization": f"Bearer {WA_SENDER_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload_api = {
+            "phone": numero,
+            "message": mensagem,
+            "order_id": f"alert-{payload.get('id')}",
+        }
+        response = requests.post(WA_SENDER_URL, json=payload_api, headers=headers, timeout=20)
+        response.raise_for_status()
+        return "sent"
+
+    raise RuntimeError("Canal WhatsApp de alerta nao configurado.")
+
+
+def _obs_dispatch_alert(payload):
+    canais = {
+        "webhook": _obs_send_alert_webhook,
+        "email": _obs_send_alert_email,
+        "whatsapp": _obs_send_alert_whatsapp,
+    }
+    resultados = {}
+
+    for canal, sender in canais.items():
+        try:
+            resultados[canal] = sender(payload)
+        except Exception as exc:
+            resultados[canal] = f"error: {exc}"
+            obs_log(
+                logging.ERROR,
+                "alert_channel_error",
+                component=payload.get("component"),
+                channel=canal,
+                error=str(exc)
+            )
+
+    sucesso = any(resultado == "sent" for resultado in resultados.values())
+    with OBS_LOCK:
+        if sucesso:
+            OBS_COUNTERS["alerts.sent"] += 1
+        else:
+            OBS_COUNTERS["alerts.failed"] += 1
+
+    obs_log(
+        logging.WARNING if sucesso else logging.ERROR,
+        "alert_dispatch_result",
+        component=payload.get("component"),
+        success=sucesso,
+        channels=resultados
+    )
+
+
+def obs_alert(component, error_message, context=None):
+    if not OBS_ALERTS_ENABLED or component not in OBS_ALERT_COMPONENTS:
+        return
+
+    context = context or {}
+    fingerprint = f"{component}:{(error_message or '')[:140]}"
+    now_epoch = time.time()
+    should_send = False
+
+    with OBS_LOCK:
+        last_sent = OBS_ALERT_LAST_SENT.get(fingerprint, 0)
+        if now_epoch - last_sent >= OBS_ALERT_COOLDOWN_SECONDS:
+            OBS_ALERT_LAST_SENT[fingerprint] = now_epoch
+            should_send = True
+        else:
+            OBS_COUNTERS["alerts.suppressed"] += 1
+
+    if not should_send:
+        obs_log(
+            logging.INFO,
+            "alert_suppressed",
+            component=component,
+            cooldown_seconds=OBS_ALERT_COOLDOWN_SECONDS
+        )
+        return
+
+    payload = {
+        "id": uuid.uuid4().hex[:12],
+        "at": obs_now_iso(),
+        "component": component,
+        "error": (error_message or "")[:500],
+        "context": context,
+        "environment": (os.environ.get("APP_ENV") or os.environ.get("ENV") or "production"),
+    }
+
+    threading.Thread(target=_obs_dispatch_alert, args=(payload,), daemon=True).start()
+
+
+def obs_mark_error(component, error, context=None, alert=True):
+    now_iso = obs_now_iso()
+    error_message = str(error) if isinstance(error, Exception) else str(error or "erro_desconhecido")
+
+    with OBS_LOCK:
+        status = OBS_COMPONENTS.setdefault(
+            component,
+            {"success": 0, "errors": 0, "last_success_at": None, "last_error_at": None, "last_error": None}
+        )
+        status["errors"] += 1
+        status["last_error_at"] = now_iso
+        status["last_error"] = error_message[:500]
+        OBS_COUNTERS[f"{component}.errors"] += 1
+
+    incident = obs_record_incident(component=component, error_message=error_message, context=context)
+    obs_log(
+        logging.ERROR,
+        "component_error",
+        component=component,
+        error=error_message[:500],
+        incident_id=incident["id"],
+        context=context or {}
+    )
+
+    if alert:
+        obs_alert(component=component, error_message=error_message, context=context)
+
+
+def obs_worker_heartbeat(worker_name):
+    now_iso = obs_now_iso()
+    with OBS_LOCK:
+        worker = OBS_WORKERS.setdefault(
+            worker_name,
+            {"last_heartbeat_at": None, "last_error_at": None, "last_error": None}
+        )
+        worker["last_heartbeat_at"] = now_iso
+        OBS_COUNTERS[f"{worker_name}.heartbeat"] += 1
+
+
+def obs_worker_error(worker_name, error):
+    now_iso = obs_now_iso()
+    error_message = str(error)
+    with OBS_LOCK:
+        worker = OBS_WORKERS.setdefault(
+            worker_name,
+            {"last_heartbeat_at": None, "last_error_at": None, "last_error": None}
+        )
+        worker["last_error_at"] = now_iso
+        worker["last_error"] = error_message[:500]
+        OBS_COUNTERS[f"{worker_name}.errors"] += 1
+    obs_log(logging.ERROR, "worker_error", worker=worker_name, error=error_message[:500])
+
+
+def obs_check_database():
+    try:
+        stats = obter_estatisticas()
+        obs_mark_success("database")
+        return True, stats, None
+    except Exception as exc:
+        obs_mark_error("database", exc, context={"source": "healthcheck"}, alert=False)
+        return False, None, str(exc)
+
+
+def _format_uptime(seconds_total):
+    segundos = max(0, int(seconds_total))
+    dias, resto = divmod(segundos, 86400)
+    horas, resto = divmod(resto, 3600)
+    minutos, segundos = divmod(resto, 60)
+    partes = []
+    if dias:
+        partes.append(f"{dias}d")
+    if horas or dias:
+        partes.append(f"{horas}h")
+    if minutos or horas or dias:
+        partes.append(f"{minutos}m")
+    partes.append(f"{segundos}s")
+    return " ".join(partes)
+
+
+def obs_health_payload(include_incidents=False):
+    now_epoch = time.time()
+    db_ok, db_stats, db_error = obs_check_database()
+
+    with OBS_LOCK:
+        counters = dict(OBS_COUNTERS)
+        components = {nome: dict(info) for nome, info in OBS_COMPONENTS.items()}
+        workers = {nome: dict(info) for nome, info in OBS_WORKERS.items()}
+        incidents = [dict(item) for item in OBS_INCIDENTS]
+        last_request = dict(OBS_LAST_REQUEST)
+
+    for worker_name, worker_data in workers.items():
+        threshold = OBS_WORKER_STALE_SECONDS_BACKUP if worker_name == "backup_worker" else OBS_WORKER_STALE_SECONDS_WHATSAPP
+        last_heartbeat = worker_data.get("last_heartbeat_at")
+        stale = False
+        if last_heartbeat:
+            try:
+                last_epoch = datetime.fromisoformat(last_heartbeat).timestamp()
+                stale = (now_epoch - last_epoch) > threshold
+            except Exception:
+                stale = True
+        else:
+            stale = True
+        worker_data["stale"] = stale
+        worker_data["stale_after_seconds"] = threshold
+
+    recent_window_seconds = 15 * 60
+    recent_incidents = [
+        item for item in incidents
+        if now_epoch - float(item.get("epoch") or 0) <= recent_window_seconds
+    ]
+
+    status = "ok"
+    if not db_ok:
+        status = "degraded"
+    if any(info.get("stale") for info in workers.values()):
+        status = "degraded"
+    if any(item.get("component") in OBS_ALERT_COMPONENTS for item in recent_incidents):
+        status = "degraded"
+
+    payload = {
+        "status": status,
+        "generated_at": obs_now_iso(),
+        "uptime_seconds": int(now_epoch - OBS_START_EPOCH),
+        "uptime_human": _format_uptime(now_epoch - OBS_START_EPOCH),
+        "database": {
+            "ok": db_ok,
+            "stats": db_stats or {},
+            "error": db_error,
+        },
+        "http": {
+            "requests_total": counters.get("http.requests_total", 0),
+            "responses_4xx": counters.get("http.responses_4xx", 0),
+            "responses_5xx": counters.get("http.responses_5xx", 0),
+            "last_request": last_request,
+        },
+        "components": components,
+        "workers": workers,
+        "counters": counters,
+        "recent_incidents_count_15m": len(recent_incidents),
+    }
+
+    if include_incidents:
+        payload["recent_incidents"] = incidents[:50]
+    return payload
+
+
+def _obs_capture_unhandled_exception(sender, exception, **extra):
+    try:
+        obs_mark_error(
+            "http",
+            exception,
+            context={
+                "method": (request.method or "").upper(),
+                "path": request.path,
+                "request_id": getattr(g, "request_id", None),
+            },
+            alert=False
+        )
+    except Exception:
+        pass
+
+
+got_request_exception.connect(_obs_capture_unhandled_exception, app)
+obs_log(
+    logging.INFO,
+    "observability_initialized",
+    alerts_enabled=OBS_ALERTS_ENABLED,
+    alert_channels={
+        "webhook": bool(OBS_ALERT_WEBHOOK_URL),
+        "email": bool(OBS_ALERT_EMAIL_TO),
+        "whatsapp": bool(OBS_ALERT_WHATSAPP_TO),
+    },
+    log_level=OBS_LOG_LEVEL,
+)
 
 CSRF_HEADER_NAME = "X-CSRF-Token"
 FAILED_LOGIN_LIMIT = int(os.environ.get("FAILED_LOGIN_LIMIT", "5"))
@@ -1751,14 +2199,37 @@ def enviar_whatsapp_automatico(order):
         }
     }
 
-    response = requests.post(url, json=payload, headers=headers, timeout=30)
-    response.raise_for_status()
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        obs_mark_success(
+            "whatsapp",
+            context={
+                "source": "auto_queue",
+                "order_id": order.get("order_id"),
+                "plan": order.get("plano"),
+            }
+        )
+    except Exception as exc:
+        obs_mark_error(
+            "whatsapp",
+            exc,
+            context={
+                "source": "auto_queue",
+                "order_id": order.get("order_id"),
+                "plan": order.get("plano"),
+                "phone": order.get("telefone"),
+            },
+            alert=True
+        )
+        raise
 
 
 MAX_TENTATIVAS_WHATSAPP = 3
 
 
 def processar_fila_whatsapp():
+    obs_worker_heartbeat("whatsapp_worker")
     pedidos = listar_whatsapp_pendentes(limite=30)
 
     for pedido in pedidos:
@@ -1783,8 +2254,10 @@ def iniciar_worker_whatsapp():
     def worker_loop():
         while True:
             try:
+                obs_worker_heartbeat("whatsapp_worker")
                 processar_fila_whatsapp()
             except Exception as e:
+                obs_worker_error("whatsapp_worker", e)
                 print(f"[ERRO] Worker WhatsApp com erro: {e}", flush=True)
             time.sleep(20)
 
@@ -1919,13 +2392,20 @@ def iniciar_worker_backup_diario():
     def worker_loop():
         while True:
             try:
+                obs_worker_heartbeat("backup_worker")
                 esperar = _segundos_ate_proximo_backup()
                 time.sleep(esperar)
+                obs_worker_heartbeat("backup_worker")
                 ok, msg = executar_backup_criptografado(trigger_type="auto")
+                if ok:
+                    obs_mark_success("backup", context={"source": "backup_auto"})
+                else:
+                    obs_mark_error("backup", msg, context={"source": "backup_auto"}, alert=False)
                 print(f"[BACKUP] {msg}", flush=True)
                 if not ok and "em andamento em outro processo" not in msg.lower():
                     time.sleep(60)
             except Exception as exc:
+                obs_worker_error("backup_worker", exc)
                 print(f"[BACKUP] erro no worker: {exc}", flush=True)
                 time.sleep(60)
 
@@ -2007,13 +2487,42 @@ def agendar_whatsapp_pos_pago(order):
     mensagem = montar_mensagem_whatsapp_pos_pago(order)
     print(f"[INFO] Pagamento confirmado; agendando WhatsApp para {order_id} em {WHATSAPP_DELAY_MINUTES} min", flush=True)
 
+    def _on_success(order_id_cb):
+        try:
+            marcar_whatsapp_auto_enviado(order_id_cb)
+        finally:
+            obs_mark_success(
+                "whatsapp",
+                context={
+                    "source": "post_paid_schedule",
+                    "order_id": order_id_cb,
+                    "plan": order.get("plano"),
+                }
+            )
+
+    def _on_failure(order_id_cb, erro):
+        try:
+            registrar_falha_whatsapp_auto(order_id_cb, erro)
+        finally:
+            obs_mark_error(
+                "whatsapp",
+                erro,
+                context={
+                    "source": "post_paid_schedule",
+                    "order_id": order_id_cb,
+                    "plan": order.get("plano"),
+                    "phone": telefone,
+                },
+                alert=True
+            )
+
     schedule_whatsapp(
         phone=telefone,
         message=mensagem,
         order_id=order_id,
         delay_minutes=WHATSAPP_DELAY_MINUTES,
-        on_success=marcar_whatsapp_auto_enviado,
-        on_failure=registrar_falha_whatsapp_auto
+        on_success=_on_success,
+        on_failure=_on_failure
     )
 
 
@@ -2583,6 +3092,10 @@ def aplicar_protecoes_request():
     path = request.path or ""
     method = request.method.upper()
     ip = obter_ip_request() or (request.remote_addr or "0.0.0.0")
+    g.request_started_at = time.time()
+    g.request_id = uuid.uuid4().hex[:12]
+    g.request_ip = ip
+    obs_increment("http.requests_total")
     admin_surface = path.startswith("/admin") or path.startswith("/api/analytics") or path == "/dashboard"
 
     if admin_surface and not _ip_em_allowlist(ip):
@@ -2666,6 +3179,57 @@ def aplicar_protecoes_request():
 
 @app.after_request
 def aplicar_headers_seguranca(response):
+    path = request.path or ""
+    method = (request.method or "").upper()
+    status_code = int(response.status_code or 0)
+    started_at = getattr(g, "request_started_at", None)
+    latency_ms = None
+    if started_at:
+        latency_ms = round((time.time() - started_at) * 1000, 2)
+
+    if status_code >= 500:
+        obs_increment("http.responses_5xx")
+        obs_mark_error(
+            "http",
+            f"status_{status_code}",
+            context={
+                "method": method,
+                "path": path,
+                "request_id": getattr(g, "request_id", None),
+            },
+            alert=False
+        )
+    elif status_code >= 400:
+        obs_increment("http.responses_4xx")
+    else:
+        obs_mark_success("http")
+
+    with OBS_LOCK:
+        OBS_LAST_REQUEST["method"] = method
+        OBS_LAST_REQUEST["path"] = path
+        OBS_LAST_REQUEST["status"] = status_code
+        OBS_LAST_REQUEST["latency_ms"] = latency_ms
+        OBS_LAST_REQUEST["at"] = obs_now_iso()
+
+    if OBS_REQUEST_LOG_ENABLED:
+        log_level = logging.INFO
+        if status_code >= 500:
+            log_level = logging.ERROR
+        elif status_code >= 400:
+            log_level = logging.WARNING
+
+        obs_log(
+            log_level,
+            "http_request",
+            request_id=getattr(g, "request_id", None),
+            method=method,
+            path=path,
+            status=status_code,
+            latency_ms=latency_ms,
+            ip=getattr(g, "request_ip", None),
+            user_agent=(request.headers.get("User-Agent") or "")[:200]
+        )
+
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -2765,6 +3329,9 @@ MAX_TENTATIVAS_EMAIL = 3
 
 def enviar_email_com_retry(order, plano_info, arquivo, senha):
     tentativas = order["email_tentativas"]
+    order_id = order.get("order_id")
+    plano = order.get("plano")
+    destinatario = order.get("email")
 
     while tentativas < MAX_TENTATIVAS_EMAIL:
         try:
@@ -2775,10 +3342,30 @@ def enviar_email_com_retry(order, plano_info, arquivo, senha):
                 senha=senha,
                 nome_cliente=order.get("nome")
             )
+            obs_mark_success(
+                "email",
+                context={
+                    "order_id": order_id,
+                    "plan": plano,
+                    "attempt": tentativas + 1,
+                    "recipient": destinatario,
+                }
+            )
             return True
         except Exception as e:
             tentativas += 1
             registrar_falha_email(order["order_id"], tentativas, str(e))
+            obs_mark_error(
+                "email",
+                e,
+                context={
+                    "order_id": order_id,
+                    "plan": plano,
+                    "attempt": tentativas,
+                    "recipient": destinatario,
+                },
+                alert=True
+            )
             time.sleep(5)
 
     return False
@@ -3976,6 +4563,16 @@ def comprar():
                 senha=senha,
                 nome_cliente=nome,
             )
+            obs_mark_success(
+                "email",
+                context={
+                    "order_id": order_id,
+                    "plan": plano_id,
+                    "attempt": 1,
+                    "recipient": email,
+                    "source": "checkout_gratis",
+                }
+            )
 
             marcar_order_processada(order_id)
             try:
@@ -4008,6 +4605,18 @@ def comprar():
             return redirect(f"/sucesso/{order_id}?t={gerar_token_sucesso_order(order_id)}")
         except Exception as exc:
             registrar_falha_email(order_id, 1, str(exc))
+            obs_mark_error(
+                "email",
+                exc,
+                context={
+                    "order_id": order_id,
+                    "plan": plano_id,
+                    "attempt": 1,
+                    "recipient": email,
+                    "source": "checkout_gratis",
+                },
+                alert=True
+            )
             return "Falha ao enviar o acesso. Tente novamente em instantes.", 500
         finally:
             if arquivo and os.path.exists(arquivo):
@@ -4029,14 +4638,19 @@ def comprar():
 
 @app.route("/webhook/infinitypay", methods=["POST"])
 def webhook():
+    obs_increment("webhook.received")
+
     if not verificar_token_webhook():
+        obs_increment("webhook.unauthorized")
         return jsonify({"msg": "N\u00e3o autorizado"}), 401
 
     if not request.is_json:
+        obs_increment("webhook.invalid_payload")
         return jsonify({"msg": "Content-Type inv\u00e1lido"}), 400
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
+        obs_increment("webhook.invalid_payload")
         return jsonify({"msg": "Payload inv\u00e1lido"}), 400
 
     transaction_nsu = str(data.get("transaction_nsu") or "").strip()
@@ -4048,32 +4662,41 @@ def webhook():
         paid_amount = 0
 
     if not transaction_nsu or not order_id or paid_amount <= 0:
+        obs_increment("webhook.ignored")
         return jsonify({"msg": "Ignorado"}), 200
 
     if transacao_ja_processada(transaction_nsu):
+        obs_increment("webhook.duplicate_transaction")
         return jsonify({"msg": "J\u00e1 processado"}), 200
 
     order = buscar_order_por_id(order_id)
     if not order:
+        obs_increment("webhook.invalid_order")
         return jsonify({"msg": "Pedido inv\u00e1lido"}), 200
 
     status_order = (order.get("status") or "").strip().upper()
     if status_order == "PAGO":
+        obs_increment("webhook.already_paid")
         return jsonify({"msg": "J\u00e1 processado"}), 200
     if status_order == "PROCESSANDO":
+        obs_increment("webhook.order_processing")
         return jsonify({"msg": "Pedido em processamento"}), 200
     if status_order != "PENDENTE":
+        obs_increment("webhook.invalid_status")
         return jsonify({"msg": "Pedido inv\u00e1lido"}), 200
 
     plano_id = order.get("plano")
     if plano_id not in PLANOS:
+        obs_increment("webhook.invalid_plan")
         return jsonify({"msg": "Plano inv\u00e1lido"}), 400
     plano_info = PLANOS[plano_id]
     preco_esperado = int(plano_info.get("preco") or 0)
     if preco_esperado > 0 and paid_amount < preco_esperado:
+        obs_increment("webhook.insufficient_payment")
         return jsonify({"msg": "Pagamento insuficiente"}), 400
 
     if not reservar_order_para_processamento(order_id):
+        obs_increment("webhook.order_processing")
         return jsonify({"msg": "Pedido em processamento"}), 200
 
     arquivo = None
@@ -4102,7 +4725,27 @@ def webhook():
         registrar_compra_analytics(order_pago, transaction_nsu=transaction_nsu)
         agendar_whatsapp_pos_pago(order_pago)
         processamento_concluido = True
+        obs_mark_success(
+            "webhook",
+            context={
+                "order_id": order_id,
+                "transaction_nsu": transaction_nsu,
+                "plan": plano_id,
+                "paid_amount": paid_amount,
+            }
+        )
     except Exception as exc:
+        obs_mark_error(
+            "webhook",
+            exc,
+            context={
+                "order_id": order_id,
+                "transaction_nsu": transaction_nsu,
+                "plan": plano_id,
+                "paid_amount": paid_amount,
+            },
+            alert=True
+        )
         print(f"Falha ao processar webhook {order_id}: {exc}", flush=True)
         return jsonify({"msg": "Erro no processamento"}), 500
     finally:
@@ -4178,6 +4821,43 @@ def admin_backup_logs():
                 item[campo] = valor.isoformat()
 
     return jsonify({"ok": True, "items": itens})
+
+
+@app.route("/healthz")
+def healthz():
+    health = obs_health_payload(include_incidents=False)
+    status_code = 200 if health.get("status") == "ok" else 503
+    return jsonify({
+        "status": health.get("status"),
+        "generated_at": health.get("generated_at"),
+        "uptime_seconds": health.get("uptime_seconds"),
+        "uptime_human": health.get("uptime_human"),
+        "database_ok": bool((health.get("database") or {}).get("ok")),
+        "http_requests_total": (health.get("http") or {}).get("requests_total", 0),
+        "recent_incidents_count_15m": health.get("recent_incidents_count_15m", 0),
+        "components": {
+            "webhook_errors": ((health.get("components") or {}).get("webhook") or {}).get("errors", 0),
+            "email_errors": ((health.get("components") or {}).get("email") or {}).get("errors", 0),
+            "whatsapp_errors": ((health.get("components") or {}).get("whatsapp") or {}).get("errors", 0),
+        },
+    }), status_code
+
+
+@app.route("/admin/health")
+def admin_health():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    health = obs_health_payload(include_incidents=True)
+    return render_template("admin_health.html", health=health)
+
+
+@app.route("/admin/health/data")
+def admin_health_data():
+    if not session.get("admin"):
+        return jsonify({"error": "unauthorized"}), 403
+
+    return jsonify(obs_health_payload(include_incidents=True))
 
 
 @app.route("/admin/dashboard")
