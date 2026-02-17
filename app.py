@@ -59,6 +59,7 @@ from database import (
     existe_quiz_submission,
     listar_afiliados,
     buscar_afiliado_por_slug,
+    buscar_afiliado_por_email,
     criar_afiliado,
     atualizar_afiliado,
     excluir_afiliado,
@@ -380,6 +381,64 @@ def montar_checkout_suffix(affiliate):
     if not affiliate:
         return ""
     return f"-{affiliate['slug']}"
+
+
+def gerar_slug_afiliado_unico(nome, email):
+    nome_norm = normalizar_nome(nome)
+    email_norm = normalizar_email(email)
+    local_email = email_norm.split("@", 1)[0] if "@" in email_norm else ""
+    primeiro_nome = nome_norm.split(" ", 1)[0] if nome_norm else ""
+
+    candidatos = []
+    if primeiro_nome:
+        candidatos.append(primeiro_nome)
+    if local_email:
+        candidatos.append(local_email)
+    if primeiro_nome and local_email:
+        candidatos.append(f"{primeiro_nome}-{local_email}")
+
+    for candidato in candidatos:
+        slug = normalizar_slug_afiliado(candidato)
+        if not slug_afiliado_valido(slug):
+            continue
+        if not buscar_afiliado_por_slug(slug, apenas_ativos=False):
+            return slug
+
+    base = normalizar_slug_afiliado(local_email or primeiro_nome or "afiliado")
+    if not slug_afiliado_valido(base):
+        base = "afiliado"
+    base = base[:52].rstrip("-")
+
+    for _ in range(40):
+        sufixo = secrets.token_hex(2)
+        slug = normalizar_slug_afiliado(f"{base}-{sufixo}")
+        if not slug_afiliado_valido(slug):
+            continue
+        if not buscar_afiliado_por_slug(slug, apenas_ativos=False):
+            return slug
+
+    return ""
+
+
+def montar_dados_afiliado_cliente(afiliado):
+    if not afiliado:
+        return None
+
+    slug = normalizar_slug_afiliado(afiliado.get("slug"))
+    if not slug_afiliado_valido(slug):
+        return None
+
+    nome = normalizar_nome(afiliado.get("nome") or "")
+    link_publico = montar_url_absoluta(f"/{slug}")
+    return {
+        "slug": slug,
+        "nome": nome or slug,
+        "email": normalizar_email(afiliado.get("email") or ""),
+        "telefone": normalizar_telefone(afiliado.get("telefone") or ""),
+        "ativo": bool(afiliado.get("ativo")),
+        "link_publico": link_publico,
+    }
+
 
 MESES_ROTULO = {
     "jan": "JAN",
@@ -2118,6 +2177,10 @@ def aplicar_protecoes_request():
         if excedeu_rate_limit(f"post_cliente_lead_upgrade:{ip}", limite=50, janela_segundos=60):
             return jsonify({"ok": False, "error": "rate_limited"}), 429
 
+    if method == "POST" and path == "/minha-conta/afiliados/ativar":
+        if excedeu_rate_limit(f"post_cliente_afiliado_ativar:{ip}", limite=10, janela_segundos=60):
+            return "Muitas tentativas. Aguarde alguns segundos.", 429
+
     if method == "POST" and path == "/login/recuperar-senha":
         if excedeu_rate_limit(f"post_cliente_recover:{ip}", limite=8, janela_segundos=60):
             return "Muitas tentativas. Aguarde alguns segundos.", 429
@@ -2766,6 +2829,65 @@ def cliente_logout():
     return response
 
 
+@app.route("/minha-conta/afiliados/ativar", methods=["POST"])
+def cliente_ativar_afiliacao():
+    token = (request.form.get("csrf_token") or request.headers.get(CSRF_HEADER_NAME) or "").strip()
+    if not validar_csrf_token(token):
+        return "Falha de validacao CSRF.", 403
+
+    email = obter_email_cliente_logado()
+    if not EMAIL_RE.fullmatch(email):
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    conta = buscar_conta_cliente_por_email(email)
+    if not conta:
+        limpar_sessao_cliente()
+        return redirect("/login")
+
+    nome_conta = normalizar_nome(descriptografar_texto_cliente(conta.get("nome")) or "")
+    telefone_conta = normalizar_telefone(descriptografar_texto_cliente(conta.get("telefone")) or "") or None
+
+    afiliado_existente = buscar_afiliado_por_email(email, apenas_ativos=False)
+    if afiliado_existente:
+        slug_existente = normalizar_slug_afiliado(afiliado_existente.get("slug") or "")
+        if not slug_afiliado_valido(slug_existente):
+            return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+        if not bool(afiliado_existente.get("ativo")):
+            atualizar_afiliado(
+                slug_atual=slug_existente,
+                slug_novo=slug_existente,
+                nome=nome_conta or afiliado_existente.get("nome") or "Afiliado TRX",
+                email=email,
+                telefone=telefone_conta or afiliado_existente.get("telefone") or None,
+                ativo=True
+            )
+            return redirect("/minha-conta?info=afiliado_reativado#afiliados")
+        return redirect("/minha-conta?info=afiliado_existente#afiliados")
+
+    slug_novo = gerar_slug_afiliado_unico(nome_conta, email)
+    if not slug_novo:
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    nome_afiliado = nome_conta or f"Afiliado {email.split('@', 1)[0]}"
+    criado = criar_afiliado(
+        slug=slug_novo,
+        nome=nome_afiliado,
+        email=email,
+        telefone=telefone_conta,
+        ativo=True
+    )
+
+    if not criado:
+        afiliado_slug = buscar_afiliado_por_slug(slug_novo, apenas_ativos=False)
+        if afiliado_slug and normalizar_email(afiliado_slug.get("email")) == email:
+            return redirect("/minha-conta?info=afiliado_existente#afiliados")
+        return redirect("/minha-conta?info=afiliado_erro#afiliados")
+
+    return redirect("/minha-conta?info=afiliado_criado#afiliados")
+
+
 @app.route("/minha-conta")
 def cliente_area():
     email = obter_email_cliente_logado()
@@ -2784,9 +2906,15 @@ def cliente_area():
     conta_view["nome"] = conta_nome_decrypt
     conta_view["telefone"] = conta_telefone_decrypt
     info_key = (request.args.get("info") or "").strip().lower()
-    info_message = ""
-    if info_key == "senha_criada":
-        info_message = "Senha criada com sucesso."
+    info_messages = {
+        "senha_criada": "Senha criada com sucesso.",
+        "afiliado_criado": "Afiliacao ativada com sucesso. Seu link de indicacao ja esta disponivel.",
+        "afiliado_reativado": "Sua afiliacao foi reativada com sucesso.",
+        "afiliado_existente": "Sua conta ja esta afiliada.",
+        "afiliado_erro": "Nao foi possivel ativar sua afiliacao agora. Tente novamente."
+    }
+    info_message = info_messages.get(info_key, "")
+    info_message_level = "warn" if info_key == "afiliado_erro" else "ok"
     quiz_user_key = (session.get("quiz_user_key") or "").strip()
     diagnostico_concluido = existe_quiz_submission(
         account_email=email,
@@ -2927,6 +3055,9 @@ def cliente_area():
                 "sales_count": int(vendas_por_plano.get(plano_id) or 0),
             })
 
+    afiliado_cliente = buscar_afiliado_por_email(email, apenas_ativos=False)
+    afiliado_cliente_view = montar_dados_afiliado_cliente(afiliado_cliente)
+
     return render_template(
         "client_area.html",
         csrf_token=gerar_csrf_token(),
@@ -2934,6 +3065,7 @@ def cliente_area():
         conta_nome=conta_nome,
         email=email,
         info_message=info_message,
+        info_message_level=info_message_level,
         diagnostico_concluido=diagnostico_concluido,
         client_notifications=client_notifications,
         notification_count=notification_count,
@@ -2942,7 +3074,8 @@ def cliente_area():
         pedidos=pedidos_view,
         ativos=ativos,
         ultimo_pedido=ultimo_pedido,
-        upsell_plans=upsell_plans
+        upsell_plans=upsell_plans,
+        afiliado_cliente=afiliado_cliente_view
     )
 
 

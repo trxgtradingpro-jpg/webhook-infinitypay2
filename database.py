@@ -729,6 +729,46 @@ def buscar_afiliado_por_slug(slug, apenas_ativos=False):
     }
 
 
+def buscar_afiliado_por_email(email, apenas_ativos=False):
+    email_norm = _normalizar_email_interno(email)
+    if not email_norm:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    sql = """
+        SELECT id, slug, nome, email, telefone, ativo, created_at, updated_at
+        FROM affiliates
+        WHERE LOWER(COALESCE(TRIM(email), '')) = %s
+    """
+    params = [email_norm]
+
+    if apenas_ativos:
+        sql += " AND ativo = TRUE"
+
+    sql += " ORDER BY created_at DESC LIMIT 1"
+
+    cur.execute(sql, params)
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "slug": row[1],
+        "nome": row[2],
+        "email": row[3],
+        "telefone": row[4],
+        "ativo": bool(row[5]),
+        "created_at": row[6],
+        "updated_at": row[7]
+    }
+
+
 def criar_afiliado(slug, nome, email=None, telefone=None, ativo=True):
     conn = get_conn()
     cur = conn.cursor()

@@ -828,6 +828,85 @@
       box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 12px 26px rgba(0,0,0,.24);
     }
     .back:hover{ transform:translateY(-1px); filter:brightness(1.08); border-color:rgba(139,197,255,.72); }
+    .affiliate-intro{
+      margin:0;
+      color:#dbe7ff;
+      font-size:15px;
+      line-height:1.5;
+      font-weight:700;
+    }
+    .affiliate-box{
+      margin-top:12px;
+      border:1px solid rgba(74,163,255,.34);
+      border-radius:14px;
+      padding:12px;
+      background:linear-gradient(180deg, rgba(13,24,40,.56), rgba(9,17,30,.48));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 10px 24px rgba(0,0,0,.20);
+      display:grid;
+      gap:10px;
+    }
+    .affiliate-status-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .affiliate-status-text{
+      color:#d8e7ff;
+      font-size:14px;
+      font-weight:800;
+    }
+    .affiliate-link-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .affiliate-link-field{
+      flex:1 1 360px;
+      min-width:220px;
+      border:1px solid rgba(74,163,255,.48);
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(8,15,27,.95), rgba(6,12,21,.95));
+      color:#ecf4ff;
+      padding:10px 12px;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.1px;
+    }
+    .affiliate-link-copy,
+    .affiliate-activate{
+      border:1px solid rgba(255,210,26,.52);
+      border-radius:12px;
+      background:linear-gradient(180deg, rgba(255,164,51,.96), rgba(236,113,16,.96));
+      color:#241000;
+      padding:10px 14px;
+      font-size:13px;
+      font-weight:1000;
+      letter-spacing:.2px;
+      cursor:pointer;
+      text-transform:uppercase;
+      box-shadow:0 12px 24px rgba(236,113,16,.30), inset 0 1px 0 rgba(255,255,255,.30);
+      transition:.16s transform, .16s filter;
+    }
+    .affiliate-link-copy:hover,
+    .affiliate-activate:hover{
+      transform:translateY(-1px);
+      filter:brightness(1.08);
+    }
+    .affiliate-muted{
+      margin:0;
+      color:var(--muted2);
+      font-size:13px;
+      line-height:1.45;
+      font-weight:700;
+    }
+    .affiliate-activate[disabled]{
+      opacity:.75;
+      cursor:not-allowed;
+      transform:none;
+      filter:none;
+    }
     .upsell-intro{
       margin:0;
       color:#dbe7ff;
@@ -1112,7 +1191,7 @@
       </div>
     </header>
     {% if info_message %}
-      <div class="msg ok">{{ info_message }}</div>
+      <div class="msg {{ info_message_level or 'ok' }}">{{ info_message }}</div>
     {% endif %}
     {% if not diagnostico_concluido %}
       <div class="msg warn">
@@ -1123,6 +1202,7 @@
 
     <nav class="account-menu">
       <a href="#resumo">Resumo</a>
+      <a href="#afiliados">Afiliados</a>
       <a href="#manual-instalacao">Manual de instalacao</a>
       <a href="#capital">Curva de capital</a>
       {% if upsell_plans %}
@@ -1154,6 +1234,52 @@
           <p class="empty">Nenhum plano encontrado para este e-mail.</p>
         {% endif %}
       </article>
+    </section>
+
+    <section class="card section-anchor" id="afiliados">
+      <h2>Programa de afiliados</h2>
+      <p class="affiliate-intro">
+        Ative sua afiliacao para receber um link exclusivo e indicar o TRX PRO com rastreamento automatico.
+      </p>
+      <div class="affiliate-box">
+        {% if afiliado_cliente %}
+          <div class="affiliate-status-row">
+            {% if afiliado_cliente.ativo %}
+              <span class="status ok">Ativo</span>
+            {% else %}
+              <span class="status bad">Inativo</span>
+            {% endif %}
+            <span class="affiliate-status-text">Slug: <strong>{{ afiliado_cliente.slug }}</strong></span>
+          </div>
+          <div class="affiliate-link-row">
+            <input
+              id="affiliateLinkField"
+              class="affiliate-link-field"
+              type="text"
+              value="{{ afiliado_cliente.link_publico }}"
+              readonly
+            >
+            <button type="button" id="affiliateCopyBtn" class="affiliate-link-copy">Copiar link</button>
+          </div>
+          <p class="affiliate-muted">
+            Compartilhe este link: <a href="{{ afiliado_cliente.link_publico }}" target="_blank" rel="noopener noreferrer">{{ afiliado_cliente.link_publico }}</a>
+          </p>
+          {% if not afiliado_cliente.ativo %}
+            <form method="POST" action="/minha-conta/afiliados/ativar">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="affiliate-activate">Reativar afiliacao</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <p class="affiliate-muted">
+            Sua conta ainda nao esta afiliada. Ative abaixo e gere agora seu link de indicacao.
+          </p>
+          <form method="POST" action="/minha-conta/afiliados/ativar">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="affiliate-activate">Quero me afiliar</button>
+          </form>
+        {% endif %}
+      </div>
     </section>
 
     <section class="card section-anchor" id="manual-instalacao">
@@ -1758,6 +1884,39 @@
       })();
     </script>
   {% endif %}
+  <script>
+    (function setupAffiliateCopy(){
+      const copyBtn = document.getElementById("affiliateCopyBtn");
+      const field = document.getElementById("affiliateLinkField");
+      if (!copyBtn || !field) return;
+
+      const originalLabel = copyBtn.textContent;
+      const setLabel = (text) => {
+        copyBtn.textContent = text;
+        setTimeout(() => {
+          copyBtn.textContent = originalLabel;
+        }, 1500);
+      };
+
+      copyBtn.addEventListener("click", async () => {
+        const value = (field.value || "").trim();
+        if (!value) return;
+
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(value);
+          } else {
+            field.focus();
+            field.select();
+            document.execCommand("copy");
+          }
+          setLabel("Copiado");
+        } catch (_) {
+          setLabel("Falhou");
+        }
+      });
+    })();
+  </script>
   <script>
     (function setupAccountSections(){
       const menu = document.querySelector(".account-menu");
