@@ -294,7 +294,7 @@
       </p>
     {% endif %}
 
-    <form id="checkout-form" method="POST" action="/comprar" novalidate>
+    <form id="checkout-form" method="POST" action="/comprar">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="plano" value="{{ plano }}">
 
@@ -350,25 +350,19 @@
     pingOnline();
     setInterval(pingOnline, 30000);
 
-    // ===== Fallback anti-interceptação =====
-    // Se algum JS global interceptar o submit (transformar em fetch/xhr),
-    // este código tenta pegar JSON do backend e redirecionar manualmente.
+    // ===== Fallback anti-interceptação (não quebra no plano grátis) =====
+    // Se algum JS global interceptar o submit e transformar em fetch/xhr,
+    // aqui a gente redireciona manualmente para onde o servidor mandou.
     (function () {
       const form = document.getElementById('checkout-form');
       const btn  = document.getElementById('checkout-submit');
       if (!form || !btn) return;
 
-      let attemptedFallback = false;
-
       form.addEventListener('submit', function () {
-        // Se for navegação normal, a página troca e este JS "some".
-        // Se a página não trocar rapidamente (submit interceptado), ativamos fallback.
         btn.disabled = true;
 
+        // Se for submit normal, a página navega e esse JS não continua.
         setTimeout(async () => {
-          if (attemptedFallback) return;
-          attemptedFallback = true;
-
           try {
             const fd = new FormData(form);
 
@@ -379,26 +373,32 @@
                 "Accept": "application/json",
                 "X-Requested-With": "XMLHttpRequest"
               },
-              credentials: "same-origin"
+              credentials: "same-origin",
+              redirect: "follow"
             });
 
-            if (!resp.ok) {
-              const txt = await resp.text();
-              alert(txt || "Não foi possível continuar. Tente novamente.");
-              btn.disabled = false;
+            // Se o servidor redirecionou (comum no plano grátis), vai para a URL final
+            if (resp.redirected && resp.url) {
+              window.location.href = resp.url;
               return;
             }
 
-            const data = await resp.json();
-            if (data && data.checkout_url) {
-              window.location.href = data.checkout_url;
-              return;
+            // Se o servidor devolveu JSON (comum no plano pago com backend ajustado)
+            const ct = (resp.headers.get("content-type") || "").toLowerCase();
+            if (ct.includes("application/json")) {
+              const data = await resp.json();
+              if (data && data.checkout_url) {
+                window.location.href = data.checkout_url;
+                return;
+              }
             }
 
-            alert("Não foi possível gerar o checkout. Tente novamente.");
+            // Caso inesperado: mostra resposta
+            const txt = await resp.text();
+            alert(txt || "Não foi possível continuar. Tente novamente.");
             btn.disabled = false;
           } catch (e) {
-            alert("Falha ao continuar. Verifique sua conexão e tente novamente.");
+            alert("Falha ao continuar. Tente novamente.");
             btn.disabled = false;
           }
         }, 350);
