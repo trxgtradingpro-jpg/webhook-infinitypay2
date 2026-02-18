@@ -24,6 +24,7 @@ from ipaddress import ip_address, ip_network
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 from cryptography.fernet import Fernet, InvalidToken
+from flask import jsonify
 
 from compactador import compactar_plano
 from email_utils import enviar_email, enviar_email_com_anexo, enviar_email_simples
@@ -5143,6 +5144,8 @@ def comprar():
             if arquivo and os.path.exists(arquivo):
                 os.remove(arquivo)
 
+    
+
     checkout_url = criar_checkout_dinamico(
         plano_id=plano_id,
         order_id=order_id,
@@ -5151,7 +5154,24 @@ def comprar():
         telefone=telefone,
     )
 
+    # ======================================================
+    # REDIRECT "À PROVA DE FETCH"
+    # - Submit normal (Document): redirect funciona.
+    # - Se algum JS interceptar e fizer fetch/xhr: devolve JSON com a URL.
+    # ======================================================
+    accept = (request.headers.get("Accept") or "").lower()
+    xrw = (request.headers.get("X-Requested-With") or "").lower()
+    content_type = (request.headers.get("Content-Type") or "").lower()
+
+    is_ajax = ("xmlhttprequest" in xrw) or ("application/json" in accept)
+
+    # Se veio como fetch/xhr (ou o cliente pede JSON), devolve JSON
+    if is_ajax:
+        return jsonify({"ok": True, "checkout_url": checkout_url}), 200
+
+    # Caso normal (form submit), navega com redirect
     return redirect(checkout_url)
+
 
 # ======================================================
 # WEBHOOK
