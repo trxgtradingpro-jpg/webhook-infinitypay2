@@ -5083,16 +5083,16 @@ def comprar():
             )
 
             marcar_order_processada(order_id)
-            try:
-                removidos = excluir_duplicados_gratis_mesmo_dia(order_id, email)
-                if removidos > 0:
-                    print(
-                        f"[DUPLICADOS] Removidos {removidos} pedido(s) gratis duplicado(s) "
-                        f"para {email} no mesmo dia.",
-                        flush=True
-                    )
-            except Exception as exc:
-                print(f"[DUPLICADOS] Falha ao limpar duplicados gratis ({order_id}): {exc}", flush=True)
+            #try:
+                #removidos = excluir_duplicados_gratis_mesmo_dia(order_id, email)
+                #if removidos > 0:
+                   # print(
+                       # f"[DUPLICADOS] Removidos {removidos} pedido(s) gratis duplicado(s) "
+                       # f"para {email} no mesmo dia.",
+                      #  flush=True
+                    #)
+            #except Exception as exc:
+                #print(f"[DUPLICADOS] Falha ao limpar duplicados gratis ({order_id}): {exc}", flush=True)
 
             order_pago = buscar_order_por_id(order_id)
             order_pago = order_pago or {"order_id": order_id, "plano": plano_id}
