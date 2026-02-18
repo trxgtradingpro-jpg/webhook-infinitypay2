@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Finalizar compra</title>
+  <title>{{ "Ativar acesso grátis" if is_free_plan else "Finalizar compra" }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -106,6 +106,13 @@
     button:hover {
       transform: translateY(-1px);
       box-shadow: 0 10px 20px rgba(39,174,96,0.3);
+    }
+
+    button:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     /* Footer (seu) */
@@ -287,8 +294,9 @@
       </p>
     {% endif %}
 
-    <form method="POST" action="/comprar">
+    <form id="checkout-form" method="POST" action="/comprar" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="plano" value="{{ plano }}">
 
       <label for="nome">Nome completo</label>
       <input
@@ -297,6 +305,7 @@
         name="nome"
         placeholder="Digite seu nome completo"
         value="{{ nome }}"
+        autocomplete="name"
         required
       />
 
@@ -307,6 +316,7 @@
         name="email"
         placeholder="Seu e-mail"
         value="{{ email }}"
+        autocomplete="email"
         required
       />
       <div class="info">O acesso será enviado para este e-mail</div>
@@ -318,13 +328,13 @@
         name="telefone"
         placeholder="Ex: 11 99999-9999"
         value="{{ telefone }}"
+        autocomplete="tel"
+        inputmode="tel"
         required
       />
       <div class="info">Usado para suporte e comunicação</div>
 
-      <input type="hidden" name="plano" value="{{ plano }}">
-
-      <button type="submit">
+      <button id="checkout-submit" type="submit">
         {{ "Continuar para ativar grátis" if is_free_plan else "Continuar para pagamento" }}
       </button>
     </form>
@@ -333,11 +343,67 @@
   </div>
 
   <script>
+    // Ping simples para métricas (não bloqueia navegação)
     async function pingOnline() {
       try { await fetch('/online/ping', { method: 'POST' }); } catch (e) {}
     }
     pingOnline();
     setInterval(pingOnline, 30000);
+
+    // ===== Fallback anti-interceptação =====
+    // Se algum JS global interceptar o submit (transformar em fetch/xhr),
+    // este código tenta pegar JSON do backend e redirecionar manualmente.
+    (function () {
+      const form = document.getElementById('checkout-form');
+      const btn  = document.getElementById('checkout-submit');
+      if (!form || !btn) return;
+
+      let attemptedFallback = false;
+
+      form.addEventListener('submit', function () {
+        // Se for navegação normal, a página troca e este JS "some".
+        // Se a página não trocar rapidamente (submit interceptado), ativamos fallback.
+        btn.disabled = true;
+
+        setTimeout(async () => {
+          if (attemptedFallback) return;
+          attemptedFallback = true;
+
+          try {
+            const fd = new FormData(form);
+
+            const resp = await fetch(form.action, {
+              method: "POST",
+              body: fd,
+              headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+              },
+              credentials: "same-origin"
+            });
+
+            if (!resp.ok) {
+              const txt = await resp.text();
+              alert(txt || "Não foi possível continuar. Tente novamente.");
+              btn.disabled = false;
+              return;
+            }
+
+            const data = await resp.json();
+            if (data && data.checkout_url) {
+              window.location.href = data.checkout_url;
+              return;
+            }
+
+            alert("Não foi possível gerar o checkout. Tente novamente.");
+            btn.disabled = false;
+          } catch (e) {
+            alert("Falha ao continuar. Verifique sua conexão e tente novamente.");
+            btn.disabled = false;
+          }
+        }, 350);
+      }, true);
+    })();
   </script>
 </body>
 </html>
