@@ -3852,7 +3852,7 @@ def checkout_sucesso(order_id):
         plano_nome=plano_nome,
         nome_cliente=nome_cliente,
         status_pago=status_pago,
-        redirect_seconds=3,
+        redirect_seconds=6,
         refresh_seconds=2,
         redirect_url="/minha-conta",
         refresh_url=refresh_url,
