@@ -73,6 +73,10 @@
       color:#fde68a;
       background:rgba(245,158,11,.12);
     }
+    .pill strong,
+    .pill.warn strong{
+      color:inherit;
+    }
     .msg{
       margin:0 0 12px;
       padding:10px 12px;
@@ -164,6 +168,53 @@
       margin-top:0;
       background:linear-gradient(180deg, #0ea5e9, #0284c7);
       color:#04111a;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f3f6fb;
+        --panel:#ffffff;
+        --line:#d2dceb;
+        --txt:#0f172a;
+        --muted:#334155;
+        --info:#0369a1;
+      }
+      body{
+        background:
+          radial-gradient(850px 520px at 12% -10%, rgba(239,68,68,.08), transparent 60%),
+          radial-gradient(900px 540px at 90% 0%, rgba(56,189,248,.09), transparent 60%),
+          var(--bg);
+      }
+      .card{
+        background:linear-gradient(180deg, #ffffff, #f8fbff);
+        box-shadow:0 16px 40px rgba(15,23,42,.15);
+      }
+      .email{
+        color:#1e293b;
+      }
+      .meta{
+        color:#0f172a;
+      }
+      .pill{
+        color:#0f172a;
+        background:#eef3fa;
+        border-color:#c8d5ea;
+      }
+      .pill.warn{
+        color:#7c2d12;
+        border-color:#f59e0b;
+        background:#fff7d6;
+      }
+      input{
+        background:#ffffff;
+        color:#0f172a;
+      }
+      .links a{
+        color:#075985;
+      }
+      .mail-btn{
+        color:#0b3b5c;
+        background:#e8f6ff;
+      }
     }
   </style>
 </head>

@@ -2610,6 +2610,128 @@ def salvar_onboarding_progresso_cliente(email, progresso):
     return buscar_onboarding_progresso_cliente(email_norm)
 
 
+def listar_onboarding_progresso_todos(limit=500):
+    limite = None
+    if limit is not None:
+        limite = int(max(1, min(int(limit), 20000)))
+
+    conn = get_conn()
+    cur = conn.cursor()
+    query = """
+        WITH contas AS (
+            SELECT
+                LOWER(BTRIM(COALESCE(email, ''))) AS email_norm,
+                email AS account_email,
+                created_at AS account_created_at
+            FROM customer_accounts
+            WHERE COALESCE(BTRIM(email), '') <> ''
+        ),
+        progresso AS (
+            SELECT
+                LOWER(BTRIM(COALESCE(email, ''))) AS email_norm,
+                email AS progress_email,
+                email_accessed,
+                tool_downloaded,
+                zip_extracted,
+                tool_installed,
+                robot_activated,
+                created_at AS progress_created_at,
+                updated_at AS progress_updated_at
+            FROM customer_onboarding_progress
+            WHERE COALESCE(BTRIM(email), '') <> ''
+        ),
+        base AS (
+            SELECT
+                COALESCE(c.email_norm, p.email_norm) AS email_norm,
+                COALESCE(c.account_email, p.progress_email) AS email,
+                COALESCE(p.email_accessed, FALSE) AS email_accessed,
+                COALESCE(p.tool_downloaded, FALSE) AS tool_downloaded,
+                COALESCE(p.zip_extracted, FALSE) AS zip_extracted,
+                COALESCE(p.tool_installed, FALSE) AS tool_installed,
+                COALESCE(p.robot_activated, FALSE) AS robot_activated,
+                p.progress_created_at,
+                p.progress_updated_at,
+                c.account_created_at
+            FROM contas c
+            FULL OUTER JOIN progresso p
+                ON p.email_norm = c.email_norm
+        ),
+        ultimo_pedido AS (
+            SELECT DISTINCT ON (LOWER(BTRIM(COALESCE(email, ''))))
+                LOWER(BTRIM(COALESCE(email, ''))) AS email_norm,
+                order_id,
+                plano,
+                status,
+                created_at
+            FROM orders
+            WHERE COALESCE(BTRIM(email), '') <> ''
+            ORDER BY LOWER(BTRIM(COALESCE(email, ''))), created_at DESC NULLS LAST
+        ),
+        pedidos_stats AS (
+            SELECT
+                LOWER(BTRIM(COALESCE(email, ''))) AS email_norm,
+                COUNT(*) FILTER (WHERE UPPER(BTRIM(COALESCE(status, ''))) = 'PAGO')::INTEGER AS paid_orders,
+                COUNT(*)::INTEGER AS total_orders
+            FROM orders
+            WHERE COALESCE(BTRIM(email), '') <> ''
+            GROUP BY 1
+        )
+        SELECT
+            b.email,
+            b.email_accessed,
+            b.tool_downloaded,
+            b.zip_extracted,
+            b.tool_installed,
+            b.robot_activated,
+            b.progress_created_at,
+            b.progress_updated_at,
+            b.account_created_at,
+            up.order_id,
+            up.plano,
+            up.status,
+            up.created_at,
+            COALESCE(ps.paid_orders, 0) AS paid_orders,
+            COALESCE(ps.total_orders, 0) AS total_orders
+        FROM base b
+        LEFT JOIN ultimo_pedido up
+            ON up.email_norm = b.email_norm
+        LEFT JOIN pedidos_stats ps
+            ON ps.email_norm = b.email_norm
+        ORDER BY COALESCE(b.progress_updated_at, b.account_created_at, up.created_at) DESC NULLS LAST
+    """
+    params = []
+    if limite is not None:
+        query += "\nLIMIT %s"
+        params.append(limite)
+
+    cur.execute(query, tuple(params))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    dados = []
+    for row in rows:
+        dados.append({
+            "email": row[0],
+            "email_accessed": bool(row[1]),
+            "tool_downloaded": bool(row[2]),
+            "zip_extracted": bool(row[3]),
+            "tool_installed": bool(row[4]),
+            "robot_activated": bool(row[5]),
+            "progress_created_at": row[6],
+            "progress_updated_at": row[7],
+            "account_created_at": row[8],
+            "last_order_id": row[9],
+            "last_order_plan": row[10],
+            "last_order_status": row[11],
+            "last_order_created_at": row[12],
+            "paid_orders": int(row[13] or 0),
+            "total_orders": int(row[14] or 0),
+        })
+    return dados
+
+
 def listar_pedidos_pagos_por_email(email, limite=20):
     email_norm = _normalizar_email_interno(email)
     if not email_norm:

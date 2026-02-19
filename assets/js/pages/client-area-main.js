@@ -197,7 +197,72 @@ function getClientAreaConfig(){
       const helpBackdrop = document.getElementById("onboardingHelpBackdrop");
       const helpClose = document.getElementById("onboardingHelpClose");
       const helpVideo = document.getElementById("onboardingHelpVideo");
+      const helpTitleEl = document.getElementById("onboardingHelpTitle");
+      const helpStepsEl = document.getElementById("onboardingHelpSteps");
+      const helpLeadEl = document.getElementById("onboardingHelpLead");
+      const helpNoteEl = document.getElementById("onboardingHelpNote");
       const helpVideoSrc = helpVideo ? helpVideo.getAttribute("src") : "";
+      const defaultHelpVideoSrc = helpVideoSrc || "https://www.youtube.com/embed/u3GWhwR8bcQ?rel=0";
+      const helpVideoBase = defaultHelpVideoSrc.split("?")[0];
+      let currentHelpVideoSrc = defaultHelpVideoSrc;
+
+      const HELP_CONTENT_BY_STEP = {
+        email_accessed: {
+          title: "Etapa 1: acessar o e-mail de liberacao",
+          lead: "Veja este trecho para localizar o e-mail e confirmar se ele chegou na caixa correta:",
+          noteHtml: "Se nao achar o e-mail, revise Spam/Promocoes e depois abra o <a href=\"#manual-instalacao\">Manual de instalacao</a>.",
+          videoStart: 111,
+          steps: [
+            { strong: "Abra seu e-mail", text: " e procure por \"TRX PRO | Acesso e instalacao\"." },
+            { strong: "Cheque Spam e Promocoes", text: " caso ele nao esteja na caixa principal." },
+            { strong: "Depois de abrir o e-mail", text: " volte e marque esta etapa." }
+          ]
+        },
+        tool_downloaded: {
+          title: "Etapa 2: baixar os arquivos da ferramenta",
+          lead: "Este ponto mostra onde clicar para fazer o download correto:",
+          noteHtml: "Se o download falhar, use o link alternativo no <a href=\"#manual-instalacao\">Manual de instalacao</a>.",
+          videoStart: 150,
+          steps: [
+            { strong: "Abra o e-mail de acesso", text: " e clique no link de download da ferramenta." },
+            { strong: "Salve o arquivo .zip", text: " em uma pasta facil de encontrar (Downloads, por exemplo)." },
+            { strong: "Confirme o fim do download", text: " e so entao marque esta etapa." }
+          ]
+        },
+        zip_extracted: {
+          title: "Etapa 3: descompactar com a senha",
+          lead: "Aqui esta o trecho para extrair o arquivo com a senha correta:",
+          noteHtml: "A senha esta no e-mail. Se necessario, confira novamente no <a href=\"#manual-instalacao\">Manual de instalacao</a>.",
+          videoStart: 155,
+          steps: [
+            { strong: "Localize o arquivo .zip", text: " baixado na etapa anterior." },
+            { strong: "Extraia o conteudo", text: " usando a senha enviada no e-mail." },
+            { strong: "Verifique a pasta extraida", text: " e marque a etapa apos validar os arquivos." }
+          ]
+        },
+        tool_installed: {
+          title: "Etapa 4: assista o video de instalacao",
+          lead: "Assista o video para esta etapa, pois o modo de instalacao atual e incompativel com o fluxo antigo.",
+          noteHtml: "Se der bloqueio no Windows, execute como administrador e siga o <a href=\"#manual-instalacao\">Manual de instalacao</a>.",
+          videoStart: 238,
+          steps: [
+            { strong: "Abra o video no ponto indicado", text: " e siga exatamente o passo a passo mostrado." },
+            { strong: "Nao use o procedimento antigo", text: " para evitar erro de instalacao." },
+            { strong: "Depois de concluir pelo video", text: " volte e marque esta etapa." }
+          ]
+        },
+        robot_activated: {
+          title: "Etapa 5: ativar o robo",
+          lead: "Veja este trecho final para ativar o robo sem erro e concluir o checklist:",
+          noteHtml: "Se precisar, abra o <a href=\"#manual-instalacao\">Manual de instalacao</a> e confirme cada campo antes de salvar.",
+          videoStart: 283,
+          steps: [
+            { strong: "Abra a plataforma ja instalada", text: " e carregue os arquivos do robo." },
+            { strong: "Confirme parametros iniciais", text: " conforme seu plano liberado." },
+            { strong: "Valide que o robo esta ativo", text: " e finalize em \"Confirmar e salvar\"." }
+          ]
+        }
+      };
       if (
         !progressMetaEl ||
         !progressFillEl ||
@@ -247,12 +312,55 @@ function getClientAreaConfig(){
       let currentStepIndex = findCurrentStepIndex(stepState);
       const isInitiallyComplete = Boolean(flowContent.hidden);
 
+      function buildHelpVideoSrc(startSeconds){
+        const start = Math.max(0, parseInt(startSeconds, 10) || 0);
+        return helpVideoBase + "?start=" + start + "&rel=0";
+      }
+
+      function setHelpContentForStep(stepKey, stepLabel){
+        const fallbackTitle = stepLabel ? ("Ajuda para " + stepLabel.toLowerCase()) : "Ajuda para esta etapa";
+        const content = HELP_CONTENT_BY_STEP[stepKey] || {
+          title: fallbackTitle,
+          lead: "Siga este trecho do vÃ­deo para concluir a etapa atual com seguranÃ§a:",
+          noteHtml: "Se precisar, abra o <a href=\"#manual-instalacao\">Manual de instalaÃ§Ã£o</a> para acompanhar o passo a passo.",
+          videoStart: 0,
+          steps: [
+            { strong: "Abra o material da etapa", text: " e siga o passo a passo exibido." },
+            { strong: "Confirme o resultado esperado", text: " antes de prosseguir." },
+            { strong: "Volte ao checklist", text: " e marque quando concluir." }
+          ]
+        };
+
+        if (helpTitleEl) {
+          helpTitleEl.textContent = content.title;
+        }
+        if (helpLeadEl) {
+          helpLeadEl.textContent = content.lead;
+        }
+        if (helpNoteEl) {
+          helpNoteEl.innerHTML = content.noteHtml;
+        }
+        if (helpStepsEl) {
+          helpStepsEl.innerHTML = "";
+          content.steps.forEach((item) => {
+            const li = document.createElement("li");
+            const strong = document.createElement("strong");
+            strong.textContent = item.strong || "";
+            li.appendChild(strong);
+            li.appendChild(document.createTextNode(item.text || ""));
+            helpStepsEl.appendChild(li);
+          });
+        }
+
+        currentHelpVideoSrc = buildHelpVideoSrc(content.videoStart);
+      }
+
       function setDoneSummary(doneCount, totalSteps){
         if (doneTitleEl) {
-          doneTitleEl.textContent = "Checklist de ativação concluído.";
+          doneTitleEl.textContent = "Checklist de ativaÃ§Ã£o concluÃ­do.";
         }
         if (doneMetaEl) {
-          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua área já está pronta para operação.";
+          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua Ã¡rea jÃ¡ estÃ¡ pronta para operaÃ§Ã£o.";
         }
       }
 
@@ -278,8 +386,9 @@ function getClientAreaConfig(){
         const { doneCount, totalSteps, percent } = getProgress(payload);
         const currentStep = steps[currentStepIndex];
         if (!currentStep) return;
+        const currentStepChecked = Boolean(payload[currentStep.key]);
 
-        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluídas";
+        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluÃ­das";
         progressFillEl.style.width = percent + "%";
         progressPercentEl.textContent = percent + "%";
         statusEl.textContent = getStatusMessage(doneCount, totalSteps);
@@ -292,27 +401,38 @@ function getClientAreaConfig(){
         }).join("");
 
         currentStepCheckboxEl.dataset.stepKey = currentStep.key;
-        currentStepCheckboxEl.checked = Boolean(payload[currentStep.key]);
+        currentStepCheckboxEl.checked = currentStepChecked;
         currentStepLabelEl.textContent = currentStep.label || ("Etapa " + (currentStepIndex + 1));
         if (currentStepIndex >= totalSteps - 1) {
-          currentStepHintEl.textContent = "Última etapa: marque esta confirmação e clique em Confirmar e salvar.";
+          currentStepHintEl.textContent = "Ãšltima etapa: marque esta confirmaÃ§Ã£o e clique em Confirmar e salvar.";
         } else {
           currentStepHintEl.textContent = "Etapa " + (currentStepIndex + 1) + " de " + totalSteps + ". Marque e clique em Prosseguir.";
         }
 
         prevBtn.disabled = currentStepIndex <= 0 || isSaving;
         nextBtn.hidden = currentStepIndex >= totalSteps - 1;
-        nextBtn.disabled = !payload[currentStep.key] || isSaving;
+        nextBtn.disabled = !currentStepChecked || isSaving;
         confirmBtn.hidden = currentStepIndex < totalSteps - 1;
         confirmBtn.disabled = doneCount < totalSteps || isSaving;
+
+        if (helpBtn) {
+          const helpPulse = !currentStepChecked && !isSaving;
+          helpBtn.classList.toggle("is-guiding", helpPulse);
+          helpBtn.classList.toggle("is-neutral", !helpPulse);
+        }
+        const nextPulse = !nextBtn.hidden && currentStepChecked && !nextBtn.disabled && !isSaving;
+        nextBtn.classList.toggle("is-guiding-next", nextPulse);
       }
 
       function openHelpModal(){
         if (!helpModal) return;
+        const stepKey = (currentStepCheckboxEl.dataset.stepKey || "").trim();
+        const stepLabel = (currentStepLabelEl.textContent || "").trim();
+        setHelpContentForStep(stepKey, stepLabel);
         helpModal.classList.add("is-open");
         helpModal.setAttribute("aria-hidden", "false");
-        if (helpVideo && helpVideoSrc) {
-          helpVideo.setAttribute("src", helpVideoSrc);
+        if (helpVideo && currentHelpVideoSrc) {
+          helpVideo.setAttribute("src", currentHelpVideoSrc);
         }
       }
 
@@ -320,9 +440,9 @@ function getClientAreaConfig(){
         if (!helpModal) return;
         helpModal.classList.remove("is-open");
         helpModal.setAttribute("aria-hidden", "true");
-        if (helpVideo && helpVideoSrc) {
+        if (helpVideo && currentHelpVideoSrc) {
           helpVideo.setAttribute("src", "");
-          setTimeout(() => helpVideo.setAttribute("src", helpVideoSrc), 80);
+          setTimeout(() => helpVideo.setAttribute("src", currentHelpVideoSrc), 80);
         }
       }
 
@@ -552,16 +672,63 @@ function getClientAreaConfig(){
       const panel = document.getElementById("notifPanel");
       if (!wrap || !toggle || !panel) return;
 
+      function positionPanel(){
+        if (!panel.classList.contains("open")) return;
+
+        const margin = 12;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const triggerRect = toggle.getBoundingClientRect();
+        const targetWidth = Math.max(260, Math.min(420, viewportWidth - (margin * 2)));
+
+        panel.style.position = "fixed";
+        panel.style.width = targetWidth + "px";
+        panel.style.right = "auto";
+
+        let left = triggerRect.right - targetWidth;
+        if (left < margin) left = margin;
+        if (left + targetWidth > viewportWidth - margin) {
+          left = viewportWidth - margin - targetWidth;
+        }
+        panel.style.left = Math.max(margin, left) + "px";
+
+        let top = triggerRect.bottom + 10;
+        if (top < margin) top = margin;
+        if (top > viewportHeight - 220) {
+          top = Math.max(margin, viewportHeight - 220);
+        }
+        panel.style.top = top + "px";
+
+        const maxHeight = Math.max(220, viewportHeight - top - margin);
+        panel.style.maxHeight = maxHeight + "px";
+
+        const list = panel.querySelector(".notif-list");
+        if (list) {
+          list.style.maxHeight = Math.max(140, maxHeight - 42) + "px";
+        }
+      }
+
       function openPanel(){
         panel.classList.add("open");
         panel.setAttribute("aria-hidden", "false");
         toggle.setAttribute("aria-expanded", "true");
+        positionPanel();
       }
 
       function closePanel(){
         panel.classList.remove("open");
         panel.setAttribute("aria-hidden", "true");
         toggle.setAttribute("aria-expanded", "false");
+        panel.style.left = "";
+        panel.style.top = "";
+        panel.style.right = "";
+        panel.style.width = "";
+        panel.style.maxHeight = "";
+
+        const list = panel.querySelector(".notif-list");
+        if (list) {
+          list.style.maxHeight = "";
+        }
       }
 
       toggle.addEventListener("click", function(){
@@ -583,4 +750,13 @@ function getClientAreaConfig(){
           closePanel();
         }
       });
+
+      window.addEventListener("resize", function(){
+        positionPanel();
+      });
+
+      window.addEventListener("scroll", function(){
+        positionPanel();
+      }, { passive: true });
     })();
+

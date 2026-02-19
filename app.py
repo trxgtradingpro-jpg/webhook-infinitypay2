@@ -92,6 +92,7 @@ from database import (
     listar_pedidos_acesso_por_email,
     buscar_ultimo_pedido_pago_por_email,
     buscar_onboarding_progresso_cliente,
+    listar_onboarding_progresso_todos,
     salvar_onboarding_progresso_cliente,
     salvar_remember_token_cliente,
     limpar_remember_token_cliente,
@@ -143,9 +144,9 @@ try:
 except (TypeError, ValueError):
     CAPITAL_CURVE_BRL_PER_POINT = 0.2
 CAPITAL_CURVE_BRL_PER_POINT = max(0.0, CAPITAL_CURVE_BRL_PER_POINT)
-CLIENT_INSTALL_VIDEO_ID = (os.environ.get("CLIENT_INSTALL_VIDEO_ID") or "19bR-OLADRU").strip()
+CLIENT_INSTALL_VIDEO_ID = (os.environ.get("CLIENT_INSTALL_VIDEO_ID") or "u3GWhwR8bcQ").strip()
 if not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", CLIENT_INSTALL_VIDEO_ID):
-    CLIENT_INSTALL_VIDEO_ID = "19bR-OLADRU"
+    CLIENT_INSTALL_VIDEO_ID = "u3GWhwR8bcQ"
 
 # ======================================================
 # INFINITEPAY CONFIG
@@ -735,7 +736,8 @@ CLIENT_VERIFY_EMAIL_KEY = "cliente_verify_email"
 CLIENT_PENDING_REMEMBER_KEY = "cliente_pending_remember"
 CLIENT_REMEMBER_COOKIE = "trx_client_remember"
 CLIENT_REMEMBER_DAYS = int(os.environ.get("CLIENT_REMEMBER_DAYS", "30"))
-CLIENT_CODE_TTL_SECONDS = int(os.environ.get("CLIENT_CODE_TTL_SECONDS", "120"))
+# O codigo de confirmacao deve expirar em 120 segundos.
+CLIENT_CODE_TTL_SECONDS = 120
 CLIENT_CODE_MAX_ATTEMPTS = int(os.environ.get("CLIENT_CODE_MAX_ATTEMPTS", "5"))
 
 CLIENT_PLAN_EXPIRY_DAYS = {
@@ -905,6 +907,73 @@ def montar_progresso_onboarding_cliente(email):
         "total_steps": total_steps,
         "percent": percent,
         "updated_at": salvo.get("updated_at"),
+    }
+
+
+def montar_resumo_onboarding_admin(linhas):
+    resultados = []
+    total_steps = len(ONBOARDING_PROGRESS_STEPS)
+
+    for linha in (linhas or []):
+        steps_bool = []
+        for chave, label in ONBOARDING_PROGRESS_STEPS:
+            steps_bool.append({
+                "key": chave,
+                "label": label,
+                "checked": bool((linha or {}).get(chave)),
+            })
+
+        done_count = sum(1 for step in steps_bool if step["checked"])
+        percent = int(round((done_count * 100) / total_steps)) if total_steps else 0
+
+        etapa_atual = None
+        etapa_restante = next((step for step in steps_bool if not step["checked"]), None)
+        if etapa_restante:
+            etapa_atual = etapa_restante["label"]
+
+        if percent >= 100:
+            status = "Concluido"
+        elif done_count <= 0:
+            status = "Nao iniciado"
+        else:
+            status = "Em progresso"
+
+        atualizado_base = (
+            (linha or {}).get("progress_updated_at")
+            or (linha or {}).get("account_created_at")
+            or (linha or {}).get("last_order_created_at")
+        )
+        atualizado_fmt = formatar_data_hora_br(atualizado_base) if atualizado_base else "-"
+
+        resultados.append({
+            "email": (linha or {}).get("email"),
+            "email_masked": mascarar_email_compacto((linha or {}).get("email")),
+            "done_count": done_count,
+            "total_steps": total_steps,
+            "percent": percent,
+            "status": status,
+            "etapa_atual": etapa_atual or "-",
+            "atualizado_em": atualizado_fmt,
+            "last_order_plan": (linha or {}).get("last_order_plan") or "-",
+            "last_order_status": (linha or {}).get("last_order_status") or "-",
+            "paid_orders": int((linha or {}).get("paid_orders") or 0),
+            "total_orders": int((linha or {}).get("total_orders") or 0),
+            "steps": steps_bool,
+        })
+
+    total_users = len(resultados)
+    completed = sum(1 for item in resultados if item["percent"] >= 100)
+    in_progress = sum(1 for item in resultados if 0 < item["percent"] < 100)
+    not_started = sum(1 for item in resultados if item["percent"] <= 0)
+
+    return {
+        "items": resultados,
+        "stats": {
+            "total_users": total_users,
+            "completed": completed,
+            "in_progress": in_progress,
+            "not_started": not_started,
+        }
     }
 
 
@@ -1373,6 +1442,23 @@ def agora_utc():
     return datetime.now(timezone.utc)
 
 
+_TZ_WARNED_KEYS = set()
+
+
+def resolver_timezone_segura(tz_key, fallback_hours=-3):
+    chave = (tz_key or "").strip() or "America/Sao_Paulo"
+    try:
+        return ZoneInfo(chave)
+    except Exception:
+        if chave not in _TZ_WARNED_KEYS:
+            print(
+                f"[TIMEZONE] ZoneInfo indisponivel para '{chave}'. Usando fallback UTC{fallback_hours:+d}.",
+                flush=True
+            )
+            _TZ_WARNED_KEYS.add(chave)
+        return timezone(timedelta(hours=fallback_hours))
+
+
 def obter_fernet_cliente():
     global _CLIENT_DATA_FERNET
     if _CLIENT_DATA_FERNET is not None:
@@ -1669,6 +1755,21 @@ def hash_codigo_validacao(email, codigo):
 
 def gerar_codigo_seis_digitos():
     return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def calcular_ttl_codigo_segundos(expira_em):
+    if not expira_em:
+        return 0
+
+    # Timestamps sem timezone vindos do banco sao tratados como UTC para evitar
+    # desvios locais que estendem indevidamente a validade.
+    if getattr(expira_em, "tzinfo", None):
+        restante = (expira_em.astimezone(timezone.utc) - agora_utc()).total_seconds()
+    else:
+        restante = (expira_em - datetime.utcnow()).total_seconds()
+
+    ttl_limite = max(30, int(CLIENT_CODE_TTL_SECONDS))
+    return max(0, min(ttl_limite, int(restante)))
 
 
 def conta_cliente_requer_configuracao_senha(conta):
@@ -2281,10 +2382,7 @@ def iniciar_worker_whatsapp():
 
 
 def _backup_timezone():
-    try:
-        return ZoneInfo(BACKUP_TIMEZONE)
-    except Exception:
-        return ZoneInfo("America/Sao_Paulo")
+    return resolver_timezone_segura(BACKUP_TIMEZONE, fallback_hours=-3)
 
 
 def _registrar_backup_execucao_seguro(**kwargs):
@@ -2548,10 +2646,7 @@ def converter_data_para_timezone_admin(dt):
     if not dt:
         return None
 
-    try:
-        tz_admin = ZoneInfo(ADMIN_TIMEZONE)
-    except Exception:
-        tz_admin = ZoneInfo("America/Sao_Paulo")
+    tz_admin = resolver_timezone_segura(ADMIN_TIMEZONE, fallback_hours=-3)
 
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
@@ -3278,10 +3373,7 @@ def parse_relatorio_mensal_nome(arquivo):
 def formatar_data_hora_br(dt_utc):
     if not dt_utc:
         return "-"
-    try:
-        tz_admin = ZoneInfo(ADMIN_TIMEZONE)
-    except Exception:
-        tz_admin = timezone.utc
+    tz_admin = resolver_timezone_segura(ADMIN_TIMEZONE, fallback_hours=-3)
     return dt_utc.astimezone(tz_admin).strftime("%d/%m/%Y %H:%M")
 
 
@@ -4255,10 +4347,7 @@ def cliente_confirmar_codigo():
             hash_salvo = (conta.get("verification_code_hash") or "").strip()
             expira_em = conta.get("verification_expires_at")
 
-            ttl_restante = 0
-            if expira_em:
-                agora_local = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
-                ttl_restante = max(0, int((expira_em - agora_local).total_seconds()))
+            ttl_restante = calcular_ttl_codigo_segundos(expira_em)
 
             if tentativas_atuais >= CLIENT_CODE_MAX_ATTEMPTS:
                 limpar_codigo_cliente(email)
@@ -4288,10 +4377,7 @@ def cliente_confirmar_codigo():
     conta = buscar_conta_cliente_por_email(email) or conta
     tentativas = int(conta.get("verification_attempts") or 0)
     expira_em = conta.get("verification_expires_at")
-    ttl_seconds = 0
-    if expira_em:
-        agora_local = datetime.now(expira_em.tzinfo) if getattr(expira_em, "tzinfo", None) else datetime.now()
-        ttl_seconds = max(0, int((expira_em - agora_local).total_seconds()))
+    ttl_seconds = calcular_ttl_codigo_segundos(expira_em)
 
     mailbox = resolver_link_caixa_email(email)
     return render_template(
@@ -5530,10 +5616,18 @@ def admin_dashboard():
 
         pedidos_processados.append(pedido)
 
+    onboarding_dashboard = {"items": [], "stats": {"total_users": 0, "completed": 0, "in_progress": 0, "not_started": 0}}
+    try:
+        onboarding_rows = listar_onboarding_progresso_todos(limit=None)
+        onboarding_dashboard = montar_resumo_onboarding_admin(onboarding_rows)
+    except Exception as exc:
+        print(f"[ADMIN] Falha ao carregar progresso de onboarding no dashboard: {exc}", flush=True)
+
     return render_template(
         "admin_dashboard.html",
         pedidos=pedidos_processados,
         stats=stats,
+        onboarding_dashboard=onboarding_dashboard,
         duplicados_grupos_count=duplicados_grupos_count,
         duplicados_registros_count=duplicados_registros_count,
         busca=busca,

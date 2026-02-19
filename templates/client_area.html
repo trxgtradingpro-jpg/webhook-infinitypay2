@@ -149,24 +149,24 @@
         <div class="onboarding-help-backdrop" id="onboardingHelpBackdrop"></div>
         <div class="onboarding-help-card">
           <button type="button" class="onboarding-help-close" id="onboardingHelpClose" aria-label="Fechar ajuda">×</button>
-          <h3>Como acessar o e-mail e seguir o checklist</h3>
-          <ol class="onboarding-help-steps">
+          <h3 id="onboardingHelpTitle">Como acessar o e-mail e seguir o checklist</h3>
+          <ol class="onboarding-help-steps" id="onboardingHelpSteps">
             <li><strong>Abra seu e-mail</strong> (incluindo Spam/Promoções) e procure o assunto “TRX PRO | Acesso e instalação”.</li>
             <li><strong>Clique no link do manual</strong> dentro do e-mail para baixar os arquivos.</li>
             <li>Volte aqui e marque a etapa apenas depois de abrir o e-mail.</li>
           </ol>
           <div class="onboarding-help-video">
-            <p>Assista ao passo a passo rápido (inicia no minuto marcado):</p>
+            <p id="onboardingHelpLead">Assista ao passo a passo rápido (inicia no minuto marcado):</p>
             <div class="onboarding-video-frame">
               <iframe
                 id="onboardingHelpVideo"
-                src="https://www.youtube.com/embed/19bR-OLADRU?start=75&rel=0"
+                src="https://www.youtube.com/embed/u3GWhwR8bcQ?rel=0"
                 title="Tutorial de instalação TRX"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen
               ></iframe>
             </div>
-            <p class="onboarding-help-note">Precisa do manual direto? <a href="#manual-instalacao">Abra o Manual de instalação</a>.</p>
+            <p class="onboarding-help-note" id="onboardingHelpNote">Precisa do manual direto? <a href="#manual-instalacao">Abra o Manual de instalação</a>.</p>
           </div>
         </div>
       </div>
@@ -433,7 +433,7 @@
         Siga o passo a passo no vídeo oficial para instalar e configurar o TRX PRO corretamente.
       </p>
       <div class="install-video-wrap">
-        <div class="install-video" id="installVideo" data-video-id="{{ install_video_id }}" data-loaded="0">
+        <div class="install-video" id="installVideo" data-video-id="u3GWhwR8bcQ" data-loaded="0">
           <iframe
             id="installVideoFrame"
             title="Manual de instalação TRX PRO"
@@ -609,6 +609,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   {% endif %}
   <script src="/assets/js/pages/client-area-chart.js?v=1" defer></script>
-  <script src="/assets/js/pages/client-area-main.js?v=1" defer></script>
+  <script src="/assets/js/pages/client-area-main.js?v=3" defer></script>
 </body>
 </html>

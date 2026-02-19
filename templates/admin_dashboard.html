@@ -42,6 +42,57 @@
     </div>
 
     <section class="panel">
+      <h3 style="margin:0 0 12px;">Progresso de ativacao por usuario</h3>
+      <div class="stats" style="margin:0 0 12px;">
+        <div class="card"><div class="label">Usuarios mapeados</div><div class="value">{{ onboarding_dashboard.stats.total_users }}</div></div>
+        <div class="card"><div class="label">Concluidos</div><div class="value">{{ onboarding_dashboard.stats.completed }}</div></div>
+        <div class="card"><div class="label">Em progresso</div><div class="value">{{ onboarding_dashboard.stats.in_progress }}</div></div>
+        <div class="card"><div class="label">Nao iniciados</div><div class="value">{{ onboarding_dashboard.stats.not_started }}</div></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Progresso</th>
+              <th>Status</th>
+              <th>Parou em</th>
+              <th>Atualizado em</th>
+              <th>Ultimo plano</th>
+              <th>Pedidos pagos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in onboarding_dashboard.items %}
+              <tr>
+                <td>{{ item.email_masked or '-' }}</td>
+                <td><span class="mono">{{ item.done_count }}/{{ item.total_steps }}</span> ({{ item.percent }}%)</td>
+                <td>
+                  {% if item.status == 'Concluido' %}
+                    <span class="ok">Concluido</span>
+                  {% elif item.status == 'Em progresso' %}
+                    <span class="pend">Em progresso</span>
+                  {% else %}
+                    <span class="muted">Nao iniciado</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.etapa_atual }}</td>
+                <td>{{ item.atualizado_em }}</td>
+                <td><span class="mono">{{ item.last_order_plan }}</span> <span class="muted">({{ item.last_order_status }})</span></td>
+                <td>{{ item.paid_orders }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="7" class="muted">Sem dados de onboarding para exibir.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
       <form class="filters" method="GET" action="/admin/dashboard">
         <div>
           <label for="filtro-busca">Busca geral</label>
