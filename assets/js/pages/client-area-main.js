@@ -362,7 +362,6 @@ function getClientAreaConfig(){
           doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua area ja esta pronta para operacao.";
         }
       }
-      }
 
       function setCompletedView(isCompleted){
         card.classList.toggle("onboarding-done-card", isCompleted);
@@ -386,6 +385,7 @@ function getClientAreaConfig(){
         const { doneCount, totalSteps, percent } = getProgress(payload);
         const currentStep = steps[currentStepIndex];
         if (!currentStep) return;
+        const currentStepChecked = Boolean(payload[currentStep.key]);
         progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluidas";
         progressFillEl.style.width = percent + "%";
         progressPercentEl.textContent = percent + "%";
@@ -402,7 +402,7 @@ function getClientAreaConfig(){
         currentStepCheckboxEl.checked = currentStepChecked;
         currentStepLabelEl.textContent = currentStep.label || ("Etapa " + (currentStepIndex + 1));
         if (currentStepIndex >= totalSteps - 1) {
-          currentStepHintEl.textContent = "Ãšltima etapa: marque esta confirmaÃ§Ã£o e clique em Confirmar e salvar.";
+          currentStepHintEl.textContent = "Ultima etapa: marque esta confirmacao e clique em Confirmar e salvar.";
         } else {
           currentStepHintEl.textContent = "Etapa " + (currentStepIndex + 1) + " de " + totalSteps + ". Marque e clique em Prosseguir.";
         }
@@ -757,4 +757,5 @@ function getClientAreaConfig(){
         positionPanel();
       }, { passive: true });
     })();
+
 
