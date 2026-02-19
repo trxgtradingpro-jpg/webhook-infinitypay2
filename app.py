@@ -5625,11 +5625,16 @@ def admin_dashboard():
     except Exception as exc:
         print(f"[ADMIN] Falha ao carregar progresso de onboarding no dashboard: {exc}", flush=True)
 
+    onboarding_items = onboarding_dashboard.get("items") if isinstance(onboarding_dashboard, dict) else []
+    onboarding_stats = onboarding_dashboard.get("stats") if isinstance(onboarding_dashboard, dict) else {"total_users": 0, "completed": 0, "in_progress": 0, "not_started": 0}
+
     return render_template(
         "admin_dashboard.html",
         pedidos=pedidos_processados,
         stats=stats,
         onboarding_dashboard=onboarding_dashboard,
+        onboarding_items=onboarding_items,
+        onboarding_stats=onboarding_stats,
         mostrar_bruto=mostrar_bruto,
         duplicados_grupos_count=duplicados_grupos_count,
         duplicados_registros_count=duplicados_registros_count,

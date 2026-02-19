@@ -70,10 +70,10 @@
     <section class="panel">
       <h3 style="margin:0 0 12px;">Progresso de ativacao por usuario</h3>
       <div class="stats" style="margin:0 0 12px;">
-        <div class="card"><div class="label">Usuarios mapeados</div><div class="value">{{ onboarding_dashboard.stats.total_users }}</div></div>
-        <div class="card"><div class="label">Concluidos</div><div class="value">{{ onboarding_dashboard.stats.completed }}</div></div>
-        <div class="card"><div class="label">Em progresso</div><div class="value">{{ onboarding_dashboard.stats.in_progress }}</div></div>
-        <div class="card"><div class="label">Nao iniciados</div><div class="value">{{ onboarding_dashboard.stats.not_started }}</div></div>
+        <div class="card"><div class="label">Usuarios mapeados</div><div class="value">{{ onboarding_stats.total_users }}</div></div>
+        <div class="card"><div class="label">Concluidos</div><div class="value">{{ onboarding_stats.completed }}</div></div>
+        <div class="card"><div class="label">Em progresso</div><div class="value">{{ onboarding_stats.in_progress }}</div></div>
+        <div class="card"><div class="label">Nao iniciados</div><div class="value">{{ onboarding_stats.not_started }}</div></div>
       </div>
 
       <div class="table-wrap">
@@ -90,7 +90,7 @@
             </tr>
           </thead>
           <tbody>
-            {% for item in onboarding_dashboard.items %}
+            {% for item in onboarding_items %}
               <tr>
                 {% set email_exibir = (item.email if mostrar_bruto else item.email_masked) %}
                 <td>{{ email_exibir or '-' }}</td>

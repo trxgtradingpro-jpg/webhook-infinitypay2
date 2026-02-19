@@ -321,8 +321,8 @@ function getClientAreaConfig(){
         const fallbackTitle = stepLabel ? ("Ajuda para " + stepLabel.toLowerCase()) : "Ajuda para esta etapa";
         const content = HELP_CONTENT_BY_STEP[stepKey] || {
           title: fallbackTitle,
-          lead: "Siga este trecho do vÃ­deo para concluir a etapa atual com seguranÃ§a:",
-          noteHtml: "Se precisar, abra o <a href=\"#manual-instalacao\">Manual de instalaÃ§Ã£o</a> para acompanhar o passo a passo.",
+          lead: "Siga este trecho do video para concluir a etapa atual com seguranca:",
+          noteHtml: "Se precisar, abra o <a href=\"#manual-instalacao\">Manual de instalacao</a> para acompanhar o passo a passo.",
           videoStart: 0,
           steps: [
             { strong: "Abra o material da etapa", text: " e siga o passo a passo exibido." },
@@ -354,14 +354,14 @@ function getClientAreaConfig(){
 
         currentHelpVideoSrc = buildHelpVideoSrc(content.videoStart);
       }
-
       function setDoneSummary(doneCount, totalSteps){
         if (doneTitleEl) {
-          doneTitleEl.textContent = "Checklist de ativaÃ§Ã£o concluÃ­do.";
+          doneTitleEl.textContent = "Checklist de ativacao concluido.";
         }
         if (doneMetaEl) {
-          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua Ã¡rea jÃ¡ estÃ¡ pronta para operaÃ§Ã£o.";
+          doneMetaEl.textContent = doneCount + "/" + totalSteps + " etapas confirmadas. Sua area ja esta pronta para operacao.";
         }
+      }
       }
 
       function setCompletedView(isCompleted){
@@ -386,9 +386,7 @@ function getClientAreaConfig(){
         const { doneCount, totalSteps, percent } = getProgress(payload);
         const currentStep = steps[currentStepIndex];
         if (!currentStep) return;
-        const currentStepChecked = Boolean(payload[currentStep.key]);
-
-        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluÃ­das";
+        progressMetaEl.textContent = doneCount + "/" + totalSteps + " etapas concluidas";
         progressFillEl.style.width = percent + "%";
         progressPercentEl.textContent = percent + "%";
         statusEl.textContent = getStatusMessage(doneCount, totalSteps);
