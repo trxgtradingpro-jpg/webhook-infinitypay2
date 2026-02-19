@@ -282,6 +282,8 @@ function getClientAreaConfig(){
       const csrfToken = String(getClientAreaConfig().csrfToken || "");
       let saveSeq = 0;
       let isSaving = false;
+      let draftSaveSeq = 0;
+      let draftSaveTimer = null;
 
       const stepState = {};
       steps.forEach((step) => {
@@ -455,6 +457,57 @@ function getClientAreaConfig(){
         });
       }
 
+      async function postOnboardingProgress(localPayload){
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            steps: localPayload
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+          throw new Error("save_failed");
+        }
+        return data;
+      }
+
+      async function saveDraftProgress(){
+        const localPayload = getPayload();
+        const seq = ++draftSaveSeq;
+
+        try {
+          const data = await postOnboardingProgress(localPayload);
+          if (seq !== draftSaveSeq) return;
+
+          const savedSteps = (data && typeof data.steps === "object" && data.steps) ? data.steps : localPayload;
+          steps.forEach((step) => {
+            stepState[step.key] = Boolean(savedSteps[step.key]);
+          });
+
+          if (!flowContent.hidden) {
+            render();
+          }
+        } catch (_) {
+          if (seq !== draftSaveSeq) return;
+          setSaveMessage("Falha ao salvar progresso automatico.", true);
+        }
+      }
+
+      function queueDraftSave(delayMs){
+        if (draftSaveTimer) {
+          clearTimeout(draftSaveTimer);
+        }
+        draftSaveTimer = setTimeout(() => {
+          draftSaveTimer = null;
+          saveDraftProgress();
+        }, Math.max(0, parseInt(delayMs, 10) || 0));
+      }
+
       async function saveProgress(){
         const localPayload = getPayload();
         const progress = getProgress(localPayload);
@@ -469,23 +522,9 @@ function getClientAreaConfig(){
         setSaveMessage("Confirmando e salvando checklist...", false);
 
         try {
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrfToken
-            },
-            credentials: "same-origin",
-            body: JSON.stringify({
-              steps: localPayload
-            })
-          });
-          const data = await response.json().catch(() => ({}));
+          const data = await postOnboardingProgress(localPayload);
 
           if (seq !== saveSeq) return;
-          if (!response.ok || !data.ok) {
-            throw new Error("save_failed");
-          }
 
           const savedSteps = (data && typeof data.steps === "object" && data.steps) ? data.steps : localPayload;
           steps.forEach((step) => {
@@ -517,6 +556,7 @@ function getClientAreaConfig(){
         stepState[stepKey] = Boolean(currentStepCheckboxEl.checked);
         setSaveMessage("", false);
         render();
+        queueDraftSave(80);
       });
 
       prevBtn.addEventListener("click", () => {
@@ -524,6 +564,7 @@ function getClientAreaConfig(){
         currentStepIndex -= 1;
         setSaveMessage("", false);
         render();
+        queueDraftSave(80);
       });
 
       nextBtn.addEventListener("click", () => {
@@ -538,6 +579,7 @@ function getClientAreaConfig(){
           currentStepIndex += 1;
           setSaveMessage("", false);
           render();
+          queueDraftSave(80);
         }
       });
 
