@@ -3,19 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics • Admin</title>
+  <title>Analytics | Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/admin-theme.css?v=20260216">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .analytics-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .analytics-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 12px;
+    }
+    .mini-title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .mini-sub {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .insight-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+      color: rgba(238, 246, 255, 0.9);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .analytics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .analytics-table th,
+    .analytics-table td {
+      border-bottom: 1px solid rgba(74, 163, 255, 0.22);
+      padding: 8px 6px;
+      text-align: left;
+    }
+    .analytics-table th {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.22px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .kpi-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .chart-box {
+      min-height: 320px;
+    }
+    .chart-box-sm {
+      min-height: 250px;
+    }
+    .empty-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
 </head>
 <body>
   <main class="admin-shell">
     <div class="topbar">
       <div>
         <div class="title">Painel Admin | Analytics</div>
-        <p class="title-sub">Analise temporal de pedidos e faturamento com filtros dinamicos.</p>
+        <p class="title-sub">Visao completa de funil, receita, retencao, upgrades, canais e onboarding com recomendacoes automaticas.</p>
       </div>
       <nav class="menu">
         <a href="/admin/dashboard">Resumo</a>
@@ -46,21 +113,20 @@
           <label class="inline-check" style="margin-top:24px;"><input id="noEnd" type="checkbox"> Sem data final</label>
         </div>
         <div>
-          <label for="chartType">Tipo de grafico</label>
-          <select id="chartType">
-            <option value="line">Linha</option>
-            <option value="area">Area</option>
-            <option value="bar">Barras</option>
-            <option value="doughnut">Donut</option>
+          <label for="groupBy">Agrupar por</label>
+          <select id="groupBy">
+            <option value="day">Dia</option>
+            <option value="week">Semana</option>
+            <option value="month">Mes</option>
           </select>
         </div>
         <div>
-          <label for="metric">Metrica</label>
+          <label for="metric">Metrica principal</label>
           <select id="metric">
             <option value="revenue">Faturamento</option>
             <option value="orders_total">Pedidos</option>
-            <option value="orders_paid">Pedidos pagos</option>
-            <option value="orders_free">Pedidos gratis</option>
+            <option value="orders_paid">Pagos</option>
+            <option value="orders_free">Gratis</option>
             <option value="orders_by_plan">Por plano</option>
           </select>
         </div>
@@ -72,166 +138,312 @@
           </select>
         </div>
         <div>
-          <label for="groupBy">Agrupar por</label>
-          <select id="groupBy">
-            <option value="day">Dia</option>
-            <option value="week">Semana</option>
-            <option value="month">Mes</option>
+          <label for="chartType">Grafico principal</label>
+          <select id="chartType">
+            <option value="line">Linha</option>
+            <option value="area">Area</option>
+            <option value="bar">Barras</option>
+            <option value="doughnut">Donut</option>
           </select>
         </div>
         <div class="actions">
           <button id="applyBtn" type="button">Aplicar</button>
         </div>
       </div>
+    </section>
 
-      <div class="row" id="summaryCards">
-        <div class="card"><div class="k">Total usuarios</div><div class="v" id="totalUsers">0</div></div>
-        <div class="card"><div class="k">Total gratis</div><div class="v" id="totalFree">0</div></div>
-        <div class="card"><div class="k">Total pagos</div><div class="v" id="totalPaid">0</div></div>
-        <div class="card"><div class="k">Faturamento</div><div class="v" id="totalRevenue">R$ 0,00</div></div>
-      </div>
-
-      <div class="row" id="funnelStageCards" style="margin-top:14px;">
-        <div class="card"><div class="k">Visita</div><div class="v" id="funnelVisit">0</div></div>
-        <div class="card"><div class="k">Clique CTA</div><div class="v" id="funnelCta">0</div></div>
-        <div class="card"><div class="k">Checkout</div><div class="v" id="funnelCheckout">0</div></div>
-        <div class="card"><div class="k">Pagamento</div><div class="v" id="funnelPayment">0</div></div>
-        <div class="card"><div class="k">Ativacao</div><div class="v" id="funnelActivation">0</div></div>
-        <div class="card"><div class="k">Retencao</div><div class="v" id="funnelRetention">0</div></div>
-      </div>
-
-      <div class="row" id="funnelRateCards" style="margin-top:10px;">
-        <div class="card"><div class="k">Visita -> CTA</div><div class="v" id="rateVisitToCta">0%</div></div>
-        <div class="card"><div class="k">CTA -> Checkout</div><div class="v" id="rateCtaToCheckout">0%</div></div>
-        <div class="card"><div class="k">Checkout -> Pagamento</div><div class="v" id="rateCheckoutToPayment">0%</div></div>
-        <div class="card"><div class="k">Pagamento -> Ativacao</div><div class="v" id="ratePaymentToActivation">0%</div></div>
-        <div class="card"><div class="k">Ativacao -> Retencao</div><div class="v" id="rateActivationToRetention">0%</div></div>
+    <section class="panel">
+      <div class="row">
+        <div class="card"><div class="k">Usuarios unicos</div><div class="v" id="kpiUsers">0</div></div>
+        <div class="card"><div class="k">Pedidos total</div><div class="v" id="kpiOrders">0</div></div>
+        <div class="card"><div class="k">Pagos</div><div class="v" id="kpiPaid">0</div></div>
+        <div class="card"><div class="k">Gratis</div><div class="v" id="kpiFree">0</div></div>
+        <div class="card"><div class="k">Faturamento</div><div class="v" id="kpiRevenue">R$ 0,00</div><div class="kpi-note" id="kpiPaidRate">Taxa pago: 0%</div></div>
+        <div class="card"><div class="k">Ticket medio</div><div class="v" id="kpiTicket">R$ 0,00</div><div class="kpi-note" id="kpiArpu">ARPU: R$ 0,00</div></div>
       </div>
     </section>
 
-    <section class="panel chart-wrap">
-      <canvas id="chart"></canvas>
+    <section class="panel">
+      <div class="row">
+        <div class="card"><div class="k">Visita</div><div class="v" id="funnelVisit">0</div></div>
+        <div class="card"><div class="k">CTA</div><div class="v" id="funnelCta">0</div><div class="kpi-note" id="rateVisitToCta">0%</div></div>
+        <div class="card"><div class="k">Checkout</div><div class="v" id="funnelCheckout">0</div><div class="kpi-note" id="rateCtaToCheckout">0%</div></div>
+        <div class="card"><div class="k">Pagamento</div><div class="v" id="funnelPayment">0</div><div class="kpi-note" id="rateCheckoutToPayment">0%</div></div>
+        <div class="card"><div class="k">Ativacao</div><div class="v" id="funnelActivation">0</div><div class="kpi-note" id="ratePaymentToActivation">0%</div></div>
+        <div class="card"><div class="k">Retencao</div><div class="v" id="funnelRetention">0</div><div class="kpi-note" id="rateActivationToRetention">0%</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="mini-title">Diagnostico automatico</h3>
+      <p class="mini-sub">Sugestoes baseadas no comportamento real do funil e no desempenho de ativacao.</p>
+      <ul class="insight-list" id="suggestionsList">
+        <li>Carregando recomendacoes...</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h3 class="mini-title">Tendencia principal</h3>
+      <p class="mini-sub">Analise temporal da metrica selecionada no filtro.</p>
+      <div class="chart-wrap chart-box">
+        <canvas id="chartMain"></canvas>
+      </div>
+    </section>
+
+    <section class="analytics-grid-3">
+      <article class="panel">
+        <h3 class="mini-title">Mix por plano</h3>
+        <p class="mini-sub">Distribuicao de pedidos por plano no periodo.</p>
+        <div class="chart-wrap chart-box-sm">
+          <canvas id="chartPlanMix"></canvas>
+        </div>
+      </article>
+      <article class="panel">
+        <h3 class="mini-title">Etapas do funil</h3>
+        <p class="mini-sub">Volume por etapa para localizar gargalos.</p>
+        <div class="chart-wrap chart-box-sm">
+          <canvas id="chartFunnel"></canvas>
+        </div>
+      </article>
+      <article class="panel">
+        <h3 class="mini-title">Canais de origem</h3>
+        <p class="mini-sub">Top UTM sources capturados no funil.</p>
+        <div class="chart-wrap chart-box-sm">
+          <canvas id="chartChannels"></canvas>
+        </div>
+      </article>
+    </section>
+
+    <section class="analytics-grid-2">
+      <article class="panel">
+        <h3 class="mini-title">Onboarding e upgrades</h3>
+        <p class="mini-sub">Saude da ativacao e intencao de upgrade.</p>
+        <div class="row">
+          <div class="card"><div class="k">Onboarding concluido</div><div class="v" id="onboardingCompleted">0</div></div>
+          <div class="card"><div class="k">Onboarding em progresso</div><div class="v" id="onboardingInProgress">0</div></div>
+          <div class="card"><div class="k">Leads de upgrade</div><div class="v" id="upgradeLeads">0</div></div>
+          <div class="card"><div class="k">Emails unicos upgrade</div><div class="v" id="upgradeEmails">0</div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Plano alvo</th>
+                <th>Leads</th>
+              </tr>
+            </thead>
+            <tbody id="upgradeTargetsTable">
+              <tr><td colspan="2" class="muted">Sem dados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h3 class="mini-title">Coortes de retencao</h3>
+        <p class="mini-sub">Retencao por mes de ativacao (usuarios com evento de retencao).</p>
+        <div class="table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Ativados</th>
+                <th>Retidos</th>
+                <th>Taxa</th>
+              </tr>
+            </thead>
+            <tbody id="cohortTable">
+              <tr><td colspan="4" class="muted">Sem dados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="analytics-grid-2">
+      <article class="panel">
+        <h3 class="mini-title">Top CTAs clicados</h3>
+        <p class="mini-sub">IDs de CTA com maior volume de clique.</p>
+        <div class="table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>CTA ID</th>
+                <th>Cliques</th>
+              </tr>
+            </thead>
+            <tbody id="ctaTable">
+              <tr><td colspan="2" class="muted">Sem dados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <h3 class="mini-title">Top referrers</h3>
+        <p class="mini-sub">Dominios de origem detectados nos eventos do funil.</p>
+        <div class="table-wrap">
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Origem</th>
+                <th>Eventos</th>
+              </tr>
+            </thead>
+            <tbody id="referrerTable">
+              <tr><td colspan="2" class="muted">Sem dados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
     </section>
   </main>
 
   <script>
-    let chart;
+    const chartState = {
+      main: null,
+      planMix: null,
+      funnel: null,
+      channels: null
+    };
 
     function formatBRL(cents) {
-      return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const value = Number(cents || 0) / 100;
+      return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     }
 
-    async function carregarResumo(params) {
-      const url = '/api/analytics/summary?' + new URLSearchParams(params).toString();
-      const r = await fetch(url);
-      if (!r.ok) return;
-      const d = await r.json();
-      document.getElementById('totalUsers').textContent = d.total_users;
-      document.getElementById('totalFree').textContent = d.total_free;
-      document.getElementById('totalPaid').textContent = d.total_paid;
-      document.getElementById('totalRevenue').textContent = formatBRL(d.revenue_total || 0);
+    function fmtInt(value) {
+      return Number(value || 0).toLocaleString("pt-BR");
     }
 
-    function formatPercent(value){
-      const num = Number(value || 0);
-      if (!Number.isFinite(num)) return "0%";
-      return num.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+    function fmtPct(value) {
+      const n = Number(value || 0);
+      return n.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
     }
 
-    function findRate(conversions, from, to){
-      const row = (Array.isArray(conversions) ? conversions : []).find((item) => item && item.from === from && item.to === to);
-      return row ? Number(row.rate_percent || 0) : 0;
+    function destroyChart(key) {
+      if (chartState[key]) {
+        chartState[key].destroy();
+        chartState[key] = null;
+      }
     }
 
-    async function carregarFunil(params) {
-      const url = '/api/analytics/funnel-summary?' + new URLSearchParams(params).toString();
-      const r = await fetch(url);
-      if (!r.ok) return;
-      const d = await r.json();
-      const counts = d.stage_counts || {};
-      const conversions = d.conversions || [];
-
-      document.getElementById('funnelVisit').textContent = counts.visit || 0;
-      document.getElementById('funnelCta').textContent = counts.cta_click || 0;
-      document.getElementById('funnelCheckout').textContent = counts.checkout_submit || 0;
-      document.getElementById('funnelPayment').textContent = counts.payment_confirmed || 0;
-      document.getElementById('funnelActivation').textContent = counts.activation || 0;
-      document.getElementById('funnelRetention').textContent = counts.retention || 0;
-
-      document.getElementById('rateVisitToCta').textContent = formatPercent(findRate(conversions, 'visit', 'cta_click'));
-      document.getElementById('rateCtaToCheckout').textContent = formatPercent(findRate(conversions, 'cta_click', 'checkout_submit'));
-      document.getElementById('rateCheckoutToPayment').textContent = formatPercent(findRate(conversions, 'checkout_submit', 'payment_confirmed'));
-      document.getElementById('ratePaymentToActivation').textContent = formatPercent(findRate(conversions, 'payment_confirmed', 'activation'));
-      document.getElementById('rateActivationToRetention').textContent = formatPercent(findRate(conversions, 'activation', 'retention'));
+    function setRows(tbodyId, rows, columns) {
+      const body = document.getElementById(tbodyId);
+      if (!body) return;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        body.innerHTML = `<tr><td colspan="${columns}" class="muted">Sem dados.</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((row) => "<tr>" + row.map((v) => `<td>${v}</td>`).join("") + "</tr>").join("");
     }
 
-    async function carregarGrafico() {
-      const start = document.getElementById('start').value;
-      const end = document.getElementById('noEnd').checked ? '' : document.getElementById('end').value;
-      const metric = document.getElementById('metric').value;
-      const chartType = document.getElementById('chartType').value;
-      const groupBy = document.getElementById('groupBy').value;
-      const plan = document.getElementById('plan').value;
+    function parseFilters() {
+      const start = document.getElementById("start").value;
+      const noEnd = document.getElementById("noEnd").checked;
+      const end = noEnd ? "" : document.getElementById("end").value;
+      const metric = document.getElementById("metric").value;
+      const chartType = document.getElementById("chartType").value;
+      const groupBy = document.getElementById("groupBy").value;
+      const plan = document.getElementById("plan").value;
+      return { start, end, metric, chartType, groupBy, plan };
+    }
 
-      const params = { start, metric, chartType, groupBy, plan };
-      if (end) params.end = end;
+    function labelsAndSeries(payload) {
+      const series = Array.isArray(payload?.series) ? payload.series : [];
+      const labelsSet = new Set();
+      series.forEach((s) => (s.data || []).forEach((p) => labelsSet.add(String(p.x))));
+      const labels = Array.from(labelsSet).sort();
+      const datasets = series.map((s, idx) => {
+        const map = new Map((s.data || []).map((p) => [String(p.x), Number(p.y || 0)]));
+        const colors = ["#23b00b", "#4aa3ff", "#ff8a1f", "#ff6a6a", "#ffd21a", "#2dd4bf"];
+        const color = colors[idx % colors.length];
+        return {
+          label: s.name || `Serie ${idx + 1}`,
+          data: labels.map((k) => map.get(k) || 0),
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3,
+          borderColor: color,
+          backgroundColor: color + "44",
+          fill: false
+        };
+      });
+      return { labels, datasets };
+    }
 
-      await Promise.all([
-        carregarResumo({ start, end }),
-        carregarFunil({ start, end })
-      ]);
+    function drawMainChart(payload, filters) {
+      destroyChart("main");
+      const canvas = document.getElementById("chartMain");
+      if (!canvas) return;
 
-      const url = '/api/analytics/chart?' + new URLSearchParams(params).toString();
-      const resp = await fetch(url);
-      if (!resp.ok) return;
-      const payload = await resp.json();
+      const metric = filters.metric;
+      const chartType = filters.chartType;
+      const isRevenue = Boolean(payload?.is_currency) || metric === "revenue";
+      const { labels, datasets } = labelsAndSeries(payload);
 
-      const datasets = payload.series.map((serie, idx) => ({
-        label: serie.name,
-        data: serie.data.map((p) => ({ x: p.x, y: p.y })),
-        borderWidth: 2,
-        pointRadius: 3,
-        tension: 0.35,
-        fill: chartType === 'area',
-        backgroundColor: [
-          'rgba(35,176,11,.24)',
-          'rgba(74,163,255,.28)',
-          'rgba(255,138,31,.25)',
-          'rgba(255,106,106,.24)',
-          'rgba(255,210,26,.22)'
-        ][idx % 5],
-        borderColor: ['#23b00b', '#4aa3ff', '#ff8a1f', '#ff6a6a', '#ffd21a'][idx % 5]
-      }));
-
-      let finalType = chartType;
-      if (chartType === 'area') finalType = 'line';
-
-      if (chart) chart.destroy();
-      chart = new Chart(document.getElementById('chart'), {
-        type: finalType,
-        data: { datasets },
-        options: {
-          parsing: false,
-          maintainAspectRatio: false,
-          scales: {
-            x: { type: 'category', ticks: { color: 'rgba(228,239,250,.8)' }, grid: { color: 'rgba(206,222,241,.12)' } },
-            y: { ticks: { color: 'rgba(228,239,250,.8)' }, grid: { color: 'rgba(206,222,241,.12)' } }
+      if (chartType === "doughnut") {
+        const sums = datasets.map((d) => (d.data || []).reduce((acc, v) => acc + Number(v || 0), 0));
+        const colors = ["#23b00b", "#4aa3ff", "#ff8a1f", "#ff6a6a", "#ffd21a", "#2dd4bf"];
+        chartState.main = new Chart(canvas, {
+          type: "doughnut",
+          data: {
+            labels: datasets.map((d) => d.label),
+            datasets: [{
+              data: sums,
+              backgroundColor: sums.map((_, i) => colors[i % colors.length] + "AA"),
+              borderColor: sums.map((_, i) => colors[i % colors.length]),
+              borderWidth: 1
+            }]
           },
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              labels: {
-                color: 'rgba(238,246,255,.92)',
-                boxWidth: 14,
-                boxHeight: 14
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: "rgba(238,246,255,.92)" } },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    const val = Number(ctx.raw || 0);
+                    return isRevenue ? `${ctx.label}: ${formatBRL(val)}` : `${ctx.label}: ${fmtInt(val)}`;
+                  }
+                }
               }
+            }
+          }
+        });
+        return;
+      }
+
+      const finalType = chartType === "area" ? "line" : chartType;
+      datasets.forEach((d) => {
+        d.fill = chartType === "area";
+      });
+
+      chartState.main = new Chart(canvas, {
+        type: finalType,
+        data: { labels, datasets },
+        options: {
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: {
+              ticks: { color: "rgba(228,239,250,.8)" },
+              grid: { color: "rgba(206,222,241,.12)" }
             },
+            y: {
+              ticks: {
+                color: "rgba(228,239,250,.8)",
+                callback: (v) => isRevenue ? formatBRL(v) : fmtInt(v)
+              },
+              grid: { color: "rgba(206,222,241,.12)" }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: "rgba(238,246,255,.92)" } },
             tooltip: {
               callbacks: {
                 label(ctx) {
-                  const v = ctx.raw?.y ?? 0;
-                  if (metric === 'revenue') return `${ctx.dataset.label}: ${formatBRL(v)}`;
-                  return `${ctx.dataset.label}: ${v}`;
+                  const val = Number(ctx.raw || 0);
+                  return isRevenue ? `${ctx.dataset.label}: ${formatBRL(val)}` : `${ctx.dataset.label}: ${fmtInt(val)}`;
                 }
               }
             }
@@ -240,30 +452,233 @@
       });
     }
 
-    document.getElementById('noEnd').addEventListener('change', (e) => {
-      document.getElementById('end').disabled = e.target.checked;
+    function drawPlanMix(summary) {
+      destroyChart("planMix");
+      const canvas = document.getElementById("chartPlanMix");
+      if (!canvas) return;
+      const rows = Array.isArray(summary.plan_stats) ? summary.plan_stats : [];
+      const labels = rows.map((r) => r.plan_name || r.plan_id);
+      const values = rows.map((r) => Number(r.orders_total || 0));
+      chartState.planMix = new Chart(canvas, {
+        type: "doughnut",
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ["#23b00baa", "#4aa3ffaa", "#ff8a1faa", "#ffd21aaa", "#ff6a6aaa"],
+            borderColor: ["#23b00b", "#4aa3ff", "#ff8a1f", "#ffd21a", "#ff6a6a"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "rgba(238,246,255,.92)" } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${fmtInt(ctx.raw)}` } }
+          }
+        }
+      });
+    }
+
+    function drawFunnelChart(summary) {
+      destroyChart("funnel");
+      const canvas = document.getElementById("chartFunnel");
+      if (!canvas) return;
+      const counts = summary?.funnel?.stage_counts || {};
+      const labels = ["Visita", "CTA", "Checkout", "Pagamento", "Ativacao", "Retencao"];
+      const values = [
+        Number(counts.visit || 0),
+        Number(counts.cta_click || 0),
+        Number(counts.checkout_submit || 0),
+        Number(counts.payment_confirmed || 0),
+        Number(counts.activation || 0),
+        Number(counts.retention || 0)
+      ];
+      chartState.funnel = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Usuarios por etapa",
+            data: values,
+            backgroundColor: "rgba(74,163,255,.48)",
+            borderColor: "#4aa3ff",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: "rgba(228,239,250,.8)" }, grid: { color: "rgba(206,222,241,.1)" } },
+            y: { ticks: { color: "rgba(228,239,250,.8)", callback: (v) => fmtInt(v) }, grid: { color: "rgba(206,222,241,.1)" } }
+          },
+          plugins: {
+            legend: { labels: { color: "rgba(238,246,255,.92)" } }
+          }
+        }
+      });
+    }
+
+    function drawChannelsChart(summary) {
+      destroyChart("channels");
+      const canvas = document.getElementById("chartChannels");
+      if (!canvas) return;
+      const channels = Array.isArray(summary?.channels?.top_utm_sources) ? summary.channels.top_utm_sources : [];
+      const top = channels.slice(0, 8);
+      chartState.channels = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: top.map((r) => r.name),
+          datasets: [{
+            label: "Eventos",
+            data: top.map((r) => Number(r.count || 0)),
+            backgroundColor: "rgba(35,176,11,.46)",
+            borderColor: "#23b00b",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          scales: {
+            x: { ticks: { color: "rgba(228,239,250,.8)", callback: (v) => fmtInt(v) }, grid: { color: "rgba(206,222,241,.1)" } },
+            y: { ticks: { color: "rgba(228,239,250,.8)" }, grid: { color: "rgba(206,222,241,.1)" } }
+          },
+          plugins: {
+            legend: { labels: { color: "rgba(238,246,255,.92)" } }
+          }
+        }
+      });
+    }
+
+    function findRate(conversions, from, to) {
+      const rows = Array.isArray(conversions) ? conversions : [];
+      const hit = rows.find((x) => x && x.from === from && x.to === to);
+      return hit ? Number(hit.rate_percent || 0) : 0;
+    }
+
+    function fillDashboard(summary) {
+      const totals = summary.totals || {};
+      document.getElementById("kpiUsers").textContent = fmtInt(totals.users_total || 0);
+      document.getElementById("kpiOrders").textContent = fmtInt(totals.orders_total || 0);
+      document.getElementById("kpiPaid").textContent = fmtInt(totals.paid_total || 0);
+      document.getElementById("kpiFree").textContent = fmtInt(totals.free_total || 0);
+      document.getElementById("kpiRevenue").textContent = formatBRL(totals.revenue_centavos_total || 0);
+      document.getElementById("kpiTicket").textContent = formatBRL(totals.avg_ticket_centavos || 0);
+      document.getElementById("kpiArpu").textContent = "ARPU: " + formatBRL(totals.arpu_centavos || 0);
+      document.getElementById("kpiPaidRate").textContent = "Taxa pago: " + fmtPct(totals.paid_rate_percent || 0);
+
+      const stageCounts = summary?.funnel?.stage_counts || {};
+      const conversions = summary?.funnel?.conversions || [];
+      document.getElementById("funnelVisit").textContent = fmtInt(stageCounts.visit || 0);
+      document.getElementById("funnelCta").textContent = fmtInt(stageCounts.cta_click || 0);
+      document.getElementById("funnelCheckout").textContent = fmtInt(stageCounts.checkout_submit || 0);
+      document.getElementById("funnelPayment").textContent = fmtInt(stageCounts.payment_confirmed || 0);
+      document.getElementById("funnelActivation").textContent = fmtInt(stageCounts.activation || 0);
+      document.getElementById("funnelRetention").textContent = fmtInt(stageCounts.retention || 0);
+      document.getElementById("rateVisitToCta").textContent = fmtPct(findRate(conversions, "visit", "cta_click"));
+      document.getElementById("rateCtaToCheckout").textContent = fmtPct(findRate(conversions, "cta_click", "checkout_submit"));
+      document.getElementById("rateCheckoutToPayment").textContent = fmtPct(findRate(conversions, "checkout_submit", "payment_confirmed"));
+      document.getElementById("ratePaymentToActivation").textContent = fmtPct(findRate(conversions, "payment_confirmed", "activation"));
+      document.getElementById("rateActivationToRetention").textContent = fmtPct(findRate(conversions, "activation", "retention"));
+
+      const suggestions = Array.isArray(summary.suggestions) ? summary.suggestions : [];
+      const suggestionHtml = suggestions.length
+        ? suggestions.map((txt) => `<li>${txt}</li>`).join("")
+        : "<li>Sem recomendacoes no periodo selecionado.</li>";
+      document.getElementById("suggestionsList").innerHTML = suggestionHtml;
+
+      const onboarding = summary.onboarding || {};
+      document.getElementById("onboardingCompleted").textContent = fmtInt(onboarding.completed || 0);
+      document.getElementById("onboardingInProgress").textContent = fmtInt(onboarding.in_progress || 0);
+
+      const upgrades = summary.upgrades || {};
+      document.getElementById("upgradeLeads").textContent = fmtInt(upgrades.total_leads || 0);
+      document.getElementById("upgradeEmails").textContent = fmtInt(upgrades.unique_emails || 0);
+
+      setRows(
+        "upgradeTargetsTable",
+        (upgrades.top_target_plans || []).map((r) => [r.name, fmtInt(r.count)]),
+        2
+      );
+      setRows(
+        "cohortTable",
+        (summary.retention_cohorts || []).map((r) => [
+          r.month,
+          fmtInt(r.activated_users || 0),
+          fmtInt(r.retained_users || 0),
+          fmtPct(r.retention_rate_percent || 0)
+        ]),
+        4
+      );
+      setRows(
+        "ctaTable",
+        Object.entries(summary?.funnel?.cta_by_id || {}).map(([k, v]) => [k, fmtInt(v)]).slice(0, 12),
+        2
+      );
+      setRows(
+        "referrerTable",
+        (summary?.channels?.top_referrers || []).map((r) => [r.name, fmtInt(r.count)]),
+        2
+      );
+
+      drawPlanMix(summary);
+      drawFunnelChart(summary);
+      drawChannelsChart(summary);
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`http_${res.status}`);
+      return res.json();
+    }
+
+    async function loadAnalytics() {
+      const filters = parseFilters();
+      const params = { start: filters.start, metric: filters.metric, chartType: filters.chartType, groupBy: filters.groupBy, plan: filters.plan };
+      if (filters.end) params.end = filters.end;
+
+      const summaryParams = { start: filters.start, plan: filters.plan };
+      if (filters.end) summaryParams.end = filters.end;
+
+      const summaryUrl = "/api/analytics/summary?" + new URLSearchParams(summaryParams).toString();
+      const chartUrl = "/api/analytics/chart?" + new URLSearchParams(params).toString();
+
+      try {
+        const [summary, chartPayload] = await Promise.all([fetchJson(summaryUrl), fetchJson(chartUrl)]);
+        fillDashboard(summary);
+        drawMainChart(chartPayload, filters);
+      } catch (err) {
+        const list = document.getElementById("suggestionsList");
+        if (list) {
+          list.innerHTML = "<li>Falha ao carregar analytics. Verifique filtros e tente novamente.</li>";
+        }
+      }
+    }
+
+    document.getElementById("noEnd").addEventListener("change", (ev) => {
+      document.getElementById("end").disabled = ev.target.checked;
     });
+    document.getElementById("applyBtn").addEventListener("click", loadAnalytics);
+    loadAnalytics();
 
-    document.getElementById('applyBtn').addEventListener('click', carregarGrafico);
-    carregarGrafico();
-
-    const backupBtn = document.getElementById('backupNowBtn');
+    const backupBtn = document.getElementById("backupNowBtn");
     if (backupBtn) {
-      backupBtn.addEventListener('click', async () => {
+      backupBtn.addEventListener("click", async () => {
         backupBtn.disabled = true;
-        backupBtn.textContent = 'Gerando backup...';
+        backupBtn.textContent = "Gerando backup...";
         try {
-          const r = await fetch('/admin/backup/agora', {
-            method: 'POST',
-            headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+          const r = await fetch("/admin/backup/agora", {
+            method: "POST",
+            headers: { "X-CSRF-Token": "{{ csrf_token }}" }
           });
           const d = await r.json();
-          alert(d.message || (d.ok ? 'Backup concluído.' : 'Falha ao gerar backup.'));
-        } catch (e) {
-          alert('Falha ao acionar backup.');
+          alert(d.message || (d.ok ? "Backup concluido." : "Falha ao gerar backup."));
+        } catch (_) {
+          alert("Falha ao acionar backup.");
         } finally {
           backupBtn.disabled = false;
-          backupBtn.textContent = 'Backup agora';
+          backupBtn.textContent = "Backup agora";
         }
       });
     }

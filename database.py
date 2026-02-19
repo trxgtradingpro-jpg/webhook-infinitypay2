@@ -1986,6 +1986,54 @@ def listar_eventos_analytics(start_date=None, end_date=None, plano=None):
     return eventos
 
 
+def listar_client_upgrade_leads(start_date=None, end_date=None):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    sql = """
+        SELECT
+            email,
+            order_id,
+            current_plan,
+            target_plan,
+            source,
+            affiliate_slug,
+            checkout_slug,
+            created_at
+        FROM client_upgrade_leads
+        WHERE 1=1
+    """
+    params = []
+
+    if start_date is not None:
+        sql += " AND created_at >= %s"
+        params.append(start_date)
+
+    if end_date is not None:
+        sql += " AND created_at < %s"
+        params.append(end_date)
+
+    sql += " ORDER BY created_at DESC"
+    cur.execute(sql, tuple(params))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    leads = []
+    for r in rows:
+        leads.append({
+            "email": r[0],
+            "order_id": r[1],
+            "current_plan": r[2],
+            "target_plan": r[3],
+            "source": r[4],
+            "affiliate_slug": r[5],
+            "checkout_slug": r[6],
+            "created_at": r[7],
+        })
+    return leads
+
+
 
 def registrar_lead_upgrade_cliente(
     email,

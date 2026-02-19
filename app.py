@@ -59,6 +59,7 @@ from database import (
     buscar_user_plan_stats,
     listar_eventos_analytics,
     listar_eventos_funil_analytics,
+    listar_client_upgrade_leads,
     buscar_primeiro_evento_funil_usuario,
     backfill_analytics_from_orders,
     registrar_lead_upgrade_cliente,
@@ -3061,6 +3062,288 @@ def carregar_eventos_analytics_filtrados(start=None, end=None, plano='all'):
     return listar_eventos_analytics(start_date=start_dt, end_date=end_dt, plano=plano)
 
 
+def _analytics_periodo_datetimes(start=None, end=None):
+    start_dt = datetime.combine(start, datetime.min.time()) if start else None
+    end_dt = datetime.combine(end + timedelta(days=1), datetime.min.time()) if end else None
+    return start_dt, end_dt
+
+
+def _analytics_referrer_host(referrer):
+    texto = (referrer or "").strip()
+    if not texto:
+        return ""
+    try:
+        parsed = urlparse(texto)
+    except Exception:
+        return ""
+    host = (parsed.netloc or "").strip().lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def _analytics_sorted_counts(data_dict, limit=12):
+    itens = [{"name": k, "count": int(v)} for k, v in (data_dict or {}).items() if k]
+    itens.sort(key=lambda item: item["count"], reverse=True)
+    return itens[: max(1, int(limit or 12))]
+
+
+def _analytics_para_lista_series(d):
+    return [{"date": k, "value": int(d[k])} for k in sorted((d or {}).keys())]
+
+
+def montar_relatorio_analytics_completo(start=None, end=None, plan="all"):
+    plan_norm = (plan or "all").strip().lower()
+    if plan_norm != "all" and plan_norm not in PLANOS:
+        plan_norm = "all"
+
+    start_dt, end_dt = _analytics_periodo_datetimes(start, end)
+    eventos_compra = carregar_eventos_analytics_filtrados(start=start, end=end, plano=plan_norm if plan_norm != "all" else "all")
+    eventos_funil_base = carregar_eventos_funil_analytics_filtrados(start=start, end=end, stage="all")
+    eventos_funil = []
+    if plan_norm == "all":
+        eventos_funil = list(eventos_funil_base)
+    else:
+        top_stages = {FUNNEL_STAGE_VISIT, FUNNEL_STAGE_CTA_CLICK}
+        for evento in eventos_funil_base:
+            stage = (evento.get("stage") or "").strip().lower()
+            plano_evento = (evento.get("plano") or "").strip().lower()
+            if plano_evento == plan_norm:
+                eventos_funil.append(evento)
+                continue
+            if stage in top_stages and not plano_evento:
+                eventos_funil.append(evento)
+
+    leads_upgrade = listar_client_upgrade_leads(start_date=start_dt, end_date=end_dt)
+    if plan_norm != "all":
+        leads_upgrade = [
+            lead for lead in leads_upgrade
+            if ((lead.get("target_plan") or "").strip().lower() == plan_norm)
+            or ((lead.get("current_plan") or "").strip().lower() == plan_norm)
+        ]
+    resumo_funil = montar_resumo_funil(eventos_funil)
+
+    totals_by_plan = {plano: 0 for plano in PLANOS.keys()}
+    plan_stats = {}
+    for plano_id, info in PLANOS.items():
+        plan_stats[plano_id] = {
+            "plan_id": plano_id,
+            "plan_name": info["nome"],
+            "orders_total": 0,
+            "orders_paid": 0,
+            "orders_free": 0,
+            "revenue_centavos": 0,
+            "users": set(),
+        }
+
+    users = set()
+    daily_revenue = defaultdict(int)
+    daily_orders = defaultdict(int)
+    daily_paid_orders = defaultdict(int)
+    daily_free_orders = defaultdict(int)
+    daily_by_plan = {plano: defaultdict(int) for plano in PLANOS.keys()}
+
+    total_free = 0
+    total_paid = 0
+    revenue_total = 0
+
+    for evento in eventos_compra:
+        plano = evento.get("plano")
+        if plano not in totals_by_plan:
+            continue
+
+        user_key = (evento.get("user_key") or "").strip().lower()
+        if user_key:
+            users.add(user_key)
+            plan_stats[plano]["users"].add(user_key)
+
+        date_key = evento["created_at"].date().isoformat()
+        totals_by_plan[plano] += 1
+        daily_orders[date_key] += 1
+        daily_by_plan[plano][date_key] += 1
+
+        amount = int(evento.get("amount_centavos") or 0)
+        revenue_total += amount
+        daily_revenue[date_key] += amount
+        plan_stats[plano]["orders_total"] += 1
+        plan_stats[plano]["revenue_centavos"] += amount
+
+        if amount > 0:
+            total_paid += 1
+            daily_paid_orders[date_key] += 1
+            plan_stats[plano]["orders_paid"] += 1
+        else:
+            total_free += 1
+            daily_free_orders[date_key] += 1
+            plan_stats[plano]["orders_free"] += 1
+
+    for plano_id in list(plan_stats.keys()):
+        info = plan_stats[plano_id]
+        users_count = len(info.pop("users"))
+        paid_orders = int(info["orders_paid"] or 0)
+        info["users_count"] = users_count
+        info["avg_ticket_centavos"] = int(round(info["revenue_centavos"] / paid_orders)) if paid_orders > 0 else 0
+
+    funil_stage_daily = {stage: defaultdict(int) for stage in FUNNEL_STAGE_ORDER}
+    utm_source_counts = defaultdict(int)
+    referrer_host_counts = defaultdict(int)
+    source_path_counts = defaultdict(int)
+
+    activation_month_by_user = {}
+    activation_users_by_month = defaultdict(set)
+    retained_users_by_activation_month = defaultdict(set)
+    retention_users_all = set()
+
+    for evento in eventos_funil:
+        stage = (evento.get("stage") or "").strip().lower()
+        created_at = evento.get("created_at")
+        if not created_at:
+            continue
+        date_key = created_at.date().isoformat()
+        if stage in funil_stage_daily:
+            funil_stage_daily[stage][date_key] += 1
+
+        utm_source = (evento.get("utm_source") or "").strip().lower()
+        if utm_source:
+            utm_source_counts[utm_source] += 1
+
+        host = _analytics_referrer_host(evento.get("referrer"))
+        if host:
+            referrer_host_counts[host] += 1
+
+        source_path = (evento.get("source_path") or "").strip().lower()
+        if source_path:
+            source_path_counts[source_path] += 1
+
+        entity = identificar_entidade_funil(evento)
+        if not entity:
+            continue
+
+        if stage == FUNNEL_STAGE_ACTIVATION:
+            month_key = created_at.strftime("%Y-%m")
+            activation_month_by_user[entity] = month_key
+            activation_users_by_month[month_key].add(entity)
+        elif stage == FUNNEL_STAGE_RETENTION:
+            retention_users_all.add(entity)
+            month_key = activation_month_by_user.get(entity)
+            if month_key:
+                retained_users_by_activation_month[month_key].add(entity)
+
+    cohort_months = sorted(activation_users_by_month.keys())
+    retention_cohorts = []
+    for month_key in cohort_months:
+        activated = len(activation_users_by_month[month_key])
+        retained = len(retained_users_by_activation_month.get(month_key, set()))
+        rate = round((retained / activated) * 100, 2) if activated else 0.0
+        retention_cohorts.append({
+            "month": month_key,
+            "activated_users": activated,
+            "retained_users": retained,
+            "retention_rate_percent": rate,
+        })
+
+    upgrade_target_counts = defaultdict(int)
+    upgrade_source_counts = defaultdict(int)
+    upgrade_emails = set()
+    for lead in leads_upgrade:
+        target_plan = (lead.get("target_plan") or "").strip().lower()
+        source = (lead.get("source") or "").strip().lower()
+        email = (lead.get("email") or "").strip().lower()
+        if target_plan:
+            upgrade_target_counts[target_plan] += 1
+        if source:
+            upgrade_source_counts[source] += 1
+        if email:
+            upgrade_emails.add(email)
+
+    onboarding_rows = listar_onboarding_progresso_todos(limit=None)
+    onboarding_window = []
+    if users:
+        onboarding_window = [r for r in onboarding_rows if ((r.get("email") or "").strip().lower() in users)]
+    target_rows = onboarding_window if onboarding_window else onboarding_rows
+
+    onboarding_stats = {"total_users": 0, "completed": 0, "in_progress": 0, "not_started": 0}
+    for row in target_rows:
+        done_count = 0
+        for key, _ in ONBOARDING_PROGRESS_STEPS:
+            if bool((row or {}).get(key)):
+                done_count += 1
+        total_steps = len(ONBOARDING_PROGRESS_STEPS)
+        onboarding_stats["total_users"] += 1
+        if done_count >= total_steps:
+            onboarding_stats["completed"] += 1
+        elif done_count <= 0:
+            onboarding_stats["not_started"] += 1
+        else:
+            onboarding_stats["in_progress"] += 1
+
+    avg_ticket = int(round(revenue_total / total_paid)) if total_paid > 0 else 0
+    arpu = int(round(revenue_total / len(users))) if len(users) > 0 else 0
+    paid_rate = round((total_paid / len(eventos_compra)) * 100, 2) if eventos_compra else 0.0
+
+    conv_map = {}
+    for row in resumo_funil.get("conversions", []):
+        key = f"{row.get('from')}->{row.get('to')}"
+        conv_map[key] = float(row.get("rate_percent") or 0.0)
+
+    suggestions = []
+    if conv_map.get("visit->cta_click", 0) < 12:
+        suggestions.append("CTR baixo no topo de funil: teste headline/CTA e ordem da prova social.")
+    if conv_map.get("cta_click->checkout_submit", 0) < 35:
+        suggestions.append("Queda entre CTA e checkout: simplifique oferta e remova friccao no clique.")
+    if conv_map.get("checkout_submit->payment_confirmed", 0) < 70:
+        suggestions.append("Conversao de checkout abaixo do ideal: revisar copy de garantia, prova e UX do pagamento.")
+    if conv_map.get("payment_confirmed->activation", 0) < 55:
+        suggestions.append("Ativacao pos-pagamento baixa: reforcar onboarding guiado e mensagens de primeiro acesso.")
+    if conv_map.get("activation->retention", 0) < 25:
+        suggestions.append("Retencao baixa: criar rotina de acompanhamento semanal e alertas de inatividade.")
+    if not suggestions:
+        suggestions.append("Funil em bom nivel: mantenha testes A/B continuos para ganho incremental.")
+
+    return {
+        "period": {
+            "start": start.isoformat() if start else None,
+            "end": end.isoformat() if end else None,
+            "plan": plan_norm,
+        },
+        "totals": {
+            "orders_total": len(eventos_compra),
+            "users_total": len(users),
+            "free_total": total_free,
+            "paid_total": total_paid,
+            "revenue_centavos_total": revenue_total,
+            "avg_ticket_centavos": avg_ticket,
+            "arpu_centavos": arpu,
+            "paid_rate_percent": paid_rate,
+        },
+        "totals_by_plan": totals_by_plan,
+        "plan_stats": list(plan_stats.values()),
+        "daily_revenue": _analytics_para_lista_series(daily_revenue),
+        "daily_orders": _analytics_para_lista_series(daily_orders),
+        "daily_paid_orders": _analytics_para_lista_series(daily_paid_orders),
+        "daily_free_orders": _analytics_para_lista_series(daily_free_orders),
+        "daily_by_plan": {plano: _analytics_para_lista_series(serie) for plano, serie in daily_by_plan.items()},
+        "funnel": {
+            **resumo_funil,
+            "daily_by_stage": {stage: _analytics_para_lista_series(serie) for stage, serie in funil_stage_daily.items()},
+        },
+        "channels": {
+            "top_utm_sources": _analytics_sorted_counts(utm_source_counts, limit=10),
+            "top_referrers": _analytics_sorted_counts(referrer_host_counts, limit=10),
+            "top_source_paths": _analytics_sorted_counts(source_path_counts, limit=10),
+        },
+        "upgrades": {
+            "total_leads": len(leads_upgrade),
+            "unique_emails": len(upgrade_emails),
+            "top_target_plans": _analytics_sorted_counts(upgrade_target_counts, limit=10),
+            "top_sources": _analytics_sorted_counts(upgrade_source_counts, limit=10),
+        },
+        "onboarding": onboarding_stats,
+        "retention_cohorts": retention_cohorts,
+        "suggestions": suggestions,
+    }
+
+
 FUNNEL_STAGE_VISIT = "visit"
 FUNNEL_STAGE_CTA_CLICK = "cta_click"
 FUNNEL_STAGE_CHECKOUT_VIEW = "checkout_view"
@@ -5918,61 +6201,38 @@ def api_analytics_summary():
     except Exception:
         return jsonify({"error": "end inv\u00e1lido (YYYY-MM-DD)"}), 400
 
+    plan = (request.args.get("plan") or "all").strip().lower()
+    if plan != "all" and plan not in PLANOS:
+        return jsonify({"error": "plan inv\u00e1lido"}), 400
+
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
 
-    eventos = carregar_eventos_analytics_filtrados(start=start, end=end, plano='all')
-    totals_by_plan = {plano: 0 for plano in PLANOS.keys()}
-    users = set()
-    daily_revenue = defaultdict(int)
-    daily_orders = defaultdict(int)
-    daily_paid_orders = defaultdict(int)
-    daily_free_orders = defaultdict(int)
-    daily_by_plan = {plano: defaultdict(int) for plano in PLANOS.keys()}
-
-    total_free = 0
-    total_paid = 0
-    revenue_total = 0
-
-    for evento in eventos:
-        plano = evento.get("plano")
-        if plano not in totals_by_plan:
-            continue
-
-        user_key = evento.get("user_key")
-        if user_key:
-            users.add(user_key)
-
-        date_key = evento["created_at"].date().isoformat()
-        totals_by_plan[plano] += 1
-        daily_orders[date_key] += 1
-        daily_by_plan[plano][date_key] += 1
-
-        amount = int(evento.get("amount_centavos") or 0)
-        revenue_total += amount
-        daily_revenue[date_key] += amount
-
-        if amount > 0:
-            total_paid += 1
-            daily_paid_orders[date_key] += 1
-        else:
-            total_free += 1
-            daily_free_orders[date_key] += 1
-
-    def para_lista(d):
-        return [{"date": k, "value": d[k]} for k in sorted(d.keys())]
+    relatorio = montar_relatorio_analytics_completo(start=start, end=end, plan=plan)
+    totals = relatorio.get("totals") or {}
 
     return jsonify({
-        "total_users": len(users),
-        "total_free": total_free,
-        "total_paid": total_paid,
-        "totals_by_plan": totals_by_plan,
-        "revenue_total": revenue_total,
-        "daily_revenue": para_lista(daily_revenue),
-        "daily_orders": para_lista(daily_orders),
-        "daily_paid_orders": para_lista(daily_paid_orders),
-        "daily_free_orders": para_lista(daily_free_orders),
-        "daily_by_plan": {plano: para_lista(serie) for plano, serie in daily_by_plan.items()}
+        # compatibilidade com o frontend atual
+        "total_users": int(totals.get("users_total") or 0),
+        "total_free": int(totals.get("free_total") or 0),
+        "total_paid": int(totals.get("paid_total") or 0),
+        "totals_by_plan": relatorio.get("totals_by_plan") or {},
+        "revenue_total": int(totals.get("revenue_centavos_total") or 0),
+        "daily_revenue": relatorio.get("daily_revenue") or [],
+        "daily_orders": relatorio.get("daily_orders") or [],
+        "daily_paid_orders": relatorio.get("daily_paid_orders") or [],
+        "daily_free_orders": relatorio.get("daily_free_orders") or [],
+        "daily_by_plan": relatorio.get("daily_by_plan") or {},
+        # dataset completo
+        "period": relatorio.get("period") or {},
+        "totals": totals,
+        "plan_stats": relatorio.get("plan_stats") or [],
+        "funnel": relatorio.get("funnel") or {},
+        "channels": relatorio.get("channels") or {},
+        "upgrades": relatorio.get("upgrades") or {},
+        "onboarding": relatorio.get("onboarding") or {},
+        "retention_cohorts": relatorio.get("retention_cohorts") or [],
+        "suggestions": relatorio.get("suggestions") or [],
     })
 
 
@@ -6035,7 +6295,7 @@ def api_analytics_chart():
     if start and end and end < start:
         return jsonify({"error": "end deve ser maior/igual a start"}), 400
 
-    filtro_plano = plan if metric == "orders_by_plan" and plan != "all" else "all"
+    filtro_plano = plan if plan != "all" else "all"
     eventos = carregar_eventos_analytics_filtrados(start=start, end=end, plano=filtro_plano)
 
     series = []
@@ -6080,7 +6340,9 @@ def api_analytics_chart():
         "groupBy": group_by,
         "plan": plan,
         "chartType": chart_type,
-        "series": series
+        "series": series,
+        "is_currency": metric == "revenue",
+        "has_data": any((item.get("data") or []) for item in series),
     })
 
 
