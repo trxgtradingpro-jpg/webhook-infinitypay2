@@ -222,10 +222,7 @@
               <td class="actions-cell">
                 <a href="/admin/pedido/{{ p.order_id }}">Ver</a>
                 {% if p.whatsapp_link %}
-                  | <form method="POST" action="/admin/whatsapp/{{ p.order_id }}" class="actions-inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit" class="btn-link">WhatsApp</button>
-                  </form>
+                  | <a class="btn-link" href="{{ p.whatsapp_link }}" target="_blank" rel="noopener">WhatsApp</a>
                 {% endif %}
                 {% if p.whatsapp_status %} | <span class="muted">{{ p.whatsapp_status }}</span>{% endif %}
                 {% if p.tem_duplicados %}
