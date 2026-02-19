@@ -192,6 +192,12 @@ function getClientAreaConfig(){
       const confirmBtn = document.getElementById("onboardingConfirmBtn");
       const statusEl = document.getElementById("onboardingStatusText");
       const saveMsgEl = document.getElementById("onboardingSaveMsg");
+      const helpBtn = document.getElementById("onboardingHelpBtn");
+      const helpModal = document.getElementById("onboardingHelpModal");
+      const helpBackdrop = document.getElementById("onboardingHelpBackdrop");
+      const helpClose = document.getElementById("onboardingHelpClose");
+      const helpVideo = document.getElementById("onboardingHelpVideo");
+      const helpVideoSrc = helpVideo ? helpVideo.getAttribute("src") : "";
       if (
         !progressMetaEl ||
         !progressFillEl ||
@@ -299,6 +305,36 @@ function getClientAreaConfig(){
         nextBtn.disabled = !payload[currentStep.key] || isSaving;
         confirmBtn.hidden = currentStepIndex < totalSteps - 1;
         confirmBtn.disabled = doneCount < totalSteps || isSaving;
+      }
+
+      function openHelpModal(){
+        if (!helpModal) return;
+        helpModal.classList.add("is-open");
+        helpModal.setAttribute("aria-hidden", "false");
+        if (helpVideo && helpVideoSrc) {
+          helpVideo.setAttribute("src", helpVideoSrc);
+        }
+      }
+
+      function closeHelpModal(){
+        if (!helpModal) return;
+        helpModal.classList.remove("is-open");
+        helpModal.setAttribute("aria-hidden", "true");
+        if (helpVideo && helpVideoSrc) {
+          helpVideo.setAttribute("src", "");
+          setTimeout(() => helpVideo.setAttribute("src", helpVideoSrc), 80);
+        }
+      }
+
+      if (helpBtn && helpModal && helpBackdrop && helpClose) {
+        helpBtn.addEventListener("click", openHelpModal);
+        helpBackdrop.addEventListener("click", closeHelpModal);
+        helpClose.addEventListener("click", closeHelpModal);
+        document.addEventListener("keydown", (ev) => {
+          if (ev.key === "Escape" && helpModal.classList.contains("is-open")) {
+            closeHelpModal();
+          }
+        });
       }
 
       async function saveProgress(){

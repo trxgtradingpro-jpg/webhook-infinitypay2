@@ -79,7 +79,7 @@
     {% if info_message %}
       <div class="msg {{ info_message_level or 'ok' }}">{{ info_message }}</div>
     {% endif %}
-    {% if not diagnostico_concluido %}
+    {% if not diagnostico_concluido and onboarding_progress.percent >= 100 %}
       <section class="diagnostic-prompt" id="diagnosticPromptCard" aria-live="polite">
         <div class="diagnostic-prompt-content">
           <p class="diagnostic-pill">Recomendação de plano pendente</p>
@@ -128,6 +128,7 @@
               <span id="onboardingCurrentStepLabel">Etapa de ativação</span>
             </label>
             <p id="onboardingCurrentStepHint" class="onboarding-step-hint"></p>
+            <button type="button" class="onboarding-help-btn" id="onboardingHelpBtn">Preciso de ajuda para esta etapa</button>
           </div>
           <div class="onboarding-actions">
             <button type="button" class="onboarding-btn" id="onboardingPrevBtn">Voltar</button>
@@ -143,6 +144,32 @@
         </div>
         <script type="application/json" id="onboardingStepsJson">{{ onboarding_progress.steps|tojson }}</script>
       </article>
+
+      <div class="onboarding-help-modal" id="onboardingHelpModal" aria-hidden="true" role="dialog" aria-label="Ajuda para checklist">
+        <div class="onboarding-help-backdrop" id="onboardingHelpBackdrop"></div>
+        <div class="onboarding-help-card">
+          <button type="button" class="onboarding-help-close" id="onboardingHelpClose" aria-label="Fechar ajuda">×</button>
+          <h3>Como acessar o e-mail e seguir o checklist</h3>
+          <ol class="onboarding-help-steps">
+            <li><strong>Abra seu e-mail</strong> (incluindo Spam/Promoções) e procure o assunto “TRX PRO | Acesso e instalação”.</li>
+            <li><strong>Clique no link do manual</strong> dentro do e-mail para baixar os arquivos.</li>
+            <li>Volte aqui e marque a etapa apenas depois de abrir o e-mail.</li>
+          </ol>
+          <div class="onboarding-help-video">
+            <p>Assista ao passo a passo rápido (inicia no minuto marcado):</p>
+            <div class="onboarding-video-frame">
+              <iframe
+                id="onboardingHelpVideo"
+                src="https://www.youtube.com/embed/19bR-OLADRU?start=75&rel=0"
+                title="Tutorial de instalação TRX"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <p class="onboarding-help-note">Precisa do manual direto? <a href="#manual-instalacao">Abra o Manual de instalação</a>.</p>
+          </div>
+        </div>
+      </div>
 
       <article class="card">
         <h2>Dados do cliente</h2>
