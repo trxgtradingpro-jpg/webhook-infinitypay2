@@ -5510,6 +5510,7 @@ def admin_dashboard():
 
     busca = (request.args.get("q") or "").strip().lower()
     filtro_plano = (request.args.get("plano") or "todos").strip().lower()
+    mostrar_bruto = (request.args.get("mostrar") or "").strip().lower() in ("1", "true", "sim", "bruto", "full", "raw")
 
     pedidos = listar_pedidos()
 
@@ -5573,6 +5574,7 @@ def admin_dashboard():
         pedido["email_masked"] = mascarar_email_compacto(pedido.get("email"))
         pedido["telefone_masked"] = mascarar_telefone_compacto(pedido.get("telefone"))
         pedido["affiliate_email_masked"] = mascarar_email_compacto(pedido.get("affiliate_email"))
+        pedido["mostrar_bruto"] = mostrar_bruto
 
         info_30_dias = calcular_contagem_regressiva_30_dias(pedido)
         pedido.update(info_30_dias)
@@ -5628,12 +5630,56 @@ def admin_dashboard():
         pedidos=pedidos_processados,
         stats=stats,
         onboarding_dashboard=onboarding_dashboard,
+        mostrar_bruto=mostrar_bruto,
         duplicados_grupos_count=duplicados_grupos_count,
         duplicados_registros_count=duplicados_registros_count,
         busca=busca,
         filtro_plano=filtro_plano,
         planos=list(PLANOS.keys())
     )
+
+
+@app.route("/admin/usuario/adicionar", methods=["POST"])
+def admin_usuario_adicionar():
+    if not session.get("admin"):
+        return redirect("/admin/login")
+
+    token = (request.form.get("csrf_token") or "").strip()
+    if not validar_csrf_token(token):
+        return "CSRF token invalido", 403
+
+    nome = (request.form.get("nome") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    telefone = (request.form.get("telefone") or "").strip()
+    criado_em_raw = (request.form.get("created_at") or "").strip()
+
+    if not email:
+        return redirect("/admin/dashboard?ok=0&msg=Informe%20o%20email")
+
+    resultado = criar_ou_atualizar_conta_cliente(email=email, nome=nome, telefone=telefone, first_access_required=True)
+    conta = resultado.get("account") or {}
+
+    if criado_em_raw:
+        try:
+            if "T" in criado_em_raw:
+                criado_em_dt = datetime.fromisoformat(criado_em_raw)
+            else:
+                criado_em_dt = datetime.fromisoformat(criado_em_raw + " 00:00")
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE customer_accounts
+                SET created_at = %s, updated_at = NOW()
+                WHERE email = %s
+            """, (criado_em_dt, conta.get("email")))
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception:
+            pass
+
+    msg = "Usuario criado" if resultado.get("created") else "Usuario atualizado"
+    return redirect(f"/admin/dashboard?ok=1&msg={quote(msg)}&mostrar=1")
 
 
 def redirecionar_admin_afiliados(msg=None, ok=False):

@@ -41,6 +41,32 @@
       <div class="card"><div class="label">Online agora</div><div class="value" id="online-count">{{ stats.online }}</div></div>
     </div>
 
+    <section class="panel" style="margin-top:12px;">
+      <form class="filters" method="POST" action="/admin/usuario/adicionar" style="gap:8px;">
+        <div><strong>Adicionar usuário</strong></div>
+        <div>
+          <label for="novo-nome">Nome</label>
+          <input id="novo-nome" type="text" name="nome" placeholder="Nome completo">
+        </div>
+        <div>
+          <label for="novo-email">E-mail *</label>
+          <input id="novo-email" type="email" name="email" required placeholder="email@dominio.com">
+        </div>
+        <div>
+          <label for="novo-telefone">Telefone</label>
+          <input id="novo-telefone" type="text" name="telefone" placeholder="DDDNúmero">
+        </div>
+        <div>
+          <label for="novo-created-at">Data de criação (opcional)</label>
+          <input id="novo-created-at" type="datetime-local" name="created_at">
+        </div>
+        <div class="actions">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Salvar usuário</button>
+        </div>
+      </form>
+    </section>
+
     <section class="panel">
       <h3 style="margin:0 0 12px;">Progresso de ativacao por usuario</h3>
       <div class="stats" style="margin:0 0 12px;">
@@ -66,7 +92,8 @@
           <tbody>
             {% for item in onboarding_dashboard.items %}
               <tr>
-                <td>{{ item.email_masked or '-' }}</td>
+                {% set email_exibir = (item.email if mostrar_bruto else item.email_masked) %}
+                <td>{{ email_exibir or '-' }}</td>
                 <td><span class="mono">{{ item.done_count }}/{{ item.total_steps }}</span> ({{ item.percent }}%)</td>
                 <td>
                   {% if item.status == 'Concluido' %}
@@ -113,6 +140,11 @@
         <div class="actions">
           <button type="submit">Filtrar</button>
           {% if busca or filtro_plano != 'todos' %}<a class="btn-chip" href="/admin/dashboard">Limpar</a>{% endif %}
+          {% if mostrar_bruto %}
+            <a class="btn-chip" href="/admin/dashboard?q={{ busca }}&plano={{ filtro_plano }}">Ocultar dados</a>
+          {% else %}
+            <a class="btn-chip" href="/admin/dashboard?q={{ busca }}&plano={{ filtro_plano }}&mostrar=1">Ver dados completos</a>
+          {% endif %}
         </div>
       </form>
     </section>
@@ -136,29 +168,33 @@
         </thead>
         <tbody>
           {% for p in pedidos %}
-            <tr>
-              <td><span class="mono no-wrap">{{ p.order_id[:8] }}...</span></td>
-              <td>{{ p.nome_masked or '-' }}</td>
-              <td>{{ p.email_masked or '-' }}</td>
-              <td>{{ p.telefone_masked or '-' }}</td>
-              <td>
-                {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
-                {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
-                {% elif p.plano == 'trx-gold' %}<span class="plan gold">TRX GOLD</span>
-                {% elif p.plano == 'trx-black' %}<span class="plan black">TRX BLACK</span>
+              <tr>
+                {% set nome_exibir = (p.nome if mostrar_bruto else p.nome_masked) %}
+                {% set email_exibir = (p.email if mostrar_bruto else p.email_masked) %}
+                {% set telefone_exibir = (p.telefone if mostrar_bruto else p.telefone_masked) %}
+                {% set aff_email_exibir = (p.affiliate_email if mostrar_bruto else p.affiliate_email_masked) %}
+                <td><span class="mono no-wrap">{{ p.order_id[:8] }}...</span></td>
+                <td>{{ nome_exibir or '-' }}</td>
+                <td>{{ email_exibir or '-' }}</td>
+                <td>{{ telefone_exibir or '-' }}</td>
+                <td>
+                  {% if p.plano == 'trx-bronze' %}<span class="plan bronze">TRX BRONZE</span>
+                  {% elif p.plano == 'trx-prata' %}<span class="plan prata">TRX PRATA</span>
+                  {% elif p.plano == 'trx-gold' %}<span class="plan gold">TRX GOLD</span>
+                  {% elif p.plano == 'trx-black' %}<span class="plan black">TRX BLACK</span>
                 {% elif p.plano == 'trx-gratis' %}<span class="plan gratis">TRX GRATIS</span>
                 {% elif p.plano == 'trx-teste' %}<span class="plan teste">TRX TESTE</span>
                 {% else %}<span class="plan">{{ p.plano }}</span>{% endif %}
               </td>
-              <td>
-                {% if p.affiliate_slug %}
-                  <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
-                  <div class="muted mono">/{{ p.affiliate_slug }}</div>
-                  {% if p.affiliate_email_masked %}<div class="muted">{{ p.affiliate_email_masked }}</div>{% endif %}
-                {% else %}
-                  <span class="muted">Direto</span>
-                {% endif %}
-              </td>
+                <td>
+                  {% if p.affiliate_slug %}
+                    <div class="aff-name">{{ p.affiliate_nome or p.affiliate_slug }}</div>
+                    <div class="muted mono">/{{ p.affiliate_slug }}</div>
+                    {% if aff_email_exibir %}<div class="muted">{{ aff_email_exibir }}</div>{% endif %}
+                  {% else %}
+                    <span class="muted">Direto</span>
+                  {% endif %}
+                </td>
               <td><span class="mono">{{ p.checkout_slug or p.plano }}</span></td>
               <td>
                 {% if p.status == 'PAGO' and p.plano == 'trx-gratis' %}
