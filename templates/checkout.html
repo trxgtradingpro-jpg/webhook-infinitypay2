@@ -206,5 +206,15 @@
 
   </div>
 
+  <script>
+    async function pingOnline() {
+      try {
+        await fetch('/online/ping', { method: 'POST' });
+      } catch (e) {}
+    }
+
+    pingOnline();
+    setInterval(pingOnline, 30000);
+  </script>
 </body>
 </html>

@@ -45,6 +45,9 @@ header h1{
   margin:0;
   font-size:24px;
 }
+.menu{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+.menu a{padding:8px 14px;border-radius:999px;border:1px solid var(--border);color:var(--text);text-decoration:none}
+.menu a.active,.menu a:hover{border-color:var(--blue);box-shadow:0 0 12px var(--glow)}
 header span{
   font-size:14px;
   color:var(--muted);
@@ -128,6 +131,12 @@ footer{
 <header>
   <h1>Dashboard</h1>
   <span>Visão geral do negócio • Dados em tempo real</span>
+  <nav class="menu">
+    <a href="/admin/dashboard">Resumo</a>
+    <a href="/admin/relatorios">Relatórios</a>
+    <a class="active" href="/dashboard">Gráficos</a>
+    <a href="/admin/analytics">Analytics</a>
+  </nav>
 </header>
 
 <div class="container">
